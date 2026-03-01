@@ -1,7 +1,8 @@
+import os
 from typing import Any
 
 from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Distance, VectorParams, SparseVectorParams
@@ -18,10 +19,16 @@ class VectorStore(BaseModel):
     dense_embedding: GeminiEmbeddingModel
     _client: QdrantClient = PrivateAttr()
 
+    url: str = Field(
+        default_factory=lambda: os.getenv("QDRANT_URL") or "localhost:6334"
+    )
+
+
     def model_post_init(self, __context: Any) -> None:
         self._sparse_embedding = FastEmbedSparse(model_name="Qdrant/bm25")
 
-        self._client = QdrantClient(path="/tmp/langchain_qdrant")
+
+        self._client = QdrantClient(url=self.url, prefer_grpc=True)
 
         if not self._client.collection_exists(self.collection_name):
             self._client.create_collection(
@@ -30,7 +37,7 @@ class VectorStore(BaseModel):
                     "dense": VectorParams(size=self.vector_size, distance=self.distance)
                 },
                 sparse_vectors_config={
-                    "sparse": SparseVectorParams(index=models.SparseIndexParams(on_disk=False))
+                    "sparse": SparseVectorParams(index=models.SparseIndexParams(on_disk=True))
                 }
             )
             print(f"Created collection'{self.collection_name}' successfully")
