@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
-from app.configs.tool.genome_http_client import call_backend
+from app.services.tools.genome_http_client import call_backend
 from app.schemas.tool.genome_tool_schema import BlastInput, GeneListInput, GeneSearchInput, PrimerDesignInput, SyntenyInput
 
 @tool

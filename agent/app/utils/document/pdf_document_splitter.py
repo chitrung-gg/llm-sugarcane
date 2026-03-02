@@ -5,9 +5,10 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import PrivateAttr
 
+from app.utils.document.document_splitter_registry import DocumentSplitterRegistry
 from app.utils.document.abstract_document_splitter import AbstractDocumentSplitter
 
-
+@DocumentSplitterRegistry.register(".pdf")
 class PDFDocumentSplitter(AbstractDocumentSplitter):
     chunk_size: int = 100
     chunk_overlap: int = 0

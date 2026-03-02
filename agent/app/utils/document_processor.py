@@ -4,20 +4,26 @@ from typing import Any, Dict, List
 from langchain_qdrant import QdrantVectorStore
 from pydantic import BaseModel, ConfigDict
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 
-from app.utils.document.factory_document_splitter import FactoryDocumentSplitter
+from app.utils.document.document_splitter_registry import DocumentSplitterRegistry
 from app.utils.document.abstract_document_splitter import AbstractDocumentSplitter
 
 class DocumentProcessor(BaseModel):
+    """
+    Processes uploaded files into vector store chunks.
+    Delegates parsing/chunking to the appropriate registered splitter
+    based on file extension — no manual splitter selection needed.
+    """
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
     vector_store: QdrantVectorStore
 
     def process_and_store(self, file_path: str) -> List[str]:
-        print(f"📄 Đang phân tích file: {file_path}")
+        print(f"Analyzing file: {file_path}")
         
         # Get correct document splitter for each file type
-        splitter = FactoryDocumentSplitter.get_splitter(file_path)
+        splitter = DocumentSplitterRegistry.get_splitter(file_path)
         
         chunks = splitter.process(file_path)
         
@@ -33,5 +39,17 @@ class DocumentProcessor(BaseModel):
         
         return inserted_ids
         
+    def process_and_get_chunks(self, file_path: str) -> List[Document]:
+        """
+        Parses and chunks a file without storing — useful for injecting
+        file content directly into the agent's context window (input_processor node).
 
+        Args:
+            file_path: Path to the uploaded file.
+
+        Returns:
+            List of LangChain Document chunks with metadata.
+        """
+        splitter = DocumentSplitterRegistry.get_splitter(file_path)
+        return splitter.process(file_path)
 

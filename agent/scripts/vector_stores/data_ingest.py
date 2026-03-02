@@ -16,7 +16,7 @@ if env_path.exists():
 else:
     print("Cannot find .env, please recheck file location")
 
-from app.utils.document.factory_document_splitter import FactoryDocumentSplitter
+from app.utils.document.document_splitter_registry import DocumentSplitterRegistry
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 from app.core.vector_store.vector_store import VectorStore 
 from app.utils.document_processor import DocumentProcessor
@@ -31,8 +31,8 @@ def ingest_folder(folder_path: str):
         return
     
     print("Registering file type to process.")
-    FactoryDocumentSplitter.register(".pdf", PDFDocumentSplitter(chunk_size=1500, chunk_overlap=300))
-    FactoryDocumentSplitter.register(".md", MarkdownDocumentSplitter())
+    # DocumentSplitterRegistry.register(".pdf", PDFDocumentSplitter(chunk_size=1500, chunk_overlap=300))
+    # DocumentSplitterRegistry.register(".md", MarkdownDocumentSplitter())
 
     print(f"Scanning folder: {target_dir.absolute()}")
 

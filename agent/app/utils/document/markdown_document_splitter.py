@@ -4,9 +4,10 @@ from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from pydantic import PrivateAttr
 
+from app.utils.document.document_splitter_registry import DocumentSplitterRegistry
 from app.utils.document.abstract_document_splitter import AbstractDocumentSplitter
 
-
+@DocumentSplitterRegistry.register(".md", ".markdown")
 class MarkdownDocumentSplitter(AbstractDocumentSplitter):
     _headers = [
         ("#", "Header 1"),
