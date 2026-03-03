@@ -1,0 +1,16 @@
+from fastapi import Depends
+from langchain_qdrant import QdrantVectorStore
+
+from app.core.app_container import AppContainer, get_container
+from app.services.llm.llm_service import LLMService
+from app.utils.document_processor import DocumentProcessor
+
+
+def get_llm_service(container: AppContainer = Depends(get_container)) -> LLMService:
+    return container.llm_service
+
+def get_vector_store(container: AppContainer = Depends(get_container)) -> QdrantVectorStore:
+    return container.vector_store
+
+def get_document_processor(container: AppContainer = Depends(get_container)) -> DocumentProcessor:
+    return container.document_processor
