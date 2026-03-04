@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # --- Gemini ---
     google_api_key: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
-    gemini_llm_model: str = "gemini-3-flash-preview"
+    gemini_llm_model: str = "gemini-2.5-flash"
     gemini_embedding_model: str = "gemini-embedding-001"
 
     # --- Qdrant ---
@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     )
     qdrant_vector_size: int = 3072   # 768 to save storage
     qdrant_prefer_grpc: bool = True
+
+    # --- SearxNG ---
+    searx_host: SecretStr | None = Field(default=None, validation_alias="SEARXNG_HOST")  
 
     # --- LLM Service ---
     llm_max_retries: int = 3
