@@ -1,5 +1,6 @@
 from fastapi import Depends
 from langchain_qdrant import QdrantVectorStore
+from langgraph.graph.state import CompiledStateGraph
 
 from app.core.app_container import AppContainer, get_container
 from app.services.llm.llm_service import LLMService
@@ -14,3 +15,6 @@ def get_vector_store(container: AppContainer = Depends(get_container)) -> Qdrant
 
 def get_document_processor(container: AppContainer = Depends(get_container)) -> DocumentProcessor:
     return container.document_processor
+
+def get_agent_graph(container: AppContainer = Depends(get_container)) -> CompiledStateGraph:
+    return container.agent_graph

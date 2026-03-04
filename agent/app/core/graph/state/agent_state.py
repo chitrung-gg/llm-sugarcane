@@ -1,9 +1,10 @@
+import operator
 from typing import Annotated, Dict, List, Literal, Optional, TypedDict
 
 from langgraph.graph import add_messages
 from langchain_core.messages import BaseMessage
 
-from agent.app.core.graph.state.record_source import RecordSource
+from app.core.graph.state.record_source import RecordSource
 
 class UploadedFile(TypedDict):
     """Stores users' uploaded files metadata."""
@@ -38,8 +39,8 @@ class AgentState(TypedDict):
     required_tools: List[str]
 
     # Execution tracking
-    rag_results: List[RAGResult]
-    tool_results: List[ToolResult]
+    rag_results: Annotated[List[RAGResult], operator.add]
+    tool_results: Annotated[List[ToolResult], operator.add] 
     iteration_count: int
     max_iterations: int         # Circuit breaker
 

@@ -1,0 +1,60 @@
+from langchain_qdrant import QdrantVectorStore
+from langgraph.graph import END, START, StateGraph
+from loguru import logger
+
+
+from app.services.llm.llm_service import LLMService
+from app.core.graph.nodes.input_processor_node import input_analyzer
+from app.core.graph.nodes.rag_node import make_rag_node
+
+from app.core.graph.nodes.router_node import make_router_node
+from app.core.graph.nodes.synthesizer_node import make_synthesizer_node
+from app.core.graph.nodes.tools_node import tools
+from app.core.graph.routing.check_if_resolved import check_if_resolved
+from app.core.graph.routing.route_action import route_action
+from app.core.graph.state.agent_state import AgentState
+
+
+def build_agent_graph(llm_service: LLMService, vector_store: QdrantVectorStore):
+    # Initialize graph
+    workflow = StateGraph(AgentState)
+
+    # Add nodes
+    workflow.add_node("input_analyzer", input_analyzer)
+    workflow.add_node("router", make_router_node(llm_service))
+    workflow.add_node("rag_execution", make_rag_node(vector_store))
+    workflow.add_node("tool_execution", tools)
+    workflow.add_node("synthesizer", make_synthesizer_node(llm_service))
+
+    # Define flows
+    workflow.add_edge(START, "input_analyzer")
+    workflow.add_edge("input_analyzer", "router")
+
+    # Conditional Routing
+    workflow.add_conditional_edges(
+        "router",
+        route_action,
+        {
+            "rag_execution": "rag_execution",
+            "tool_execution": "tool_execution",
+            "synthesizer": "synthesizer"
+        }
+    )
+
+    # Merge results
+    workflow.add_edge("rag_execution", "synthesizer")
+    workflow.add_edge("tool_execution", "synthesizer")
+
+    # Check if answer appropriate
+    workflow.add_conditional_edges(
+        "synthesizer",
+        check_if_resolved,
+        {
+            END: END,
+            "router": "router"
+        }
+    )
+
+    graph = workflow.compile()
+    logger.debug(graph.get_graph().draw_ascii())
+    return graph
