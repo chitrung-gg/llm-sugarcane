@@ -21,6 +21,15 @@ class RAGResult(TypedDict):
     page_number: Optional[int]
     relevance_score: Optional[float]        # Cosine
 
+class WebResult(TypedDict):
+    """Stores the web result from search tool"""
+    snippet: str
+    title: str
+    link: str
+    engines: list[str]
+    category: str
+
+
 class ToolResult(TypedDict):
     """Stores tool executions' results."""
     tool_name: str
@@ -35,12 +44,13 @@ class AgentState(TypedDict):
     uploaded_files: List[UploadedFile]
 
     # Routing
-    intent: Literal["rag_only", "tool_only", "both", "unclear"]
+    intent: Literal["rag_only", "tool_only", "web_search", "all", "unclear"]
     required_tools: List[str]
 
     # Execution tracking
     rag_results: Annotated[List[RAGResult], operator.add]
     tool_results: Annotated[List[ToolResult], operator.add] 
+    web_results: Annotated[List[WebResult], operator.add]
     iteration_count: int
     max_iterations: int         # Circuit breaker
 

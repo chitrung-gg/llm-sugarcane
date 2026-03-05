@@ -1,7 +1,7 @@
 import time
 from loguru import logger
 
-from app.core.graph.state.agent_state import AgentState
+from app.core.graph.state.agent_state import AgentState, ToolResult
 
 
 async def tools(state: AgentState) -> dict:
@@ -48,13 +48,12 @@ async def tools(state: AgentState) -> dict:
                 f"latency={elapsed}ms"
             )
 
-        tool_item = {
-            "tool_name": tool_name,
-            "status": status,
-            "output": output_text,
-            "execution_time_ms": elapsed,
-        }
-
+        tool_item = ToolResult(
+            tool_name=tool_name,
+            status=status, 
+            output=output_text,
+            execution_time_ms=elapsed
+        )
         new_tool_results.append(tool_item)
 
     total_elapsed = int((time.time() - overall_start) * 1000)

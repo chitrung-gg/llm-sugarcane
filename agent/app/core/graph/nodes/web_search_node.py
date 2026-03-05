@@ -1,9 +1,8 @@
 import time
-
-from langchain_community.utilities.searx_search import SearxSearchWrapper
 from loguru import logger
+from langchain_community.utilities.searx_search import SearxSearchWrapper
 
-from app.core.graph.state.agent_state import AgentState, ToolResult
+from app.core.graph.state.agent_state import AgentState, WebResult
 
 def make_web_search_node(searx_wrapper: SearxSearchWrapper):
     """Factory to create the web search node with injected dependency."""
@@ -13,28 +12,42 @@ def make_web_search_node(searx_wrapper: SearxSearchWrapper):
 
         query = state["query"]
         start_time = time.time()
+        
+        new_web_results = []
 
         try:
-            raw_results = searx_wrapper.run(query)
-            status = "success"
+            # .results() gives us structured JSON instead of a raw string!
+            raw_results = searx_wrapper.results(query, num_results=5)
+            
+            for res in raw_results:
+                web_item = WebResult(
+                    snippet=res.get("snippet", "No snippet available"),
+                    title=res.get("title", "No Title"),
+                    link=res.get("link", ""),
+                    engines=res.get("engines", []),
+                    category=res.get("category", "general")
+                )
+                new_web_results.append(web_item)
+                
         except Exception as e:
             logger.error(f"SearXNG search failed: {e}")
-            raw_results = f"Web search failed due to an error: {str(e)}"
-            status = "error"
+            # Inject an error result so the Synthesizer knows the search failed
+            new_web_results.append(
+                WebResult(
+                    snippet=f"Web search failed due to an error: {str(e)}",
+                    title="Search Error",
+                    link="",
+                    engines=[],
+                    category="error"
+                )
+            )
         
         execution_time = int((time.time() - start_time) * 1000)
+        logger.debug(f"[Web Search] ✅ Completed in {execution_time} ms | Found {len(new_web_results)} items")
 
-        # Package into custom schema
-        search_result = ToolResult(
-            tool_name="searxng_web_search",
-            status=status,
-            output=raw_results,
-            execution_time_ms=execution_time
-        )
-
-        # Because tool_results uses operator.add, returning a list appends it to state
+        # Because web_results uses operator.add, returning a list appends it to state
         return {
-            "tool_results": [search_result]
+            "web_results": new_web_results
         }
     
     return web_search

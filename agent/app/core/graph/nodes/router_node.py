@@ -21,12 +21,16 @@ def make_router_node(llm_service: LLMService):
         llm = llm_service.get_model()
         router_llm = llm.with_structured_output(RouteDecision)
 
-        system_instructions = """You are an expert routing assistant for a Sugarcane Genomics system.
+        system_instructions = """
+            You are an expert routing assistant for a Sugarcane Genomics system.
             Your job is to analyze the user's query and route it to the correct execution path.
-            - Choose 'rag_only' if the query asks for literature, research papers, or general knowledge.
-            - Choose 'tool_only' if the query requires executing code, BLAST, or Synteny analysis.
-            - Choose 'both' if the query requires BOTH literature search and tool execution.
-            - Choose 'unclear' if the query is a simple greeting or doesn't require any search.
+
+            RULES FOR ROUTING:
+            - Choose 'rag_only': If the query asks for static knowledge, literature, research papers, or general sugarcane biology that is stored in our internal database.
+            - Choose 'tool_only': If the query requires executing bioinformatic tools, local BLAST, or Synteny analysis.
+            - Choose 'web_search': If the query asks for the *latest* news, external web data, CIRAD databases, or up-to-date information not likely in a static local database.
+            - Choose 'all': If the query requires a combination of searches (e.g., checking internal literature AND searching the web for recent updates).
+            - Choose 'unclear': If the query is a simple greeting (e.g., 'Hello', 'Who are you?') or does not require looking up any data.
         """
 
         user_input = f"User Query: {query}"
@@ -41,12 +45,8 @@ def make_router_node(llm_service: LLMService):
             logger.debug(
                 f"[Router] Including chat history | messages={len(state['messages'])}"
             )
-            messages_to_send = (
-                [messages_to_send[0]]
-                + state["messages"]
-                + [messages_to_send[1]]
-            )
-
+            messages_to_send.extend(state["messages"])
+        
         logger.debug(
             f"[Router] Sending {len(messages_to_send)} messages to LLM"
         )
