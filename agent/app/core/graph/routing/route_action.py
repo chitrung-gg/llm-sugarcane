@@ -3,9 +3,11 @@ from typing import List, Literal
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from langgraph.types import Command
 from app.core.graph.state.agent_state import AgentState
 
 
+# def route_action(state: AgentState) -> Command[Literal["rag_execution", "tool_execution", "web_search", "synthesizer"]]:
 def route_action(state: AgentState):
     # Safely extract the intent from the state
     intent = state.get("intent")

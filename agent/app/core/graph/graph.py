@@ -1,6 +1,7 @@
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import RetryPolicy
 from loguru import logger
 
 
@@ -27,7 +28,11 @@ def build_agent_graph(
     workflow = StateGraph(AgentState)
 
     # Add nodes
-    workflow.add_node("input_analyzer", input_analyzer)
+    workflow.add_node(
+        "input_analyzer",
+        input_analyzer,
+        retry_policy=RetryPolicy(max_attempts=3, initial_interval=1.0)
+    )
     workflow.add_node("router", make_router_node(llm_service))
     workflow.add_node("rag_execution", make_rag_node(vector_store))
     workflow.add_node("web_search", make_web_search_node(searx_wrapper))
@@ -43,6 +48,7 @@ def build_agent_graph(
         "router",
         route_action,
         {
+            # Name returned by route_action : Name of next node to visit 
             "rag_execution": "rag_execution",
             "tool_execution": "tool_execution",
             "web_search": "web_search",
@@ -54,6 +60,7 @@ def build_agent_graph(
         "rag_execution",
         check_rag_fallback,
         {
+            # Name returned by route_action : Name of next node to visit
             "web_search": "web_search",
             "synthesizer": "synthesizer"
         }
