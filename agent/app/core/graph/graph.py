@@ -5,10 +5,11 @@ from langgraph.types import RetryPolicy
 from loguru import logger
 
 
+from app.core.graph.nodes.input_processor_node import make_input_analyzer_node
+from app.utils.document_processor import DocumentProcessor
 from app.core.graph.routing.check_rag_fallback import check_rag_fallback
 from app.core.graph.nodes.web_search_node import make_web_search_node
 from app.services.llm.llm_service import LLMService
-from app.core.graph.nodes.input_processor_node import input_analyzer
 from app.core.graph.nodes.rag_node import make_rag_node
 
 from app.core.graph.nodes.router_node import make_router_node
@@ -22,7 +23,8 @@ from app.core.graph.state.agent_state import AgentState
 def build_agent_graph(
     llm_service: LLMService,
     vector_store: QdrantVectorStore,
-    searx_wrapper: SearxSearchWrapper
+    searx_wrapper: SearxSearchWrapper,
+    document_processor: DocumentProcessor
 ):
     # Initialize graph
     workflow = StateGraph(AgentState)
@@ -30,14 +32,29 @@ def build_agent_graph(
     # Add nodes
     workflow.add_node(
         "input_analyzer",
-        input_analyzer,
+        make_input_analyzer_node(document_processor),
         retry_policy=RetryPolicy(max_attempts=3, initial_interval=1.0)
     )
-    workflow.add_node("router", make_router_node(llm_service))
-    workflow.add_node("rag_execution", make_rag_node(vector_store))
-    workflow.add_node("web_search", make_web_search_node(searx_wrapper))
-    workflow.add_node("tool_execution", tools)
-    workflow.add_node("synthesizer", make_synthesizer_node(llm_service))
+    workflow.add_node(
+        "router",
+        make_router_node(llm_service)
+    )
+    workflow.add_node(
+        "rag_execution",
+        make_rag_node(vector_store)
+    )
+    workflow.add_node(
+        "web_search",
+        make_web_search_node(searx_wrapper)
+    )
+    workflow.add_node(
+        "tool_execution",
+        tools
+    )
+    workflow.add_node(
+        "synthesizer",
+        make_synthesizer_node(llm_service)
+    )
 
     # Define flows
     workflow.add_edge(START, "input_analyzer")

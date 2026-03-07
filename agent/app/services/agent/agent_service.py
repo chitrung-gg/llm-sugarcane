@@ -4,7 +4,7 @@ from app.core.tools.post_tool import create_post, get_user_posts
 from app.schemas.agent.agent_request import AgentRequest
 
 class AgentService:
-    # Abstract t
+    # Abstract 
     def __init__(self, model: ChatGoogleGenerativeAI) -> None:
         self.model = model
     

@@ -24,6 +24,8 @@ def route_action(state: AgentState):
     elif intent == "all":
         # Return list of nodes so that LangGraph can run request parallel. 
         return ["rag_execution", "tool_execution", "web_search"] 
+    elif intent == "direct_answer": 
+        return "synthesizer"
     else:
         # Fallback for "unclear" or any unexpected intent
         return "synthesizer"

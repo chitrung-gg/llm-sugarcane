@@ -16,7 +16,8 @@ class InterceptHandler(logging.Handler):
         try:
             level = logger.level(record.levelname).name
         except ValueError:
-            level = str(record.levelno)
+            level = "DEBUG"
+            # level = str(record.levelno)
 
         # Find caller from where the logged message originated
         # This ensures Loguru prints the actual file/line number, not this interceptor file!
@@ -35,10 +36,10 @@ def setup_logging():
     settings = get_settings()
     log_level = settings.log_level.upper()
 
-    # 1. Remove the default Loguru handler
+    # Remove the default Loguru handler
     logger.remove()
 
-    # 2. Add our custom Loguru handler targeting standard output
+    # Add our custom Loguru handler targeting standard output
     logger.add(
         sys.stdout,
         level=log_level,
@@ -50,10 +51,10 @@ def setup_logging():
         colorize=True
     )
 
-    # 3. Intercept everything at the root logger level
+    # Intercept everything at the root logger level
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 
-    # 4. Hijack stubborn third-party loggers (like Uvicorn and FastAPI)
+    # Hijack stubborn third-party loggers (like Uvicorn and FastAPI)
     # Uvicorn creates its own loggers early, so we must overwrite them manually.
     loggers_to_hijack = (
         "uvicorn",

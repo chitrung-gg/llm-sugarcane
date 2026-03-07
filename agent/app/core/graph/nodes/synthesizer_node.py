@@ -22,12 +22,22 @@ def make_synthesizer_node(llm_service: LLMService):
         current_iteration = state.get("iteration_count", 0)
         query = state["query"]
 
+        # Extract the uploaded file text from the messages
+        file_context = ""
+        for msg in state.get("messages", []):
+            # Look for the SystemMessage created by the Input Analyzer
+            if getattr(msg, "content", "").startswith("The user has uploaded the following files"):
+                file_context = msg.content
+
         # Format context
         rag_context = "\n".join([f"- [Doc: {r.get('source_file')}] {r.get('content')}" for r in state.get("rag_results", [])])
         web_context = "\n".join([f"- [{r.get('title')}] ({r.get('link')}): {r.get('snippet')}" for r in state.get("web_results", [])])
         tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')}" for r in state.get("tool_results", [])])
 
         context_string = f"""
+            --- UPLOADED FILE CONTENT ---
+            {file_context if file_context else "No files uploaded."}
+            
             --- RAG KNOWLEDGE ---
             {rag_context if rag_context else "No RAG data found."}
 

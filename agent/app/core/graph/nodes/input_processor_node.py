@@ -2,54 +2,69 @@ import time
 from loguru import logger
 from typing import Dict, Any
 
+from app.utils.document_processor import DocumentProcessor
 from app.core.graph.state.agent_state import AgentState
 from langchain_core.messages import SystemMessage
 
 
-async def input_analyzer(state: AgentState) -> Dict[str, Any]:
-    start_time = time.time()
+# Wrap in factory method
+def make_input_analyzer_node(document_processor: DocumentProcessor):
+    async def input_analyzer(state: AgentState) -> Dict[str, Any]:
+        start_time = time.time()
 
-    logger.debug("========== [Input Analyzer Node] ==========")
-    logger.debug(f"State keys: {list(state.keys())}")
-    logger.debug(f"Query: {state.get('query')}")
+        logger.debug("========== [Input Analyzer Node] ==========")
+        logger.debug(f"State keys: {list(state.keys())}")
+        logger.debug(f"Query: {state.get('query')}")
 
-    files = state.get("uploaded_files", [])
-    logger.debug(f"Uploaded files count: {len(files)}")
+        files = state.get("uploaded_files", [])
+        logger.debug(f"Uploaded files count: {len(files)}")
 
-    file_context = ""
+        file_context = ""
 
-    if files:
-        try:
-            file_summary = "\n".join(
-                [f"- {f.get('file_name')} (Type: {f.get('file_type')})" for f in files]
-            )
-            file_context = f"Attached files context:\n{file_summary}"
+        if files:
+            for f in files:
+                file_name = f.get('file_name')
+                file_path = f.get('file_path')
+                file_type = f.get('file_type')
 
-            logger.debug("File summary constructed")
-            logger.debug(file_summary)
+                logger.debug(f"Parsing uploaded file: {file_name}")
+                try:
+                    chunks = document_processor.process_and_get_chunks(file_path)
 
-        except Exception as e:
-            logger.exception("Failed to parse uploaded files metadata")
-    else:
-        logger.debug("No uploaded files provided")
+                    # Combine the chunks
+                    parsed_text = "\n".join([chunk.page_content for chunk in chunks])
 
-    msg = SystemMessage(content=file_context) if file_context else None
 
-    if msg:
-        logger.debug("Injecting SystemMessage into state.messages")
-    else:
-        logger.debug("No SystemMessage injected")
+                    file_context += f"--- Start of Content: {file_name} (Type: {file_type}) ---\n{parsed_text}\n--- End of {file_name} ---\n\n"
 
-    current_iter = state.get("iteration_count", 0)
-    max_iter = state.get("max_iterations")
+                except Exception as e:
+                    logger.exception(f"Failed to parse uploaded file {file_name}")
+                    file_context += f"--- Start of Content: {file_name} ---\n[Error: Could not extract text from this file.]\n--- End of {file_name} ---\n\n"
+            if file_context:
+                file_context = f"The user has uploaded the following files for context. Use this information to answer their query:\n\n{file_context}"
+                logger.debug("Successfully extracted file content and constructed SystemMessage.")
+        else:
+            logger.debug("No uploaded files provided")
 
-    logger.debug(f"Iteration count: {current_iter}")
-    logger.debug(f"Max iterations: {max_iter}")
+        msg = SystemMessage(content=file_context) if file_context else None
 
-    elapsed = int((time.time() - start_time) * 1000)
-    logger.debug(f"Input Analyzer execution time: {elapsed} ms")
+        if msg:
+            logger.debug("Injecting SystemMessage into state.messages")
+        else:
+            logger.debug("No SystemMessage injected")
 
-    return {
-        "messages": [msg] if msg else [],
-        "iteration_count": current_iter
-    }
+        current_iter = state.get("iteration_count", 0)
+        max_iter = state.get("max_iterations")
+
+        logger.debug(f"Iteration count: {current_iter}")
+        logger.debug(f"Max iterations: {max_iter}")
+
+        elapsed = int((time.time() - start_time) * 1000)
+        logger.debug(f"Input Analyzer execution time: {elapsed} ms")
+
+        return {
+            "messages": [msg] if msg else [],
+            "iteration_count": current_iter
+        }
+
+    return input_analyzer

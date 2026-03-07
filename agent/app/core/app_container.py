@@ -80,7 +80,8 @@ class AppContainer:
         self._agent_graph = build_agent_graph(
             llm_service=self.llm_service,
             vector_store=self.vector_store,
-            searx_wrapper=self.searx_search
+            searx_wrapper=self.searx_search,
+            document_processor=self.document_processor
         )
     # --- Public accessors ---
 

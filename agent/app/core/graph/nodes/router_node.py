@@ -25,14 +25,15 @@ def make_router_node(llm_service: LLMService):
             You are an expert routing assistant for a Sugarcane Genomics system.
             Your job is to analyze the user's query and route it to the correct execution path.
 
-            RULES FOR ROUTING:
-            - Choose 'rag_only': If the query asks for static knowledge, literature, research papers, or general sugarcane biology that is stored in our internal database.
-            - Choose 'tool_only': If the query requires executing bioinformatic tools, local BLAST, or Synteny analysis.
-            - Choose 'web_search': If the query asks for the *latest* news, external web data, CIRAD databases, or up-to-date information not likely in a static local database.
-            - Choose 'all': If the query requires a combination of searches (e.g., checking internal literature AND searching the web for recent updates).
-            - Choose 'unclear': If the query is a simple greeting (e.g., 'Hello', 'Who are you?') or does not require looking up any data.
+            CRITICAL ROUTING RULES:
+            - Choose 'direct_answer': If the user asks to summarize, translate, or answer questions strictly about a file they just uploaded, and you can see the file's content in the chat history.
+            - Choose 'all' (RECOMMENDED DEFAULT): For general sugarcane biology questions.
+            - Choose 'web_search': For the *latest* news, external web data, or broad scientific facts.
+            - Choose 'rag_only': ONLY if the query explicitly targets our internal database.
+            - Choose 'tool_only': For executing bioinformatic tools (BLAST/Synteny).
+            - Choose 'unclear': For simple greetings.
         """
-
+        
         user_input = f"User Query: {query}"
 
         messages_to_send = [

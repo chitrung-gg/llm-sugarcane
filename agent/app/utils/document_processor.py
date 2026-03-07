@@ -7,8 +7,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 from app.utils.document.document_splitter_registry import DocumentSplitterRegistry
-from app.utils.document.abstract_document_splitter import AbstractDocumentSplitter
-
 class DocumentProcessor(BaseModel):
     """
     Processes uploaded files into vector store chunks.

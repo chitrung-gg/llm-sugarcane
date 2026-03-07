@@ -44,7 +44,7 @@ class AgentState(TypedDict):
     uploaded_files: List[UploadedFile]
 
     # Routing
-    intent: Literal["rag_only", "tool_only", "web_search", "all", "unclear"]
+    intent: Literal["rag_only", "tool_only", "web_search", "all", "unclear", "direct_answer"]
     required_tools: List[str]
 
     # Execution tracking
