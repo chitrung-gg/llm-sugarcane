@@ -38,6 +38,9 @@ class Settings(BaseSettings):
 
     # --- Log ---
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
+
+    # --- Langchain ---
+    docling_allow_external_plugins: str = Field(default="0", validation_alias="DOCLING_ALLOW_EXTERNAL_PLUGINS")
     
     # --- App ---
     app_env: str = Field(default="development", validation_alias="APP_ENV")

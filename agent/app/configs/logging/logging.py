@@ -65,6 +65,11 @@ def setup_logging():
         "langgraph",
         "asyncio",
         "starlette",
+        "docling",
+        "docling_core",
+        "RapidOCR",
+        "onnxruntime",
+        "urllib3", # Catches those HTTP GET logs from RapidOCR
     )
 
     for logger_name in loggers_to_hijack:
