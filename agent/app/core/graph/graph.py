@@ -5,7 +5,7 @@ from langgraph.types import RetryPolicy
 from loguru import logger
 
 
-from app.core.graph.nodes.input_processor_node import make_input_analyzer_node
+from app.core.graph.nodes.input_analyzer_node import make_input_analyzer_node
 from app.utils.document_processor import DocumentProcessor
 from app.core.graph.routing.check_rag_fallback import check_rag_fallback
 from app.core.graph.nodes.web_search_node import make_web_search_node

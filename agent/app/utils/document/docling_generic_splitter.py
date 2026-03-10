@@ -7,6 +7,7 @@ from pydantic import PrivateAttr
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
+from transformers import AutoTokenizer
 
 
 from app.utils.document.abstract_document_splitter import AbstractDocumentSplitter
@@ -34,6 +35,11 @@ class DoclingGenericSplitter(AbstractDocumentSplitter):
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
             }
         )
+
+        # Config HybridChunker
+        # tokenizer = HuggingFaceTokenizer(
+        #     tokenizer=AutoTokenizer.from_pretrained("jinaai/jina-embeddings-v5-text-nano")
+        # )
 
         # Explicitly set the export type to DOC_CHUNKS!
         loader = DoclingLoader(
