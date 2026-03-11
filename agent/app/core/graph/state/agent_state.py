@@ -3,6 +3,7 @@ from typing import Annotated, Dict, List, Literal, Optional, TypedDict
 
 from langgraph.graph import add_messages
 from langchain_core.messages import BaseMessage
+from langchain_core.documents import Document
 
 from app.core.graph.state.record_source import RecordSource
 
@@ -42,6 +43,7 @@ class AgentState(TypedDict):
     query: str
     messages: Annotated[List[BaseMessage], add_messages]
     uploaded_files: List[UploadedFile]
+    uploaded_chunks: Annotated[List[Document], operator.add]
 
     # Routing
     intent: Literal["rag_only", "tool_only", "web_search", "all", "unclear", "direct_answer"]

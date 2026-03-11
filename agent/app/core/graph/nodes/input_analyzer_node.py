@@ -2,6 +2,7 @@ import time
 from loguru import logger
 from typing import Dict, Any
 
+from app.configs.settings.settings import get_settings
 from app.utils.document_processor import DocumentProcessor
 from app.core.graph.state.agent_state import AgentState
 from langchain_core.messages import SystemMessage
@@ -10,6 +11,7 @@ from langchain_core.messages import SystemMessage
 # Wrap in factory method
 def make_input_analyzer_node(document_processor: DocumentProcessor):
     async def input_analyzer(state: AgentState) -> Dict[str, Any]:
+        settings = get_settings()
         start_time = time.time()
 
         logger.debug("========== [Input Analyzer Node] ==========")
@@ -20,6 +22,8 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
         logger.debug(f"Uploaded files count: {len(files)}")
 
         file_context = ""
+
+        ephemeral_chunks = []
 
         if files:
             for f in files:
@@ -34,8 +38,15 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
                     # Combine the chunks
                     parsed_text = "\n".join([chunk.page_content for chunk in chunks])
 
+                    if len(parsed_text) > settings.gemini_max_input_token:
+                        logger.warning(f"⚠️ {file_name} is massive. Saving to RAM for local BM25 search.")
 
-                    file_context += f"--- Start of Content: {file_name} (Type: {file_type}) ---\n{parsed_text}\n--- End of {file_name} ---\n\n"
+                        ephemeral_chunks.extend(chunks)
+                        file_context += f"\n[SYSTEM NOTE: The uploaded file '{file_name}' was too large to read instantly. It is stored in temporary memory. You MUST route to 'rag_only' or 'all' to augment it.]\n"
+                        
+                    else:    
+                        logger.debug(f"📄 {file_name} is small. Injecting directly.")
+                        file_context += f"--- Start of Content: {file_name} (Type: {file_type}) ---\n{parsed_text}\n--- End of {file_name} ---\n\n"
 
                 except Exception as e:
                     logger.exception(f"Failed to parse uploaded file {file_name}")
@@ -64,6 +75,7 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
 
         return {
             "messages": [msg] if msg else [],
+            "uploaded_chunks": ephemeral_chunks,
             "iteration_count": current_iter
         }
 

@@ -7,9 +7,12 @@ from pydantic import PrivateAttr
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
+from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from transformers import AutoTokenizer
 
 
+from app.configs.settings.settings import get_settings
 from app.utils.document.abstract_document_splitter import AbstractDocumentSplitter
 from app.utils.document.document_splitter_registry import DocumentSplitterRegistry
 
@@ -19,9 +22,11 @@ from app.utils.document.document_splitter_registry import DocumentSplitterRegist
     ".html", ".epub", ".msg", ".eml", ".rtf", ".odt"
 )
 class DoclingGenericSplitter(AbstractDocumentSplitter):
+
     _splitter: Any = PrivateAttr(default=None)
 
     def process(self, file_path: str) -> List[Document]:
+        settings = get_settings()
         logger.debug(f"Using Docling to parse {file_path}")
 
         pipeline_options = PdfPipelineOptions()
@@ -37,15 +42,19 @@ class DoclingGenericSplitter(AbstractDocumentSplitter):
         )
 
         # Config HybridChunker
-        # tokenizer = HuggingFaceTokenizer(
-        #     tokenizer=AutoTokenizer.from_pretrained("jinaai/jina-embeddings-v5-text-nano")
-        # )
+        # Use better embedding model as from the MTEB Leaderboard if resources allow
+        tokenizer = HuggingFaceTokenizer(
+            tokenizer=AutoTokenizer.from_pretrained(settings.hugging_face_tokenizer),
+            max_tokens=500
+        )
+
 
         # Explicitly set the export type to DOC_CHUNKS!
         loader = DoclingLoader(
             file_path=file_path,
             export_type=ExportType.DOC_CHUNKS,
-            converter=doc_converter
+            converter=doc_converter,
+            chunker=HybridChunker(tokenizer=tokenizer)
         )
         
         docs = loader.load()

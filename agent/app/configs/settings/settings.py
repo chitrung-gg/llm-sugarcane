@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     google_api_key: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
     gemini_llm_model: str = "gemini-3-flash-preview"
     gemini_embedding_model: str = "gemini-embedding-001"
+    gemini_max_input_token: int = 200000
 
     # --- Qdrant ---
     qdrant_url: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
@@ -29,6 +30,10 @@ class Settings(BaseSettings):
     )
     qdrant_vector_size: int = 3072   # 768 to save storage
     qdrant_prefer_grpc: bool = True
+    rag_score_threshold: float = 0.70
+
+    # --- InMemory Store ---
+    retriever_top_k: int = 3
 
     # --- SearxNG ---
     searx_host: SecretStr | None = Field(default=None, validation_alias="SEARXNG_HOST")  
@@ -39,9 +44,13 @@ class Settings(BaseSettings):
     # --- Log ---
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
 
-    # --- Langchain ---
+    # --- Langchain Docling ---
     docling_allow_external_plugins: str = Field(default="0", validation_alias="DOCLING_ALLOW_EXTERNAL_PLUGINS")
     
+    # --- HuggingFaceTokenizer for DocumentProcessor ---
+    hugging_face_tokenizer: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", validation_alias="HUGGING_FACE_TOKENIZER")
+
+
     # --- App ---
     app_env: str = Field(default="development", validation_alias="APP_ENV")
     debug: bool = False

@@ -1,12 +1,18 @@
+import os
+import time
+from typing import List, Optional
+import uuid
+
+from fastapi import UploadFile
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.graph.state import CompiledStateGraph
+
+from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem
 from app.core.tools.genome_tool import list_genome_files
 from app.core.tools.post_tool import create_post, get_user_posts
 from app.schemas.agent.agent_request import AgentRequest
 
 class AgentService:
-    # Abstract 
-    def __init__(self, model: ChatGoogleGenerativeAI) -> None:
-        self.model = model
     
     AVAILABLE_TOOLS = {
         "create_post": create_post,
@@ -14,57 +20,81 @@ class AgentService:
         "genome_files": list_genome_files
     }
 
-    def process_query(self, request: AgentRequest):
-        # Currently, only handle the query request
-        response = self.model.invoke(request.query)
+    async def process_langgraph_chat(
+        self, query: str, file: Optional[UploadFile], graph: CompiledStateGraph
+    ) -> AgentResponse:
+        """Handles file saving, graph execution, and source consolidation."""
+        start_time = time.time()
+        uploaded_files_meta = []
 
-        final_answer = ""
-        tool_executions = []
+        # 1. Handle File Upload
+        if file:
+            temp_dir = "/tmp/sugarcane"
+            os.makedirs(temp_dir, exist_ok=True)
 
-        if response.tool_calls:
-            for tool_call in response.tool_calls:
-                tool_name = tool_call["name"]
-                tool_args = tool_call["args"]
-
-                if tool_name in self.AVAILABLE_TOOLS:
-                    tool_instance = self.AVAILABLE_TOOLS[tool_name]
-                    try:
-                        print(f"Executing tool: {tool_name} with args: {tool_args}")
-
-                        result_data = tool_instance.invoke(tool_args)
-
-                        tool_executions.append({
-                            "tool_name": tool_name,
-                            "arguments": tool_args,
-                            "result": result_data
-                        })
-                    except Exception as e:
-                        tool_executions.append({
-                            "tool_name": tool_name,
-                            "arguments": tool_args,
-                            "result": str(e)
-                        })
+            file_id = str(uuid.uuid4())
+            safe_filename = f"{file_id}_{file.filename}"
+            temp_file_path = os.path.join(temp_dir, safe_filename)
             
-            final_answer = "Invoke related tool successfully."
-        else:
-            # Xử lý an toàn cho content của Gemini
-            if isinstance(response.content, str):
-                final_answer = response.content
-            elif isinstance(response.content, list):
-                # Nếu là mảng, lọc lấy nội dung 'text' từ các dictionary bên trong
-                text_blocks = [
-                    block.get("text", "") 
-                    for block in response.content 
-                    if isinstance(block, dict) and "text" in block
-                ]
-                final_answer = "\n".join(text_blocks)
-            else:
-                # Fallback an toàn cho các kiểu dữ liệu dị biệt khác
-                final_answer = str(response.content)
+            content = await file.read()
+            with open(temp_file_path, "wb") as f:
+                f.write(content)
+            
+            filename = file.filename or ""
+            extension = f".{filename.split('.')[-1]}".lower()
+            
+            uploaded_files_meta.append({
+                "file_id": file_id,
+                "file_name": file.filename,
+                "file_path": temp_file_path,
+                "file_type": extension.strip("."), 
+                "description": "User uploaded file for context."
+            })
 
-        return {
-            "answer": final_answer,
-            "tool_executions": tool_executions
+        # 2. Initial AgentState
+        initial_state = {
+            "query": query,
+            "messages": [], 
+            "uploaded_files": uploaded_files_meta, 
+            "iteration_count": 0,
+            "max_iterations": 3 
         }
 
+        # 3. Execute Graph
+        final_state = await graph.ainvoke(initial_state)
+
+        # 4. Consolidate Sources
+        raw_sources = final_state.get("sources_used", [])
+        consolidated_sources = self._consolidate_sources(raw_sources)
+
+        process_time = time.time() - start_time
+
+        # 5. Build and Return Response
+        return AgentResponse(
+            answer=final_state.get("final_answer", "No answer generated."),
+            rag_sources=consolidated_sources, 
+            tool_executions=final_state.get("tool_results", []),
+            execution_time=process_time
+        )
+
+    def _consolidate_sources(self, raw_sources: list) -> List[RAGSourceItem]:
+        """Groups raw chunks by source_file to return a clean summary."""
+        unique_sources = {}
+        
+        for source in raw_sources:
+            file_name = source.get("source_file", "Unknown")
+            score = source.get("score", 0.0)
+            
+            if file_name not in unique_sources:
+                unique_sources[file_name] = RAGSourceItem(
+                    source_file=file_name,
+                    chunks_used=1,
+                    highest_score=score
+                )
+            else:
+                unique_sources[file_name].chunks_used += 1
+                current_max = unique_sources[file_name].highest_score or 0.0
+                unique_sources[file_name].highest_score = max(current_max, score)
+                
+        return list(unique_sources.values())
 
