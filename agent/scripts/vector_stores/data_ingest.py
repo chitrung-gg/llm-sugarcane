@@ -21,7 +21,6 @@ from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 from app.core.vector_store.vector_store import VectorStore 
 from app.utils.document_processor import DocumentProcessor
 from app.utils.document.markdown_document_splitter import MarkdownDocumentSplitter
-from app.utils.document.pdf_document_splitter import PDFDocumentSplitter
 
 def ingest_folder(folder_path: str):
     target_dir = Path(folder_path)

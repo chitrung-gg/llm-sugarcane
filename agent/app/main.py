@@ -19,7 +19,6 @@ async def lifespan(app: FastAPI):
     get_container().initialize()
     yield
     # teardown if needed (e.g. close DB connections)
-    # print("🛑 Shutting down...")
 
 app = FastAPI(
     title="Sugarcane Genome Agent",
