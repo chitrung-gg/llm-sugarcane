@@ -16,7 +16,7 @@ from langchain_qdrant import QdrantVectorStore
 
 from app.core.graph.state.agent_state import AgentState, RAGResult
 
-after_rag_node = Literal["web_search", "synthesizer"]
+after_rag_node = Literal["synthesizer"]
 RELEVANCE_SCORE = 0.90
 
 def make_rag_node(vector_store: QdrantVectorStore):
@@ -122,10 +122,12 @@ def make_rag_node(vector_store: QdrantVectorStore):
         preview_state = cast(AgentState, {**state, **updates})
         
         # Get the destination using your separated logic class!
-        destination = check_rag_fallback(preview_state)
+        # Dont need this as `synthesizer` node can execute parallel `web_search`
+        # If not enough information, then it will call again
+        # destination = check_rag_fallback(preview_state)
 
         return Command(
-            goto=destination,
+            goto="synthesizer",
             update=updates
         )
 

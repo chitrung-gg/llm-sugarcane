@@ -30,6 +30,9 @@ def make_synthesizer_node(llm_service: LLMService):
         max_iterations = state.get("max_iterations", 3)
         query = state["query"]
 
+        # Detect if this is the final allowed loop
+        is_final_attempt = (current_iteration + 1) >= max_iterations
+
         # Extract the uploaded file text from the messages
         file_context = ""
         for msg in state.get("messages", []):
@@ -56,9 +59,19 @@ def make_synthesizer_node(llm_service: LLMService):
             {tool_context if tool_context else "No tool data found."}
         """
 
+        # Dynamically add instructions if the agent is about to give up
+        final_warning = ""
+        if is_final_attempt:
+            final_warning = """
+            ⚠️ CRITICAL INSTRUCTION: This is your final attempt to answer. If you still do not have the complete information, you MUST:
+            1. Provide whatever partial answer you can in the 'answer' field.
+            2. At the end of the 'answer' field, add a clear note stating exactly what information you could not find.
+            3. Suggest alternative search queries, specific tools, or ask the user to upload a relevant document (like a specific research paper) to help you answer it.
+        """
+        
+            
         prompt = f"""
             You are an expert Bioinformatics Assistant. Use the provided context to answer the user's query.
-            
             User Query: {query}
             
             Context:
@@ -68,6 +81,7 @@ def make_synthesizer_node(llm_service: LLMService):
             - Synthesize the information from all available contexts.
             - If you can fully answer the query, set 'is_complete' to True.
             - If you cannot fully answer the query because information is missing from the context, answer what you can, set 'is_complete' to False, and state exactly what is missing in the 'missing_info' field.
+            {final_warning} 
         """
 
         llm = llm_service.get_model().with_structured_output(SynthesizerOutput)
