@@ -1,13 +1,17 @@
 import time
+from typing import Literal
 from loguru import logger
 from langchain_community.utilities.searx_search import SearxSearchWrapper
+from langgraph.types import Command
 
 from app.core.graph.state.agent_state import AgentState, WebResult
+
+after_web_search_node = Literal["synthesizer"]
 
 def make_web_search_node(searx_wrapper: SearxSearchWrapper):
     """Factory to create the web search node with injected dependency."""
 
-    async def web_search(state: AgentState) -> dict:
+    async def web_search(state: AgentState) -> Command[after_web_search_node]:
         logger.debug("--- 🌐 TRIGGERING SEARXNG WEB SEARCH ---")
 
         query = state["query"]
@@ -30,7 +34,7 @@ def make_web_search_node(searx_wrapper: SearxSearchWrapper):
                 new_web_results.append(web_item)
                 
         except Exception as e:
-            logger.error(f"SearXNG search failed: {e}")
+            logger.error("SearXNG search failed: {error}", error=str(e))
             # Inject an error result so the Synthesizer knows the search failed
             new_web_results.append(
                 WebResult(
@@ -43,11 +47,15 @@ def make_web_search_node(searx_wrapper: SearxSearchWrapper):
             )
         
         execution_time = int((time.time() - start_time) * 1000)
-        logger.debug(f"[Web Search] ✅ Completed in {execution_time} ms | Found {len(new_web_results)} items")
+        logger.debug(
+            "[Web Search] ✅ Completed in {execution_time} ms | Found {count} items", 
+            execution_time=execution_time, count=len(new_web_results)
+        )
 
         # Because web_results uses operator.add, returning a list appends it to state
-        return {
-            "web_results": new_web_results
-        }
+        return Command(
+            goto="synthesizer",
+            update={"web_results": new_web_results}
+        )
     
     return web_search

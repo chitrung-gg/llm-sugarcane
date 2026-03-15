@@ -1,12 +1,19 @@
 import time
+from typing import Literal, cast
+from langgraph.graph import END
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.graph.routing.check_if_resolved import check_if_resolved
 from app.core.graph.state.agent_state import AgentState
 from app.core.graph.workflow.agent_workflow import SynthesizerDecision
 from app.services.llm.llm_service import LLMService
 
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
+from langgraph.types import Command
+
+# after_synthesizer_node to go to after completed this step
+after_synthesizer_node = Literal["router", "__end__"]
 
 # Define how the LLM should output its answer
 class SynthesizerOutput(BaseModel):
@@ -16,10 +23,11 @@ class SynthesizerOutput(BaseModel):
     
 def make_synthesizer_node(llm_service: LLMService):
 
-    async def synthesizer(state: AgentState) -> dict:
+    async def synthesizer(state: AgentState) -> Command[after_synthesizer_node]:
         logger.debug("[Synthesizer] ✍️ Generating final response")
         
         current_iteration = state.get("iteration_count", 0)
+        max_iterations = state.get("max_iterations", 3)
         query = state["query"]
 
         # Extract the uploaded file text from the messages
@@ -68,31 +76,46 @@ def make_synthesizer_node(llm_service: LLMService):
             raw_result = await llm.ainvoke(prompt)
             result = SynthesizerOutput.model_validate(raw_result)
         except Exception as e:
-            logger.error(f"[Synthesizer] LLM Generation failed: {e}")
-            return {
+            logger.error("[Synthesizer] LLM Generation failed: {error}", error=str(e))
+            # Force END on fatal errors to avoid loops
+            updates = {
                 "final_answer": "I apologize, but I encountered an error while synthesizing the information.",
-                "is_complete": True, # Force complete on fatal error to avoid infinite loops
+                "is_complete": True, 
                 "iteration_count": current_iteration + 1
             }
+            return Command(
+                goto="__end__",         # langgraph.graph.END equals to __end__ 
+                update=updates
+            )
 
-        logger.debug(f"[Synthesizer] Complete? {result.is_complete} | Missing: {result.missing_info}")
+        logger.debug(
+            "[Synthesizer] Complete? {is_complete} | Missing: {missing}", 
+            is_complete=result.is_complete, missing=result.missing_info
+        )
         
-        # 4. Prepare State Updates
+        # Prepare State Updates
         updates = {
             "final_answer": result.answer,
             "is_complete": result.is_complete,
             "iteration_count": current_iteration + 1 # Increment loop counter!
         }
 
-        # 5. The Breadcrumb Logic - Communicate with the Router!
+        # Evaluator-optimizer pattern
         if not result.is_complete:
-            logger.warning(f"[Synthesizer] Missing info: '{result.missing_info}'. Triggering loop back to Router.")
             feedback_msg = AIMessage(
                 content=f"Internal Note: I partially answered the user, but I am still missing: {result.missing_info}. "
-                        f"Please route to a different tool (like web_search or tool_execution) to find this missing information."
+                        f"Please route to a different tool to find this missing information."
             )
             updates["messages"] = [feedback_msg]
-            
-        return updates
+        
+        preview_state = cast(AgentState, {**state, **updates})
+        
+        destination = check_if_resolved(preview_state)
+
+        return Command(
+            goto=destination,
+            update=updates
+        )
+
 
     return synthesizer

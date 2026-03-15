@@ -1,9 +1,13 @@
+from typing import Literal
+
 from loguru import logger
+from langgraph.types import Command
 
 from app.core.graph.state.agent_state import AgentState
 
 
-def check_rag_fallback(state: AgentState) -> str:
+after_rag_fallback_node = Literal["web_search", "synthesizer"]
+def check_rag_fallback(state: AgentState) -> after_rag_fallback_node:
     """
     Checks if RAG returned useful documents. 
     If not, routes to web search. Otherwise, proceeds to synthesizer.

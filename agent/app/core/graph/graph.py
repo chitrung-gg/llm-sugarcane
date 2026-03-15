@@ -16,7 +16,6 @@ from app.core.graph.nodes.router_node import make_router_node
 from app.core.graph.nodes.synthesizer_node import make_synthesizer_node
 from app.core.graph.nodes.tools_node import tools
 from app.core.graph.routing.check_if_resolved import check_if_resolved
-from app.core.graph.routing.route_action import route_action
 from app.core.graph.state.agent_state import AgentState
 
 
@@ -58,44 +57,44 @@ def build_agent_graph(
 
     # Define flows
     workflow.add_edge(START, "input_analyzer")
-    workflow.add_edge("input_analyzer", "router")
+    # workflow.add_edge("input_analyzer", "router")
 
     # Conditional Routing
-    workflow.add_conditional_edges(
-        "router",
-        route_action,
-        {
-            # Name returned by route_action : Name of next node to visit 
-            "rag_execution": "rag_execution",
-            "tool_execution": "tool_execution",
-            "web_search": "web_search",
-            "synthesizer": "synthesizer"
-        }
-    )
+    # workflow.add_conditional_edges(
+    #     "router",
+    #     route_action,
+    #     {
+    #         # Name returned by route_action : Name of next node to visit 
+    #         "rag_execution": "rag_execution",
+    #         "tool_execution": "tool_execution",
+    #         "web_search": "web_search",
+    #         "synthesizer": "synthesizer"
+    #     }
+    # )
 
-    workflow.add_conditional_edges(
-        "rag_execution",
-        check_rag_fallback,
-        {
-            # Name returned by route_action : Name of next node to visit
-            "web_search": "web_search",
-            "synthesizer": "synthesizer"
-        }
-    )
+    # workflow.add_conditional_edges(
+    #     "rag_execution",
+    #     check_rag_fallback,
+    #     {
+    #         # Name returned by route_action : Name of next node to visit
+    #         "web_search": "web_search",
+    #         "synthesizer": "synthesizer"
+    #     }
+    # )
 
     # Merge results
-    workflow.add_edge("tool_execution", "synthesizer")
-    workflow.add_edge("web_search", "synthesizer")
+    # workflow.add_edge("tool_execution", "synthesizer")
+    # workflow.add_edge("web_search", "synthesizer")
 
     # Check if answer appropriate
-    workflow.add_conditional_edges(
-        "synthesizer",
-        check_if_resolved,
-        {
-            END: END,
-            "router": "router"
-        }
-    )
+    # workflow.add_conditional_edges(
+    #     "synthesizer",
+    #     check_if_resolved,
+    #     {
+    #         END: END,
+    #         "router": "router"
+    #     }
+    # )
 
     graph = workflow.compile()
     logger.debug(graph.get_graph().draw_ascii())

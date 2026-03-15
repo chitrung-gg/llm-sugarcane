@@ -1,16 +1,18 @@
 import time
+from typing import Literal, Union
 from loguru import logger
 
-from app.core.graph.routing.route_action import RouteDecision
+from app.core.graph.routing.route_action import RouteDecision, get_routing_destinations
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 
 from langchain_core.messages import SystemMessage, HumanMessage
+from langgraph.types import Command
 
+after_router_node = Literal["rag_execution", "tool_execution", "web_search", "synthesizer"]
 
 def make_router_node(llm_service: LLMService):
-
-    async def router(state: AgentState) -> dict:
+    async def router(state: AgentState) -> Command[after_router_node]:
         logger.debug("[Router] 🧭 Starting intent analysis")
 
         start_time = time.time()
@@ -59,6 +61,8 @@ def make_router_node(llm_service: LLMService):
         except Exception as e:
             logger.exception("[Router] ❌ LLM routing failed")
             raise
+        
+        destinations = get_routing_destinations(decision.intent)
 
         elapsed = int((time.time() - start_time) * 1000)
 
@@ -69,9 +73,11 @@ def make_router_node(llm_service: LLMService):
             f"latency={elapsed}ms"
         )
 
-        return {
-            "intent": decision.intent,
-            "required_tools": decision.required_tools,
-        }
+        return Command(
+            goto=destinations,
+            update={
+                "required_tools": decision.required_tools
+            }
+        )
 
     return router

@@ -19,7 +19,8 @@ from app.utils.document.document_splitter_registry import DocumentSplitterRegist
 
 @DocumentSplitterRegistry.register(
     ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", 
-    ".html", ".epub", ".msg", ".eml", ".rtf", ".odt"
+    ".html", ".epub", ".msg", ".eml", ".rtf", ".odt", ".md", 
+    ".tex"
 )
 class DoclingGenericSplitter(AbstractDocumentSplitter):
 
