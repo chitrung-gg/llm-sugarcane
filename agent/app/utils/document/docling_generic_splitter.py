@@ -33,7 +33,7 @@ class DoclingGenericSplitter(AbstractDocumentSplitter):
         pipeline_options = PdfPipelineOptions()
         pipeline_options.allow_external_plugins = True
         # Disable OCR if needed to speed things up
-        # pipeline_options.do_ocr = False 
+        pipeline_options.do_ocr = False 
 
         # Build the converter
         doc_converter = DocumentConverter(

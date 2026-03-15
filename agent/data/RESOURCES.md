@@ -1,1 +1,0 @@
-Cosmic Princess Kaguya: rate: 9.99
