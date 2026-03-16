@@ -17,8 +17,8 @@ class Settings(BaseSettings):
 
     # --- Gemini ---
     google_api_key: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
-    gemini_llm_model: str = "gemini-3-flash-preview"
-    gemini_embedding_model: str = "gemini-embedding-001"
+    gemini_llm_model: str = "gemini-3-flash-preview"   # gemini-2.5-flash
+    gemini_embedding_model: str = "gemini-embedding-2-preview"  # gemini-embedding-001
     gemini_max_input_token: int = 200000
 
     # --- Qdrant ---

@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Any, Dict, List
 from langchain_google_genai import ChatGoogleGenerativeAI
+from loguru import logger
 from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 from langchain_core.language_models import BaseChatModel
@@ -14,6 +15,8 @@ class LLMService(BaseModel):
     No over-engineering, just clean configuration for LangGraph.
     """
 
+    _primary_llm: Any = PrivateAttr()
+    
     def model_post_init(self, _context: Any):
         settings = get_settings()
         api_key = settings.google_api_key.get_secret_value() if settings.google_api_key else None
@@ -28,7 +31,7 @@ class LLMService(BaseModel):
             max_retries=settings.llm_max_retries, 
         )
         
-        print(f"LLMService ready: {settings.gemini_llm_model}")
+        logger.info(f"LLMService ready: {settings.gemini_llm_model}")
 
     def get_model(self) -> BaseChatModel:
         return self._primary_llm

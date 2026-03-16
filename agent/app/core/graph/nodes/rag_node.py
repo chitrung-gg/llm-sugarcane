@@ -48,12 +48,12 @@ def make_rag_node(vector_store: QdrantVectorStore):
             )
 
             # Filter out irrelevant docs
-            if score < settings.rag_score_threshold:
-                logger.warning(
-                    "[RAG] 🚫 Dropping Doc {idx} - Score {score} is below threshold {threshold}",
-                    idx=idx, score=score, threshold=settings.rag_score_threshold
-                )
-                continue
+            # if score < settings.rag_score_threshold:
+            #     logger.warning(
+            #         "[RAG] 🚫 Dropping Doc {idx} - Score {score} is below threshold {threshold}",
+            #         idx=idx, score=score, threshold=settings.rag_score_threshold
+            #     )
+            #     continue
 
             # Package into custom schema
             rag_item = RAGResult(

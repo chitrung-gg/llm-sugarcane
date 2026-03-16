@@ -7,6 +7,7 @@ import uuid
 
 from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from loguru import logger
 from transformers import AutoTokenizer
 
 
@@ -20,7 +21,7 @@ env_path = project_root / ".env"
 if env_path.exists():
     load_dotenv(dotenv_path=env_path)
 else:
-    print("Cannot find .env, please recheck file location")
+    logger.info("Cannot find .env, please recheck file location")
 
 from app.utils.document.document_splitter_registry import DocumentSplitterRegistry
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
@@ -64,43 +65,63 @@ def process_single_file(file_path, processor, fallback_splitter, vector_store):
 
         chunks_inserted = 0
         if safe_chunks:
-            inserted_ids = vector_store.add_documents(documents=safe_chunks, ids=safe_ids)
-            chunks_inserted = len(inserted_ids) if inserted_ids else 0
-            
+            # Micro batching to overcome Gemini Limits
+            BATCH_SIZE = 16  # How many chunks to send at once
+            SLEEP_TIME = 10  # Seconds to pause between batches
+
+            for i in range(0, len(safe_chunks), BATCH_SIZE):
+                batch_chunks = safe_chunks[i : i + BATCH_SIZE]
+                batch_ids = safe_ids[i : i + BATCH_SIZE]
+                
+                logger.info(f"  -> Sending chunks {i} to {i + len(batch_chunks)} out of {len(safe_chunks)}...")
+                
+                # Send just this small batch to Qdrant/Gemini
+                inserted_ids = vector_store.add_documents(documents=batch_chunks, ids=batch_ids)
+                chunks_inserted += len(inserted_ids) if inserted_ids else 0
+                
+                # If there are more chunks left, sleep to cool down the API quota
+                if i + BATCH_SIZE < len(safe_chunks):
+                    logger.info(f"  -> ⏳ Sleeping {SLEEP_TIME}s to respect Gemini Free Tier limits...")
+                    time.sleep(SLEEP_TIME)
+            # ==========================================
+
         # Explicitly delete massive variables from memory
         del raw_chunks
         del safe_chunks
         del safe_ids
+        
         # Force Python to hand the memory back to the OS immediately
         gc.collect() 
 
         return chunks_inserted
     except Exception as e:
-        print(f"❌ Fail on {file_path.name}: {str(e)}")
+        logger.info(f"❌ Fail on {file_path.name}: {str(e)}")
         return -1 # Indicate failure
-
-
     
 
 def ingest_folder(folder_path: str):
     target_dir = Path(folder_path)
     
     if not target_dir.exists() or not target_dir.is_dir():
-        print(f"Folder '{folder_path}' doesn't exist!")
+        logger.info(f"Folder '{folder_path}' doesn't exist!")
         return
     
-    print("Registering file type to process.")
-    # DocumentSplitterRegistry.register(".pdf", PDFDocumentSplitter(chunk_size=1500, chunk_overlap=300))
+    logger.info("Registering file type to process.")
+    # DocumentSplitterRegistry.register(".pdf", PDFDocumentSplitter(chunk_size=6000, chunk_overlap=300))
     # DocumentSplitterRegistry.register(".md", MarkdownDocumentSplitter())
 
-    print(f"Scanning folder: {target_dir.absolute()}")
+    logger.info(f"Scanning folder: {target_dir.absolute()}")
 
-    print("Initializing Qdrant (Hybrid Search) and Gemini Embeddings...")
+    logger.info("Initializing Qdrant (Hybrid Search) and Gemini Embeddings...")
     
-    gemini_model = GeminiEmbeddingModel()
+    gemini_embedding = GeminiEmbeddingModel()
+    # local_embedding = HuggingFaceEmbeddings(
+    #     model_name="sentence-transformers/all-MiniLM-L6-v2"
+    # )
     qdrant_config = VectorStore(
         collection_name="sugarcane_docs", 
-        dense_embedding=gemini_model
+        dense_embedding=gemini_embedding
+        # dense_embedding=local_embedding
     )
     
     # Get object QdrantVectorStore from Langchain
@@ -124,12 +145,32 @@ def ingest_folder(folder_path: str):
     
     # Append all files
     all_files = pdf_files + md_files + html_files
+    logger.info(f"Found {len(pdf_files)} PDF(s) and {len(md_files)} Markdown(s) and {len(html_files)} HTML(s). \n")
     
     if not all_files:
-        print("Cannot find any files appropriate for tools.")
+        logger.info("Cannot find any files appropriate for tools.")
+        return
+    
+    # Filter out already processed files
+    ledger_path = Path(__file__).resolve().parent / ".processed_files.txt"
+    processed_files = set()
+    
+    if ledger_path.exists():
+        with open(ledger_path, "r") as f:
+            processed_files = set(line.strip() for line in f)
+
+    # Filter out files we've already done
+    files_to_process = [f for f in all_files if f.name not in processed_files]
+
+    if not files_to_process:
+        logger.info("✅ All files are already in the vector store! Nothing new to ingest.")
         return
 
-    print(f"Found {len(pdf_files)} PDF(s) and {len(md_files)} Markdown(s) and {len(html_files)} HTML(s). \n")
+    skipped_count = len(all_files) - len(files_to_process)
+    if skipped_count > 0:
+        logger.info(f"⏭️ Skipped {skipped_count} files that were already ingested.")
+        
+    logger.info(f"🚀 Found {len(files_to_process)} NEW files to ingest. \n")
 
     # Start processing
     total_chunks = 0
@@ -139,7 +180,7 @@ def ingest_folder(folder_path: str):
         # Submit all jobs to the thread pool
         future_to_file = {
             executor.submit(process_single_file, fp, processor, fallback_splitter, qdrant_hybrid_store): fp 
-            for fp in all_files
+            for fp in files_to_process
         }
 
         # Process results as they finish
@@ -150,18 +191,19 @@ def ingest_folder(folder_path: str):
                 if chunks_inserted >= 0:
                     success_count += 1
                     total_chunks += chunks_inserted
-                    print(f"✅ [{success_count}/{len(all_files)}] Finished {file_path.name}")
+                    logger.info(f"✅ [{success_count}/{len(files_to_process)}] Finished {file_path.name}")
                     
-                    # 2. Force the script to sleep for 15 seconds to respect the rate limit
-                    print("Waiting 15 seconds to respect Gemini API limits...")
-                    time.sleep(15) 
+                    with open(ledger_path, "a") as f:
+                        f.write(f"{file_path.name}\n")
+
+                    # Force the script to sleep for 60 seconds to respect the rate limit
                     
             except Exception as exc:
-                print(f"❌ {file_path.name} generated an exception: {exc}")
+                logger.info(f"❌ {file_path.name} generated an exception: {exc}")
 
-    print("\n" + "="*50)
-    print(f"Processing done! Success: {success_count}/{len(all_files)} files. Total Chunks: {total_chunks}")
-    print("="*50)
+    logger.info("\n" + "="*50)
+    logger.info(f"Processing done! Success: {success_count}/{len(files_to_process)} files. Total Chunks: {total_chunks}")
+    logger.info("="*50)
 
     
 if __name__ == "__main__":
