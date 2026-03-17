@@ -4,6 +4,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from langgraph.types import Command
+from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.graph.state.agent_state import AgentState
 
 
@@ -31,6 +32,7 @@ class RouteDecision(BaseModel):
         description="Determine the routing intent based on the user query. "
                     "Use 'web_search' for fetching the latest news, external databases, or information not found in vector stores."
     )
-    required_tools: List[str] = Field(
+    required_tools: List[ToolCallRequest] = Field(
+        default_factory=List,
         description="List of required tool names (e.g., ['blast', 'synteny']). Leave empty if no tools are needed."
     )

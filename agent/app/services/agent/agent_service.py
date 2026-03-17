@@ -9,17 +9,9 @@ from langgraph.graph.state import CompiledStateGraph
 
 from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem
 from app.core.tools.genome_tool import list_genome_files
-from app.core.tools.post_tool import create_post, get_user_posts
 from app.schemas.agent.agent_request import AgentRequest
 
 class AgentService:
-    
-    AVAILABLE_TOOLS = {
-        "create_post": create_post,
-        "get_user_posts": get_user_posts,
-        "genome_files": list_genome_files
-    }
-
     async def process_langgraph_chat(
         self, query: str, file: Optional[UploadFile], graph: CompiledStateGraph
     ) -> AgentResponse:

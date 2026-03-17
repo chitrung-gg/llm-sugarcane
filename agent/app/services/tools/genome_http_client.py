@@ -1,27 +1,31 @@
-import os
+import httpx
+from loguru import logger
 
-GENOME_BACKEND_API_URL = os.getenv("GENOME_BACKEND_API_URL", "http://localhost:8080/api/v1")
-# Nếu backend yêu cầu API Key
-BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "") 
+from app.configs.settings.settings import get_settings
 
-# Tùy chọn: Hàm helper để gọi API giúp code gọn hơn
-import requests
 
-def call_backend(method: str, endpoint: str, params=None, json=None) -> dict:
-    url = f"{GENOME_BACKEND_API_URL}{endpoint}"
-    headers = {"Authorization": f"Bearer {BACKEND_API_KEY}"} if BACKEND_API_KEY else {}
-    
+TIMEOUT = 120
+async def call_backend(method: str, endpoint: str, params=None, json_data=None) -> dict:
+    settings = get_settings()
+
+    # Grab URL
+    base_url = getattr(settings, "genome_backend_api_url", "http://localhost:8000").rstrip("/")
+    endpoint = endpoint if endpoint.startswith("/") else f"/{endpoint}"
+    url = f"{base_url}{endpoint}"
+
     try:
-        response = requests.request(
-            method=method, 
-            url=url, 
-            params=params, 
-            json=json, 
-            headers=headers,
-            timeout=30 # Quan trọng cho các tác vụ gen nặng (BLAST/Synteny)
-        )
-        response.raise_for_status() # Quăng lỗi nếu API trả về 4xx, 5xx
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        # Bắt lỗi và trả về dạng dictionary để LLM biết tool bị lỗi thay vì làm sập cả Agent
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.request(
+                method=method,
+                url=url,
+                params=params,
+                json=json_data
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP Error {e.response.status_code} for {url}: {e.response.text}")
+        return {"error": str(e), "details": e.response.text, "status": "failed"}
+    except Exception as e:
+        logger.error(f"Backend API Call Failed: {url} - {str(e)}")
         return {"error": str(e), "status": "failed"}

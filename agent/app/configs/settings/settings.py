@@ -50,7 +50,9 @@ class Settings(BaseSettings):
     # --- HuggingFaceTokenizer for DocumentProcessor ---
     hugging_face_tokenizer: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", validation_alias="HUGGING_FACE_TOKENIZER")
 
-
+    # --- Tool ---
+    genome_backend_api_url: str = Field(default="http://192.168.198.101:8000", validation_alias="GENOME_BACKEND_API_URL")
+    
     # --- App ---
     app_env: str = Field(default="development", validation_alias="APP_ENV")
     debug: bool = False

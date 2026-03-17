@@ -2,6 +2,7 @@ import time
 from typing import Literal, Union
 from loguru import logger
 
+from app.core.graph.nodes.tools_node import AVAILABLE_TOOLS
 from app.core.graph.routing.route_action import RouteDecision, get_routing_destinations
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
@@ -23,7 +24,9 @@ def make_router_node(llm_service: LLMService):
         llm = llm_service.get_model()
         router_llm = llm.with_structured_output(RouteDecision)
 
-        system_instructions = """
+        tool_list_str = "\n".join([f"- {name}: {tool.description}" for name, tool in AVAILABLE_TOOLS.items()])
+        
+        system_instructions = f"""
             You are an expert routing assistant for a Sugarcane Genomics system.
             Your job is to analyze the user's query and route it to the correct execution path.
 
@@ -34,6 +37,11 @@ def make_router_node(llm_service: LLMService):
             - Choose 'rag_only': ONLY if the query explicitly targets our internal database.
             - Choose 'tool_only': For executing bioinformatic tools (BLAST/Synteny).
             - Choose 'unclear': For simple greetings.
+
+            AVAILABLE BIOINFORMATICS TOOLS:
+            {tool_list_str}
+            
+            CRITICAL: If you decide tools are required, you MUST use the exact tool names listed above. Do not guess or invent tool names.
         """
         
         user_input = f"User Query: {query}"
