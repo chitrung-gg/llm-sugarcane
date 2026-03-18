@@ -120,7 +120,13 @@ def make_synthesizer_node(llm_service: LLMService):
                 content=f"Internal Note: I partially answered the user, but I am still missing: {result.missing_info}. "
                         f"Please route to a different tool to find this missing information."
             )
+
+            # Memory Persistence
             updates["messages"] = [feedback_msg]
+        else:
+            final_msg = AIMessage(content=result.answer)
+            updates["messages"] = [final_msg]
+
         
         preview_state = cast(AgentState, {**state, **updates})
         

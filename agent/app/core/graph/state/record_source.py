@@ -1,5 +1,6 @@
 from typing import Literal, TypedDict
 
+from langchain.agents import AgentState
 
 class RecordSource(TypedDict):
     """Tracks where a piece of information came from for debugging and citation."""

@@ -80,7 +80,7 @@ def make_rag_node(vector_store: QdrantVectorStore):
             # Using BM25 plus variant
             bm25_retriever = BM25Retriever.from_documents(
                 ephemeral_chunks,
-                k=settings.retriever_top_k,
+                k=settings.inmemory_retriever_top_k,
                 bm25_variant="plus",
             )
 

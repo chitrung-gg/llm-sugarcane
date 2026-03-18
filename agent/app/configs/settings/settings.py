@@ -33,7 +33,13 @@ class Settings(BaseSettings):
     rag_score_threshold: float = 0.70
 
     # --- InMemory Store ---
-    retriever_top_k: int = 3
+    inmemory_retriever_top_k: int = 3
+
+    # --- LangGraph's Postgres Checkpointer ---
+    langgraph_postgres_url: str = Field(
+        default="postgresql+asyncpg://langgraph:langgraph@localhost:5432/sugarcane",
+        validation_alias="LANGGRAPH_POSTGRES_URL"
+    )
 
     # --- SearxNG ---
     searx_host: SecretStr | None = Field(default=None, validation_alias="SEARXNG_HOST")  

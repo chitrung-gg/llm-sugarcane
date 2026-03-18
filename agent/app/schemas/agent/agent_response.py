@@ -1,4 +1,5 @@
 from typing import List, Optional
+import uuid
 from pydantic import BaseModel, Field
 
 class RAGSourceItem(BaseModel):
@@ -16,6 +17,7 @@ class ToolExecutionItem(BaseModel):
 
 class AgentResponse(BaseModel):
     """Main response schema for the Agent API."""
+    thread_id: uuid.UUID
     answer: str
     rag_sources: List[RAGSourceItem] = Field(default_factory=list)
     tool_executions: List[ToolExecutionItem] = Field(default_factory=list)

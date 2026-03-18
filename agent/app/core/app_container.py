@@ -3,6 +3,7 @@ from functools import lru_cache
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.graph.state import CompiledStateGraph
+from loguru import logger
 
 from app.core.graph.graph import build_agent_graph
 from app.configs.settings.settings import get_settings
@@ -24,25 +25,25 @@ class AppContainer:
         self._searx_wrapper: SearxSearchWrapper | None = None
         self._agent_graph: CompiledStateGraph | None = None
 
-    def initialize(self):
-        print(" Initializing app container...")
-        self._init_llm_service() 
-        self._init_embedding_model()
-        self._init_vector_store()
-        self._init_document_processor()
-        self._init_searx_wrapper()
-        self._init_agent_graph()
-        print(" App container ready.")
+    async def initialize(self):
+        logger.info(" Initializing app container...")
+        await self._init_llm_service() 
+        await self._init_embedding_model()
+        await self._init_vector_store()
+        await self._init_document_processor()
+        await self._init_searx_wrapper()
+        await self._init_agent_graph()
+        logger.info(" App container ready.")
 
-    def _init_llm_service(self):
+    async def _init_llm_service(self):
         """Initialize LLM models with fallback chain."""
         self._llm_service = LLMService()
 
-    def _init_embedding_model(self):
+    async def _init_embedding_model(self):
         """Initialize Gemini embedding model."""
         self._embedding_model = GeminiEmbeddingModel()
 
-    def _init_vector_store(self):
+    async def _init_vector_store(self):
         """Initialize Qdrant using your Custom VectorStore Wrapper."""
         settings = get_settings()
 
@@ -58,7 +59,7 @@ class AppContainer:
         
         self._vector_store = qdrant_config.get_vector_store()
 
-    def _init_searx_wrapper(self):
+    async def _init_searx_wrapper(self):
         """Initialize SearXNG Wrapper."""
         settings = get_settings()
 
@@ -69,15 +70,15 @@ class AppContainer:
             searx_host=settings.searx_host.get_secret_value()
         )
 
-    def _init_document_processor(self):
+    async def _init_document_processor(self):
         """Initialize DocumentProcessor with the shared vector store."""
         self._document_processor = DocumentProcessor(
             vector_store=self.vector_store,
         )
 
-    def _init_agent_graph(self):
+    async def _init_agent_graph(self):
         """Builds the LangGraph once during startup."""
-        self._agent_graph = build_agent_graph(
+        self._agent_graph = await build_agent_graph(
             llm_service=self.llm_service,
             vector_store=self.vector_store,
             searx_wrapper=self.searx_search,

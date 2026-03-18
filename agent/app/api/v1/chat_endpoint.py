@@ -19,14 +19,17 @@ router = APIRouter()
 
 @router.post("/agent_langgraph/chat", response_model=AgentResponse)
 async def chat_with_langgraph_agent(
+    thread_id: Optional[uuid.UUID] = Form(None, description="Conversation Thread ID"),
     query: str = Form(..., description="Query"),
     file: Optional[UploadFile] = File(None, description="Optional file for context"),
     graph: CompiledStateGraph = Depends(get_agent_graph),
     agent_service: AgentService = Depends(get_agent_service)
 ):
+    active_thread_id = thread_id or uuid.uuid4()
+
     try:
         # Delegate all business logic to the service
-        return await agent_service.process_langgraph_chat(query, file, graph)
+        return await agent_service.process_langgraph_chat(active_thread_id, query, file, graph)
         
     except Exception as e:
         logger.error(f"Graph Execution Error: {str(e)}")

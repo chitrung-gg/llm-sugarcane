@@ -1,5 +1,6 @@
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy
 from loguru import logger
@@ -17,9 +18,9 @@ from app.core.graph.nodes.synthesizer_node import make_synthesizer_node
 from app.core.graph.nodes.tools_node import tools
 from app.core.graph.routing.check_if_resolved import check_if_resolved
 from app.core.graph.state.agent_state import AgentState
+from app.configs.databases.databases import langgraph_connection_pool
 
-
-def build_agent_graph(
+async def build_agent_graph(
     llm_service: LLMService,
     vector_store: QdrantVectorStore,
     searx_wrapper: SearxSearchWrapper,
@@ -96,6 +97,12 @@ def build_agent_graph(
     #     }
     # )
 
-    graph = workflow.compile()
+    # Utilize Checkpoint to save State
+    checkpointer = AsyncPostgresSaver(langgraph_connection_pool)
+    await checkpointer.setup()
+
+    graph = workflow.compile(
+        checkpointer=checkpointer
+    )
     logger.debug(graph.get_graph().draw_ascii())
     return graph
