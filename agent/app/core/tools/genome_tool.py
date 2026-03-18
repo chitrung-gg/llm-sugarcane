@@ -7,34 +7,36 @@ from app.schemas.tool.genome_tool_schema import BlastInput, GeneListInput, GeneS
 
 @tool
 async def list_genome_files() -> Dict[str, Any]:
-    """List available genome files."""
+    """
+    List all available genome files and their metadata in the database. 
+    CRITICAL: Use this tool FIRST whenever the user asks about a genome, genome files, or needs to run an analysis, because you must find the correct 'genome_id' or 'file_id' from this list to use in subsequent tools.
+    """
     return await call_backend("GET", "/api/genome/files")
 
 @tool
 async def get_region_sequence(file_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
-    """Retrieve genomic sequence for a specific region."""
+    """
+    Retrieve a simplified list of all registered genomes (Name, Genotype, Status, ID).
+    Use this if you just need to quickly look up a genome's basic ID by its name.
+    """
     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
     return await call_backend("GET", "/api/genome/region/sequence", params=params)
 
 @tool
 async def get_region_annotation(file_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
-    """Retrieve gene annotations within a genomic region."""
+    """
+    Retrieve the raw genomic sequence for a specific chromosomal region.
+    Requires 'file_id' (obtainable from list_genome_files), 'chrom' (chromosome name), 'start' position, and 'end' position.
+    """
     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
     return await call_backend("GET", "/api/genome/region/annotation", params=params)
 
-# @tool
-# async def get_all_genomes() -> List[Dict[str, Any]]:
-#     """Retrieve all genomes for dropdown selection."""
-#     data = await call_backend("GET", "/api/genome/list")
-
-#     if not isinstance(data, list):
-#         raise ValueError("Expected list from /api/genome/list")
-    
-#     return data
-
 @tool(args_schema=GeneListInput)
 async def get_genes_list(genome_id: int, page: int = 1, limit: int = 20) -> Dict[str, Any]:
-    """Retrieve paginated gene metadata list."""
+    """
+    Retrieve all gene annotations and features located within a specific chromosomal region.
+    Requires 'file_id' (obtainable from list_genome_files), 'chrom' (chromosome name), 'start', and 'end'.
+    """
     payload = {"genome_id": genome_id, "page": page, "limit": limit}
     return await call_backend("POST", "/api/genome/get-genes", json_data=payload)
 
@@ -49,7 +51,11 @@ async def search_genes_full(
     page: int = 1,
     limit: int = 10,
 ) -> Dict[str, Any]:
-    """Perform advanced gene search."""
+    """
+    Perform an advanced search to find specific genes based on keyword, exact gene ID, or coordinate ranges.
+    Use this tool when the user asks to "find a gene", "search for genes", or look up a gene by its name/locus.
+    Highly recommended to provide 'genome_id' alongside the search criteria.
+    """
     # Drop None values to keep the payload clean
     payload = {
         k: v for k, v in {
@@ -62,19 +68,30 @@ async def search_genes_full(
 
 @tool
 async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
-    """Retrieve detailed information for a gene."""
+    """
+    Retrieve comprehensive details for ONE specific gene, including its chromosome, coordinates, and full sequences (genomic, CDS, protein, flanks).
+    Use this when the user asks for details, properties, or sequences of a specific gene.
+    Requires BOTH 'gene_id' (e.g., Soffi...) and 'genome_id'.
+    """
     params = {"genome_id": genome_id}
     return await call_backend("GET", f"/api/genome/detail/{gene_id}", params=params)
 
 @tool
 async def get_sequence_raw(genome_id: int, gene_id: str, type: str = "genomic") -> Dict[str, Any]:
-    """Retrieve raw sequence for a gene."""
+    """
+    Quickly retrieve ONLY the raw string sequence for a gene.
+    Requires 'genome_id', 'gene_id', and 'type' (must be one of: "genomic", "cds", "protein", "flank").
+    """
     params = {"genome_id": genome_id, "gene_id": gene_id, "type": type}
     return await call_backend("GET", "/api/genome/sequence", params=params)
 
 @tool(args_schema=BlastInput)
 async def run_blast(file_id: int, sequence: str, program: str = "blastn", evalue: float = 1e-5) -> Dict[str, Any]:
-    """Run BLAST alignment."""
+    """
+    Run a BLAST alignment against a specific genome.
+    Use this when the user provides a nucleotide or protein sequence and wants to align it.
+    Requires 'file_id' (the target database) and 'sequence' (the query).
+    """
     payload = {"file_id": file_id, "sequence": sequence, "program": program, "evalue": evalue}
     return await call_backend("POST", "/api/blast/run", json_data=payload)
 
@@ -85,7 +102,10 @@ async def run_synteny_analysis(
     start_b: Optional[int] = None, end_b: Optional[int] = None,
     check_quality: bool = True,
 ) -> Dict[str, Any]:
-    """Perform synteny analysis between two genomes."""
+    """
+    Perform synteny block analysis to compare the structure of two different genomes.
+    Requires BOTH 'genome_a_id' and 'genome_b_id'. Optional coordinates can focus the analysis on specific regions.
+    """
     payload = {
         k: v for k, v in {
             "genome_a_id": genome_a_id, "genome_b_id": genome_b_id,
@@ -97,7 +117,10 @@ async def run_synteny_analysis(
 
 @tool
 async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: Optional[str] = None) -> Dict[str, Any]:
-    """Run CRISPOR gRNA design and off-target analysis."""
+    """
+    Run the CRISPOR tool to design gRNA candidates and analyze off-target effects.
+    Requires 'genome_id'. You must also provide EITHER a 'gene_id' or a raw 'sequence'.
+    """
     # Note: OpenAPI spec says POST, but parameters are 'query' (in)
     params = {k: v for k, v in {"genome_id": genome_id, "gene_id": gene_id, "sequence": sequence}.items() if v is not None}
     return await call_backend("POST", "/api/crispor", params=params)
@@ -110,7 +133,10 @@ async def design_polyploid_primer(
     primer_opt_tm: float = 60, primer_min_tm: float = 52, primer_max_tm: float = 68,
     primer_min_gc: float = 20, primer_max_gc: float = 80, primer_opt_gc_percent: float = 50,
 ) -> Dict[str, Any]:
-    """Design primers for polyploid genomes."""
+    """
+    Design PCR primers specifically optimized for complex polyploid genomes.
+    Requires 'file_id' and a target 'query'.
+    """
     payload = {
         "file_id": file_id, "query": query, "primer_num_return": primer_num_return,
         "primer_product_size_range": primer_product_size_range, "primer_opt_size": primer_opt_size,
