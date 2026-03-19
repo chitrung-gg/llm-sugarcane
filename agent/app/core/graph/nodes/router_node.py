@@ -26,6 +26,15 @@ def make_router_node(llm_service: LLMService):
         router_llm = llm.with_structured_output(RouteDecision)
 
         tool_list_str = render_text_description_and_args(list(AVAILABLE_TOOLS.values()))
+
+        # executed_tools = state.get("tool_results", [])
+        # if executed_tools:
+        #     executed_str = render_text_description_and_args(executed_tools)
+        #     tool_history_prompt = f"""
+        #         \nPREVIOUSLY EXECUTED TOOLS:\nYou have already run these tools: \n{executed_str}\nDO NOT run them again unless absolutely necessary. Look at the missing information and pick the NEXT logical tool in the chain.
+        #     """
+        # else:
+        #     tool_history_prompt = ""
         
         system_instructions = f"""
             You are an expert routing assistant for a Sugarcane Genomics system.
@@ -41,6 +50,7 @@ def make_router_node(llm_service: LLMService):
 
             AVAILABLE BIOINFORMATICS TOOLS:
             {tool_list_str}
+            
             
             CRITICAL: If you decide tools are required, you MUST use the exact tool names listed above. Do not guess or invent tool names and arguments.
         """

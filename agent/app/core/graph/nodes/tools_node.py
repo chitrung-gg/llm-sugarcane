@@ -7,8 +7,7 @@ from langgraph.types import Command
 from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.tools.genome_tool import (
     design_polyploid_primer, get_gene_detail,
-    get_genes_list, get_region_annotation, get_region_sequence,
-    get_sequence_raw, list_genome_files, run_blast, run_crispor,
+    get_genes_list, list_genome_files, run_blast, run_crispor,
     run_synteny_analysis, search_genes_full
 )
 from app.core.graph.state.agent_state import AgentState, ToolResult
@@ -17,9 +16,9 @@ from app.core.graph.state.agent_state import AgentState, ToolResult
 after_tools_node = Literal["synthesizer"]
 AVAILABLE_TOOLS = {
     tool.name: tool for tool in [
-        list_genome_files, get_region_sequence, get_region_annotation,
+        list_genome_files,
         get_genes_list, search_genes_full,
-        get_gene_detail, get_sequence_raw, run_blast,
+        get_gene_detail, run_blast,
         run_synteny_analysis, run_crispor, design_polyploid_primer
     ]
 }

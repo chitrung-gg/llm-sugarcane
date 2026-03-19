@@ -20,17 +20,22 @@ class GeneSearchInput(BaseModel):
 class BlastInput(BaseModel):
     file_id: int
     sequence: str
-    program: str = "blastn"
     evalue: float = 1e-5
 
-class SyntenyInput(BaseModel):
-    genome_a_id: int
-    genome_b_id: int
-    start_a: Optional[int] = None
-    end_a: Optional[int] = None
-    start_b: Optional[int] = None
-    end_b: Optional[int] = None
-    check_quality: bool = True
+# class SyntenyInput(BaseModel):
+#     genome_a_id: int
+#     genome_b_id: int
+#     start_a: Optional[int] = None
+#     end_a: Optional[int] = None
+#     start_b: Optional[int] = None
+#     end_b: Optional[int] = None
+#     check_quality: bool = True
+
+class SyntenyHaplotypeInput(BaseModel):
+    genome_id: int
+    haplotype_set_query: str
+    haplotype_set_subject: str
+    homologous_group: Optional[int] = None
 
 class PrimerDesignInput(BaseModel):
     file_id: int
