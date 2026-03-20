@@ -5,7 +5,7 @@ from app.configs.settings.settings import get_settings
 
 
 TIMEOUT = 120
-async def call_backend(method: str, endpoint: str, params=None, json_data=None) -> dict:
+async def call_genome_backend(method: str, endpoint: str, params=None, json_data=None) -> dict:
     settings = get_settings()
 
     # Grab URL

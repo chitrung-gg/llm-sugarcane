@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
-from app.services.tools.genome_http_client import call_backend
+from app.services.tools.call_genome_backend import call_genome_backend
 from app.schemas.tool.genome_tool_schema import BlastInput, GeneListInput, GeneSearchInput, PrimerDesignInput, SyntenyHaplotypeInput
 
 @tool
@@ -21,7 +21,7 @@ async def list_genome_files() -> Dict[str, Any]:
     - status: processing status (e.g., READY)
     - index_path, blast_db_path: auxiliary data if available
     """
-    return await call_backend("GET", "/api/genome/files")
+    return await call_genome_backend("GET", "/api/genome/files")
 
 # @tool
 # async def get_region_sequence(file_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
@@ -30,7 +30,7 @@ async def list_genome_files() -> Dict[str, Any]:
 #     Use this if you just need to quickly look up a genome's basic ID by its name.
 #     """
 #     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
-#     return await call_backend("GET", "/api/genome/region/sequence", params=params)
+#     return await call_genome_backend("GET", "/api/genome/region/sequence", params=params)
 
 # @tool
 # async def get_region_annotation(file_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
@@ -39,7 +39,7 @@ async def list_genome_files() -> Dict[str, Any]:
 #     Requires 'file_id' (obtainable from list_genome_files), 'chrom' (chromosome name), 'start' position, and 'end' position.
 #     """
 #     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
-#     return await call_backend("GET", "/api/genome/region/annotation", params=params)
+#     return await call_genome_backend("GET", "/api/genome/region/annotation", params=params)
 
 @tool(args_schema=GeneListInput)
 async def get_genes_list(genome_id: int, page: int = 1, limit: int = 20) -> Dict[str, Any]:
@@ -59,7 +59,7 @@ async def get_genes_list(genome_id: int, page: int = 1, limit: int = 20) -> Dict
         - id (gene record id), genome_id
     """
     payload = {"genome_id": genome_id, "page": page, "limit": limit}
-    return await call_backend("POST", "/api/genome/get-genes", json_data=payload)
+    return await call_genome_backend("POST", "/api/genome/get-genes", json_data=payload)
 
 @tool(args_schema=GeneSearchInput)
 async def search_genes_full(
@@ -98,7 +98,7 @@ async def search_genes_full(
             "page": page, "limit": limit
         }.items() if v is not None
     }
-    return await call_backend("POST", "/api/genome/search", json_data=payload)
+    return await call_genome_backend("POST", "/api/genome/search", json_data=payload)
 
 @tool
 async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
@@ -116,7 +116,7 @@ async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
     - genomic_sequence, cds_sequence, protein_sequence, upstream_flank (if available)
     """
     params = {"genome_id": genome_id}
-    return await call_backend("GET", f"/api/genome/detail/{gene_id}", params=params)
+    return await call_genome_backend("GET", f"/api/genome/detail/{gene_id}", params=params)
 
 # @tool
 # async def get_sequence_raw(genome_id: int, gene_id: str, type: str = "genomic") -> Dict[str, Any]:
@@ -125,7 +125,7 @@ async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
 #     Requires 'genome_id', 'gene_id', and 'type' (must be one of: "genomic", "cds", "protein", "flank").
 #     """
 #     params = {"genome_id": genome_id, "gene_id": gene_id, "type": type}
-#     return await call_backend("GET", "/api/genome/sequence", params=params)
+#     return await call_genome_backend("GET", "/api/genome/sequence", params=params)
 
 @tool(args_schema=BlastInput)
 async def run_blast(file_id: int, sequence: str, evalue: float = 1e-5) -> Dict[str, Any]:
@@ -143,7 +143,7 @@ async def run_blast(file_id: int, sequence: str, evalue: float = 1e-5) -> Dict[s
     Returns BLAST results including hits, alignments, scores, e-values, and matched regions.
     """
     payload = {"file_id": file_id, "sequence": sequence, "evalue": evalue}
-    return await call_backend("POST", "/api/blast/run", json_data=payload)
+    return await call_genome_backend("POST", "/api/blast/run", json_data=payload)
 
 # @tool(args_schema=SyntenyInput)
 # async def run_synteny_analysis(
@@ -163,7 +163,7 @@ async def run_blast(file_id: int, sequence: str, evalue: float = 1e-5) -> Dict[s
 #             "check_quality": check_quality
 #         }.items() if v is not None
 #     }
-#     return await call_backend("POST", "/api/synteny/analyze", json_data=payload)
+#     return await call_genome_backend("POST", "/api/synteny/analyze", json_data=payload)
 
 @tool(args_schema=SyntenyHaplotypeInput)
 async def run_synteny_analysis(
@@ -200,7 +200,7 @@ async def run_synteny_analysis(
             "homologous_group": homologous_group
         }.items() if v is not None
     }
-    return await call_backend("POST", "/api/synteny/analyze_haplotype", json_data=payload)
+    return await call_genome_backend("POST", "/api/synteny/analyze_haplotype", json_data=payload)
 
 
 @tool
@@ -224,7 +224,7 @@ async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: O
     """
     # Note: OpenAPI spec says POST, but parameters are 'query' (in)
     params = {k: v for k, v in {"genome_id": genome_id, "gene_id": gene_id, "sequence": sequence}.items() if v is not None}
-    return await call_backend("POST", "/api/crispor", params=params)
+    return await call_genome_backend("POST", "/api/crispor", params=params)
 
 @tool(args_schema=PrimerDesignInput)
 async def design_polyploid_primer(
@@ -260,4 +260,4 @@ async def design_polyploid_primer(
         "primer_opt_tm": primer_opt_tm, "primer_min_tm": primer_min_tm, "primer_max_tm": primer_max_tm,
         "primer_min_gc": primer_min_gc, "primer_max_gc": primer_max_gc, "primer_opt_gc_percent": primer_opt_gc_percent
     }
-    return await call_backend("POST", "/api/primer/design_polyploid", json_data=payload)
+    return await call_genome_backend("POST", "/api/primer/design_polyploid", json_data=payload)
