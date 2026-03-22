@@ -56,8 +56,28 @@ class Settings(BaseSettings):
     # --- HuggingFaceTokenizer for DocumentProcessor ---
     hugging_face_tokenizer: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", validation_alias="HUGGING_FACE_TOKENIZER")
 
-    # --- Tool ---
-    genome_backend_api_url: str = Field(default="http://192.168.198.101:8000", validation_alias="GENOME_BACKEND_API_URL")
+    # --- RustFS ---
+    rustfs_endpoint_url: str = Field(
+        default="http://localhost:9000",
+        validation_alias="RUSTFS_ENDPOINT_URL"
+    )
+    rustfs_access_key_id: str = Field(
+        default="rustfs",
+        validation_alias="RUSTFS_ACCESS_KEY_ID"
+    )
+    rustfs_secret_access_key: str = Field(
+        default="rustfs",
+        validation_alias="RUSTFS_SECRET_ACCESS_KEY"
+    )
+    rustfs_region_name: str = Field(
+        default="ap-southeast-1",
+        validation_alias="RUSTFS_REGION_NAME"
+    )
+
+    # --- Genome Tool ---
+    genome_backend_api_url: str = Field(
+        default="http://localhost:8001", validation_alias="GENOME_BACKEND_API_URL"
+    )
     
     # --- App ---
     app_env: str = Field(default="development", validation_alias="APP_ENV")

@@ -4,6 +4,7 @@ from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.graph.state import CompiledStateGraph
 from loguru import logger
+from botocore.client import BaseClient
 
 from app.core.graph.graph import build_agent_graph
 from app.configs.settings.settings import get_settings
@@ -12,7 +13,7 @@ from app.utils.document_processor import DocumentProcessor
 
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 from app.core.vector_store.vector_store import VectorStore
-
+from app.configs.storage.object_storage import rustfs_client
 
 class AppContainer:
     """Central dependency container."""
@@ -24,6 +25,7 @@ class AppContainer:
         self._document_processor: DocumentProcessor | None = None
         self._searx_wrapper: SearxSearchWrapper | None = None
         self._agent_graph: CompiledStateGraph | None = None
+        self._rustfs_client: BaseClient | None = None
 
     async def initialize(self):
         logger.info(" Initializing app container...")
@@ -33,6 +35,7 @@ class AppContainer:
         await self._init_document_processor()
         await self._init_searx_wrapper()
         await self._init_agent_graph()
+        await self._init_rustfs_client()
         logger.info(" App container ready.")
 
     async def _init_llm_service(self):
@@ -84,6 +87,11 @@ class AppContainer:
             searx_wrapper=self.searx_search,
             document_processor=self.document_processor
         )
+
+    async def _init_rustfs_client(self):
+        """Initialize RustFS client (S3 compatible)"""
+        self._rustfs_client = rustfs_client
+
     # --- Public accessors ---
 
     @property
@@ -116,6 +124,10 @@ class AppContainer:
         assert self._agent_graph, "Container not initialized (Agent Graph missing)"
         return self._agent_graph
 
+    @property
+    def rustfs_client(self) -> BaseClient:
+        assert self._rustfs_client, "Container not initialized (RustFSClient missing)"
+        return self._rustfs_client
 
 # Singleton instance
 _container = AppContainer()

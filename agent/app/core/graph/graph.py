@@ -18,7 +18,7 @@ from app.core.graph.nodes.synthesizer_node import make_synthesizer_node
 from app.core.graph.nodes.tools_node import tools
 from app.core.graph.routing.check_if_resolved import check_if_resolved
 from app.core.graph.state.agent_state import AgentState
-from app.configs.databases.databases import langgraph_connection_pool
+from app.configs.storage.databases import langgraph_connection_pool
 
 async def build_agent_graph(
     llm_service: LLMService,

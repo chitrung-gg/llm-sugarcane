@@ -22,3 +22,4 @@ def get_agent_graph(container: AppContainer = Depends(get_container)) -> Compile
 
 def get_agent_service(container: AppContainer = Depends(get_container)) -> AgentService:
     return AgentService()
+
