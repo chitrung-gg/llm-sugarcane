@@ -84,7 +84,7 @@ def make_synthesizer_node(llm_service: LLMService):
             {final_warning} 
         """
 
-        llm = llm_service.get_model().with_structured_output(SynthesizerOutput)
+        llm = llm_service.get_primary_model().with_structured_output(SynthesizerOutput)
 
         try:
             raw_result = await llm.ainvoke(prompt)

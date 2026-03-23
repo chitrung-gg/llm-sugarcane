@@ -1,6 +1,7 @@
 from fastapi import Depends
 from langchain_qdrant import QdrantVectorStore
 from langgraph.graph.state import CompiledStateGraph
+from botocore.client import BaseClient
 
 from app.services.agent.agent_service import AgentService
 from app.core.app_container import AppContainer, get_container
@@ -21,5 +22,11 @@ def get_agent_graph(container: AppContainer = Depends(get_container)) -> Compile
     return container.agent_graph
 
 def get_agent_service(container: AppContainer = Depends(get_container)) -> AgentService:
-    return AgentService()
+    return AgentService(
+        graph=container.agent_graph,
+        rustfs_client=container.rustfs_client,
+        llm_service=container.llm_service
+    )
 
+def get_rustfs_client(container: AppContainer = Depends(get_container)) -> BaseClient:
+    return container.rustfs_client

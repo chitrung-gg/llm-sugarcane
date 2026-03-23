@@ -1,5 +1,4 @@
 from functools import lru_cache
-import os
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,8 +16,19 @@ class Settings(BaseSettings):
 
     # --- Gemini ---
     google_api_key: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
-    gemini_llm_model: str = "gemini-3-flash-preview"   # gemini-2.5-flash
-    gemini_embedding_model: str = "gemini-embedding-2-preview"  # gemini-embedding-001
+    gemini_primary_model: str = Field(
+        default="gemini-3-flash-preview", 
+        validation_alias="GEMINI_PRIMARY_MODEL"
+    )
+    gemini_secondary_model: str = Field(
+        default="gemini-2.5-flash", 
+        validation_alias="GEMINI_SECONDARY_MODEL"
+    )
+
+    gemini_embedding_model: str = Field(
+        default="gemini-embedding-2-preview",   # "gemini-embedding-001"
+        validation_alias="GEMINI_PRIMARY_EMBEDDING_MODEL"
+    ) 
     gemini_max_input_token: int = 200000
 
     # --- Qdrant ---

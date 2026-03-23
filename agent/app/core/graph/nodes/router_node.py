@@ -22,7 +22,7 @@ def make_router_node(llm_service: LLMService):
         query = state["query"]
         logger.debug(f"[Router] Query: {query}")
 
-        llm = llm_service.get_model()
+        llm = llm_service.get_secondary_model()
         router_llm = llm.with_structured_output(RouteDecision)
 
         tool_list_str = render_text_description_and_args(list(AVAILABLE_TOOLS.values()))
