@@ -6,7 +6,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.services.llm.llm_service import LLMService
 
-# We keep these just to provide hints to the LLM prompt, not as hard rules.
+# Keep these just to provide hints to the LLM prompt, not as hard rules.
 GENOMIC_EXTENSIONS = {
     ".fasta.gz", ".fa.gz", ".fna.gz",
     ".genome.fasta.gz", ".genome.fa.gz",
