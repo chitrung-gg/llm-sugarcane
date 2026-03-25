@@ -19,8 +19,9 @@ GENOMIC_EXTENSIONS = {
 }
 
 KNOWLEDGE_EXTENSIONS = {
-    ".pdf", ".txt", ".md",
-    ".csv", ".tsv", ".xlsx",
+    ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", 
+    ".html", ".epub", ".msg", ".eml", ".rtf", ".odt", ".md", 
+    ".tex", ".csv", ".png", ".jpeg"
 }
 
 
