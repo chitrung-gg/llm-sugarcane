@@ -3,7 +3,9 @@ import time
 from typing import Literal
 from loguru import logger
 from langgraph.types import Command
+from langchain_core.tools import BaseTool
 
+from agent.app.core.app_container import get_container
 from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.tools.genome_tool import (
     design_polyploid_primer, get_gene_detail,
@@ -14,20 +16,39 @@ from app.core.graph.state.agent_state import AgentState, ToolResult
 
 
 after_tools_node = Literal["synthesizer"]
-AVAILABLE_TOOLS = {
-    tool.name: tool for tool in [
+
+def get_all_available_tools() -> dict[str, BaseTool]:
+    """
+    Dynamically build the tool dictionary including OpenAPI tools.
+
+    Because each method return the name depends on the OpenAPI specs, and can be changed over time, so we should build the list dynamically
+    """
+    static_tools = [
         list_genome_files,
         get_genes_list, search_genes_full,
         get_gene_detail, run_blast,
         run_synteny_analysis, run_crispor, design_polyploid_primer
     ]
-}
 
+    tool_dict = {
+        tool.name: tool for tool in static_tools
+    }
+
+    # Merge in the dynamic NCBI tools from the container
+    container = get_container()
+    for ncbi_tool in container.ncbi_tools:
+        tool_dict[ncbi_tool.name] = ncbi_tool
+        
+    return tool_dict
+    
 async def tools(state: AgentState) -> Command[after_tools_node]:
     tools_to_run = state.get("required_tools", [])
 
+    # Get all tools (Static + OpenAPI)
+    available_tools = get_all_available_tools()
+
     logger.debug(
-        "[Tools] 🛠 Starting tool execution | count={count}",
+        "[Tools] 🛠 Starting {count} tools for execution",
         count=len(tools_to_run)
     )
 
@@ -62,7 +83,7 @@ async def tools(state: AgentState) -> Command[after_tools_node]:
         logger.debug("[Tools] Executing tool: {tool_name}", tool_name=tool_name)
         tool_start = time.time()
 
-        if tool_name not in AVAILABLE_TOOLS:
+        if tool_name not in available_tools:
             error_msg = f"Tool '{tool_name}' is not recognized."
             logger.error(error_msg)
             new_tool_results.append(ToolResult(
@@ -72,7 +93,7 @@ async def tools(state: AgentState) -> Command[after_tools_node]:
 
         try:
             # Execute the actual LangChain tool
-            tool_instance = AVAILABLE_TOOLS[tool_name]
+            tool_instance = available_tools[tool_name]
             raw_output = await tool_instance.ainvoke(tool_args)     # async
             
             # Format output safely to string

@@ -1,11 +1,14 @@
 from functools import lru_cache
+from typing import List
 
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.graph.state import CompiledStateGraph
+from langchain_core.tools import BaseTool
 from loguru import logger
 from botocore.client import BaseClient
 
+from app.core.tools.openapi_tool import build_openapi_tools
 from app.core.graph.graph import build_agent_graph
 from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
@@ -34,6 +37,7 @@ class AppContainer:
         await self._init_vector_store()
         await self._init_document_processor()
         await self._init_searx_wrapper()
+        await self._init_ncbi_tools()
         await self._init_agent_graph()
         await self._init_rustfs_client()
         logger.info(" App container ready.")
@@ -92,6 +96,18 @@ class AppContainer:
         """Initialize RustFS client (S3 compatible)"""
         self._rustfs_client = rustfs_client
 
+    async def _init_ncbi_tools(self):
+        """Initialize dynamic tools from NCBI OpenAPI spec."""
+        settings = get_settings()
+        api_key = settings.ncbi_api_key.get_secret_value() if settings.ncbi_api_key else None
+        
+        self._ncbi_tools = build_openapi_tools(
+            llm=self.llm_service.get_primary_model(),
+            openapi_yaml_path=settings.ncbi_openapi_yaml_path,
+            api_key=api_key
+        )
+    
+
     # --- Public accessors ---
 
     @property
@@ -128,6 +144,10 @@ class AppContainer:
     def rustfs_client(self) -> BaseClient:
         assert self._rustfs_client, "Container not initialized (RustFSClient missing)"
         return self._rustfs_client
+    
+    @property
+    def ncbi_tools(self) -> List[BaseTool]:
+        return self._ncbi_tools
 
 # Singleton instance
 _container = AppContainer()

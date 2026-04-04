@@ -88,6 +88,16 @@ class Settings(BaseSettings):
     genome_backend_api_url: str = Field(
         default="http://localhost:8001", validation_alias="GENOME_BACKEND_API_URL"
     )
+
+    ncbi_openapi_yaml_path: str = Field(
+        default="resources/ncbi_dataset_openapi_v2.yaml", 
+        validation_alias="NCBI_OPENAPI_YAML_PATH"
+    )
+
+    ncbi_api_key: SecretStr | None = Field(
+        default=None, 
+        validation_alias="NCBI_API_KEY"
+    )
     
     # --- App ---
     app_env: str = Field(default="development", validation_alias="APP_ENV")

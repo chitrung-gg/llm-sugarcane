@@ -1,5 +1,5 @@
 -- Create the restricted user account specifically for LangGraph
-CREATE USER langgraph WITH PASSWORD 'your_secure_password';
+CREATE USER langgraph WITH PASSWORD 'your_secure_password';     -- Don't delete the ''
 
 -- Create the schema and make the new user the absolute owner
 CREATE SCHEMA langgraph AUTHORIZATION langgraph;
