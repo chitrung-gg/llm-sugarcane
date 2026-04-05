@@ -16,7 +16,7 @@ from langchain_qdrant import QdrantVectorStore
 
 from app.core.graph.state.agent_state import AgentState, RAGResult
 
-after_rag_node = Literal["synthesizer"]
+after_rag_node = Literal["router"]
 RELEVANCE_SCORE = 0.90
 
 def make_rag_node(vector_store: QdrantVectorStore):
@@ -126,8 +126,9 @@ def make_rag_node(vector_store: QdrantVectorStore):
         # If not enough information, then it will call again
         # destination = check_rag_fallback(preview_state)
 
+        # Return to Router node as following the ReAct pattern (Reasoning Loop)
         return Command(
-            goto="synthesizer",
+            goto="router",
             update=updates
         )
 

@@ -9,7 +9,7 @@ from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.graph.state.agent_state import AgentState, ToolResult
 
 
-after_tools_node = Literal["synthesizer"]
+after_tools_node = Literal["router"]
 
 def make_tools_node(available_tools: dict[str, BaseTool]):
     async def tools(state: AgentState) -> Command[after_tools_node]:
@@ -23,7 +23,7 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
         if not tools_to_run:
             logger.debug("[Tools] No tools required.")
             return Command(
-                goto="synthesizer",
+                goto="router",
                 update={"tool_results": []}
             )
 
@@ -101,7 +101,7 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
 
         # Return Command to route exactly to the synthesizer
         return Command(
-            goto="synthesizer",
+            goto="router",
             update={"tool_results": new_tool_results}
         )
     

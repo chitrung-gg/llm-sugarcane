@@ -6,7 +6,7 @@ from langgraph.types import Command
 
 from app.core.graph.state.agent_state import AgentState, WebResult
 
-after_web_search_node = Literal["synthesizer"]
+after_web_search_node = Literal["router"]
 
 def make_web_search_node(searx_wrapper: SearxSearchWrapper):
     """Factory to create the web search node with injected dependency."""
@@ -54,7 +54,7 @@ def make_web_search_node(searx_wrapper: SearxSearchWrapper):
 
         # Because web_results uses operator.add, returning a list appends it to state
         return Command(
-            goto="synthesizer",
+            goto="router",
             update={"web_results": new_web_results}
         )
     

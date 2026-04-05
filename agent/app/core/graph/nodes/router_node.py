@@ -29,32 +29,48 @@ def make_router_node(
 
         tool_list_str = render_text_description_and_args(list(available_tools.values()))
 
-        # executed_tools = state.get("tool_results", [])
-        # if executed_tools:
-        #     executed_str = render_text_description_and_args(executed_tools)
-        #     tool_history_prompt = f"""
-        #         \nPREVIOUSLY EXECUTED TOOLS:\nYou have already run these tools: \n{executed_str}\nDO NOT run them again unless absolutely necessary. Look at the missing information and pick the NEXT logical tool in the chain.
-        #     """
-        # else:
-        #     tool_history_prompt = ""
+        rag_results = state.get("rag_results", [])
+        tool_results = state.get("tool_results", [])
+        web_results = state.get("web_results", [])
+
+        execution_history = ""
+        if rag_results or tool_results or web_results:
+            execution_history += "\n--- CURRENT SEARCH/TOOL RESULTS ---\n"
+            if rag_results:
+                execution_history += f"- Found {len(rag_results)} chunks from local RAG.\n"
+            if tool_results:
+                execution_history += "- Tool History:\n"
+                for res in tool_results:
+                    status_emoji = "✅" if res['status'] == "success" else "❌"
+                    execution_history += f"  {status_emoji} {res['tool_name']}: {res['output'][:300]}...\n"
+            if web_results:
+                execution_history += f"- Found {len(web_results)} web results.\n"
+            
+            execution_history += """
+                1. If the results above are SUFFICIENT to fully answer the user, choose 'direct_answer' to finish.
+                2. If a tool returned 'Unknown', 'Error', or generic metadata (like 'GCA_...' without names), DO NOT repeat it. Instead, try a different tool (e.g., if genome search failed, try gene search or web search).
+                3. If you have partial info, decide which specific tool can fill the remaining gap.
+            """
+
         
         system_instructions = f"""
             You are an expert routing assistant for a Sugarcane Genomics system.
             Your job is to analyze the user's query and route it to the correct execution path.
 
+            {execution_history}
+
             CRITICAL ROUTING RULES:
-            - Choose 'direct_answer': If the user asks to summarize, translate, or answer questions strictly about a file they just uploaded, and you can see the file's content in the chat history.
-            - Choose 'all' (RECOMMENDED DEFAULT): For general sugarcane biology questions.
-            - Choose 'web_search': For the *latest* news, external web data, or broad scientific facts.
-            - Choose 'rag_only': ONLY if the query explicitly targets our internal database.
-            - Choose 'tool_only': For executing bioinformatic tools (BLAST/Synteny).
-            - Choose 'unclear': For simple greetings.
+            - Choose 'direct_answer': If you have enough information to answer, or if the user asks a simple question (about uploaded files or not).
+            - Choose 'all' (RECOMMENDED FOR FIRST TURN): For general biological queries.
+            - Choose 'web_search': For latest news or when internal databases (RAG/Tools) fail.
+            - Choose 'rag_only': For queries specifically about local documents.
+            - Choose 'tool_only': For specialized bioinformatic analyses (NCBI, BLAST, etc.)
 
             AVAILABLE BIOINFORMATICS TOOLS:
             {tool_list_str}
             
             
-            CRITICAL: If you decide tools are required, you MUST use the exact tool names listed above. Do not guess or invent tool names and arguments.
+            CRITICAL: Use EXACT tool names. Do not hallucinate tools.
         """
         
         user_input = f"User Query: {query}"
@@ -66,34 +82,34 @@ def make_router_node(
 
         # Include previous chat history if it exists
         if state.get("messages"):
-            history_messages = state["messages"]
-            logger.debug(
-                f"[Router] Including chat history | total_messages={len(history_messages)}"
-            )
+            # history_messages = state["messages"]
+            # logger.debug(
+            #     f"[Router] Including chat history | total_messages={len(history_messages)}"
+            # )
             
-            # 1. Extract up to the last 5 messages
-            last_5_msgs = history_messages[-5:]
+            # # 1. Extract up to the last 5 messages
+            # last_5_msgs = history_messages[-5:]
             
-            logger.debug("[Router] --- Last 5 Messages in Context ---")
-            for idx, msg in enumerate(last_5_msgs):
-                # Identify if it is a HumanMessage, AIMessage, etc.
-                msg_type = msg.__class__.__name__ 
+            # logger.debug("[Router] --- Last 5 Messages in Context ---")
+            # for idx, msg in enumerate(last_5_msgs):
+            #     # Identify if it is a HumanMessage, AIMessage, etc.
+            #     msg_type = msg.__class__.__name__ 
                 
-                # Truncate the content to 150 characters for clean terminal output
-                raw_content = str(msg.content).replace("\n", " ")
-                content_preview = raw_content[:150] + ("..." if len(raw_content) > 150 else "")
+            #     # Truncate the content to 150 characters for clean terminal output
+            #     raw_content = str(msg.content).replace("\n", " ")
+            #     content_preview = raw_content[:150] + ("..." if len(raw_content) > 150 else "")
                 
-                logger.debug(f"  {idx + 1}. [{msg_type}]: {content_preview}")
-            logger.debug("--------------------------------------------")
+            #     logger.debug(f"  {idx + 1}. [{msg_type}]: {content_preview}")
+            # logger.debug("--------------------------------------------")
 
-            # 2. Append the history to the prompt
-            # Pro-tip: If conversations get very long, you might want to change this to:
-            # messages_to_send.extend(history_messages[-10:]) 
-            # to prevent the Router from exceeding its context window!
-            messages_to_send.extend(history_messages)
+            # # 2. Append the history to the prompt
+            # # Pro-tip: If conversations get very long, you might want to change this to:
+            # # messages_to_send.extend(history_messages[-10:]) 
+            # # to prevent the Router from exceeding its context window!
+            messages_to_send.extend(state["messages"])
         
         logger.debug(
-            f"[Router] Sending {len(messages_to_send)} messages to LLM"
+            f"[Router] Sending {len(messages_to_send)} messages to LLM (Iteration: {state.get('iteration_count', 0)})"
         )
 
         try:
@@ -109,10 +125,7 @@ def make_router_node(
         elapsed = int((time.time() - start_time) * 1000)
 
         logger.debug(
-            f"[Router] ✅ Decision made | "
-            f"intent={decision.intent} | "
-            f"tools={decision.required_tools} | "
-            f"latency={elapsed}ms"
+            f"[Router] ✅ Decision: {decision.intent} | Tools: {decision.required_tools} | Latency: {elapsed}ms"
         )
 
         return Command(
