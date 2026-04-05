@@ -2,18 +2,20 @@ import time
 from typing import Literal, Union
 from loguru import logger
 
-from app.core.graph.nodes.tools_node import AVAILABLE_TOOLS
 from app.core.graph.routing.route_action import RouteDecision, get_routing_destinations
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.tools import render_text_description_and_args
+from langchain_core.tools import render_text_description_and_args, BaseTool
 from langgraph.types import Command
 
 after_router_node = Literal["rag_execution", "tool_execution", "web_search", "synthesizer"]
 
-def make_router_node(llm_service: LLMService):
+def make_router_node(
+    llm_service: LLMService,
+    available_tools: dict[str, BaseTool]
+):
     async def router(state: AgentState) -> Command[after_router_node]:
         logger.debug("[Router] 🧭 Starting intent analysis")
 
@@ -25,7 +27,7 @@ def make_router_node(llm_service: LLMService):
         llm = llm_service.get_secondary_model()
         router_llm = llm.with_structured_output(RouteDecision)
 
-        tool_list_str = render_text_description_and_args(list(AVAILABLE_TOOLS.values()))
+        tool_list_str = render_text_description_and_args(list(available_tools.values()))
 
         # executed_tools = state.get("tool_results", [])
         # if executed_tools:

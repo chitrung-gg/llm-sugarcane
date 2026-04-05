@@ -17,6 +17,8 @@ class LLMService(BaseModel):
     
     _primary_model: Any = PrivateAttr()
     _secondary_model: Any = PrivateAttr()
+    _tertiary_model: Any = PrivateAttr()
+    _quaternary_model: Any = PrivateAttr()
     
     def model_post_init(self, _context: Any):
         settings = get_settings()
@@ -38,14 +40,41 @@ class LLMService(BaseModel):
             temperature=0.0,        # Prioritize correctness
             max_retries=settings.llm_max_retries, 
         )
+
+        self._tertiary_model = ChatGoogleGenerativeAI(
+            model=settings.gemini_tertiary_model,
+            google_api_key=api_key,
+            temperature=0.0,        # Prioritize correctness
+            max_retries=settings.llm_max_retries, 
+        )
+        self._quaternary_model = ChatGoogleGenerativeAI(
+            model=settings.gemini_quaternary_model,
+            google_api_key=api_key,
+            temperature=0.0,        # Prioritize correctness
+            max_retries=settings.llm_max_retries, 
+        )
+
         
-        logger.info(f"LLMService ready | Primary: {settings.gemini_primary_model} | Secondary: {settings.gemini_secondary_model}")
+        
+        logger.info(f"""
+            LLMService ready |
+            Primary: {settings.gemini_primary_model} |
+            Secondary: {settings.gemini_secondary_model} |
+            Tertiary: {settings.gemini_tertiary_model} |
+            Quaternary: {settings.gemini_quaternary_model}
+        """)
 
     def get_primary_model(self) -> BaseChatModel:
         return self._primary_model
     
     def get_secondary_model(self) -> BaseChatModel:
         return self._secondary_model
+    
+    def get_tertiary_model(self) -> BaseChatModel:
+        return self._tertiary_model
+    
+    def get_quaternary_model(self) -> BaseChatModel:
+        return self._quaternary_model
 
     
     

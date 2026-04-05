@@ -8,6 +8,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 from botocore.client import BaseClient
 
+from app.core.tools.ncbi_dataset_tool import get_ncbi_gene_metadata, search_ncbi_genes, search_ncbi_genome
 from app.core.tools.openapi_tool import build_openapi_tools
 from app.core.graph.graph import build_agent_graph
 from app.configs.settings.settings import get_settings
@@ -17,6 +18,11 @@ from app.utils.document_processor import DocumentProcessor
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 from app.core.vector_store.vector_store import VectorStore
 from app.configs.storage.object_storage import rustfs_client
+from app.core.tools.genome_tool import (
+    design_polyploid_primer, get_gene_detail,
+    get_genes_list, list_genome_files, run_blast, run_crispor,
+    run_synteny_analysis, search_genes_full
+)
 
 class AppContainer:
     """Central dependency container."""
@@ -84,12 +90,27 @@ class AppContainer:
         )
 
     async def _init_agent_graph(self):
-        """Builds the LangGraph once during startup."""
+        """
+        Builds the LangGraph once during startup.
+        
+        Because each method return the name depends on the OpenAPI specs, and can be changed over time, so we should build the list dynamically
+        """
+        static_tools = [
+            list_genome_files, get_genes_list, search_genes_full,
+            get_gene_detail, run_blast, run_synteny_analysis, 
+            run_crispor, design_polyploid_primer, search_ncbi_genome,
+            search_ncbi_genes, get_ncbi_gene_metadata
+        ]
+        # Combine static and dynamic tools into a dictionary
+        # all_tools = {tool.name: tool for tool in static_tools + self.ncbi_tools}
+        all_tools = {tool.name: tool for tool in static_tools}
+
         self._agent_graph = await build_agent_graph(
             llm_service=self.llm_service,
             vector_store=self.vector_store,
             searx_wrapper=self.searx_search,
-            document_processor=self.document_processor
+            document_processor=self.document_processor, 
+            available_tools=all_tools
         )
 
     async def _init_rustfs_client(self):

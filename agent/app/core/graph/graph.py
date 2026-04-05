@@ -3,6 +3,7 @@ from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy
+from langchain_core.tools import BaseTool
 from loguru import logger
 
 
@@ -15,7 +16,7 @@ from app.core.graph.nodes.rag_node import make_rag_node
 
 from app.core.graph.nodes.router_node import make_router_node
 from app.core.graph.nodes.synthesizer_node import make_synthesizer_node
-from app.core.graph.nodes.tools_node import tools
+from app.core.graph.nodes.tools_node import make_tools_node
 from app.core.graph.routing.check_if_resolved import check_if_resolved
 from app.core.graph.state.agent_state import AgentState
 from app.configs.storage.databases import langgraph_connection_pool
@@ -24,7 +25,8 @@ async def build_agent_graph(
     llm_service: LLMService,
     vector_store: QdrantVectorStore,
     searx_wrapper: SearxSearchWrapper,
-    document_processor: DocumentProcessor
+    document_processor: DocumentProcessor, 
+    available_tools: dict[str, BaseTool]
 ):
     # Initialize graph
     workflow = StateGraph(AgentState)
@@ -37,7 +39,7 @@ async def build_agent_graph(
     )
     workflow.add_node(
         "router",
-        make_router_node(llm_service)
+        make_router_node(llm_service, available_tools)
     )
     workflow.add_node(
         "rag_execution",
@@ -49,7 +51,7 @@ async def build_agent_graph(
     )
     workflow.add_node(
         "tool_execution",
-        tools
+        make_tools_node(available_tools)
     )
     workflow.add_node(
         "synthesizer",

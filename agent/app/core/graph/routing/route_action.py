@@ -33,6 +33,6 @@ class RouteDecision(BaseModel):
                     "Use 'web_search' for fetching the latest news, external databases, or information not found in vector stores."
     )
     required_tools: List[ToolCallRequest] = Field(
-        default_factory=List,
+        default_factory=list,
         description="List of required tool names (e.g., ['blast', 'synteny']). Leave empty if no tools are needed."
     )

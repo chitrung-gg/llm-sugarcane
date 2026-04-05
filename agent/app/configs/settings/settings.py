@@ -17,12 +17,24 @@ class Settings(BaseSettings):
     # --- Gemini ---
     google_api_key: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
     gemini_primary_model: str = Field(
-        default="gemini-3-flash-preview", 
+        default="gemma-4-31b-it", 
         validation_alias="GEMINI_PRIMARY_MODEL"
     )
+    # gemini_primary_model: str = Field(
+    #     default="gemini-3-flash-preview", 
+    #     validation_alias="GEMINI_PRIMARY_MODEL"
+    # )
     gemini_secondary_model: str = Field(
         default="gemini-2.5-flash", 
         validation_alias="GEMINI_SECONDARY_MODEL"
+    )
+    gemini_tertiary_model: str = Field(
+        default="gemini-3.1-flash-lite-preview", 
+        validation_alias="GEMINI_TERTIARY_MODEL"
+    )
+    gemini_quaternary_model: str = Field(
+        default="gemini-2.5-flash-lite", 
+        validation_alias="GEMINI_QUATERNARY_MODEL"
     )
 
     gemini_embedding_model: str = Field(
@@ -90,7 +102,7 @@ class Settings(BaseSettings):
     )
 
     ncbi_openapi_yaml_path: str = Field(
-        default="resources/ncbi_dataset_openapi_v2.yaml", 
+        default="resources/ncbi_dataset_openapi_truncated.yaml", 
         validation_alias="NCBI_OPENAPI_YAML_PATH"
     )
 
