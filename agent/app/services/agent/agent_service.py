@@ -116,7 +116,7 @@ class AgentService:
         # 2. Initial AgentState
         initial_state = {
             "query": query,
-            "messages": [HumanMessage(content=query)], 
+            "messages": [HumanMessage(content=query)],      # Add users messages
             "uploaded_files": uploaded_files_meta, 
             "iteration_count": 0,
             "max_iterations": 3 

@@ -1,46 +1,94 @@
 import aiohttp
-import urllib.parse
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, cast
+from aiolimiter import AsyncLimiter
 from loguru import logger
 from langchain_core.tools import tool
 
+from app.configs.settings.settings import get_settings
+
+settings = get_settings()
 # Base URLs
 EUTILS_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 DATASETS_BASE = "https://api.ncbi.nlm.nih.gov/datasets/v2"
 
+# Set up the rate limiter
+RATE_LIMIT = 10 if settings.ncbi_api_key else 3
+limiter = AsyncLimiter(RATE_LIMIT, 1)
+
+def _unwrap_secret(value: Any) -> str:
+    """Safely extracts the string from a Pydantic SecretStr, or returns the string itself."""
+    if hasattr(value, "get_secret_value"):
+        return value.get_secret_value()
+    return str(value)
+
+def build_eutils_params(**kwargs) -> Dict[str, Any]:
+    """Helper function to cleanly pass params via aiohttp instead of manual URL building."""
+    params = kwargs.copy()
+    
+    if settings.ncbi_tool:
+        # NCBI STRICT RULE: Tool name must NOT contain spaces
+        raw_tool = _unwrap_secret(settings.ncbi_tool)
+        params['tool'] = raw_tool.replace(" ", "_")
+        
+    if settings.ncbi_email:
+        params['email'] = _unwrap_secret(settings.ncbi_email)
+        
+    if settings.ncbi_api_key:
+        params['api_key'] = _unwrap_secret(settings.ncbi_api_key)
+        
+    return params
+
+def get_datasets_headers() -> Dict[str, str]:
+    """Helper to generate headers for Datasets v2 API, including optional API key."""
+    headers = {"Accept": "application/json"}
+    if settings.ncbi_api_key:
+        headers["api-key"] = _unwrap_secret(settings.ncbi_api_key)
+    return headers
+
 @tool
 async def search_ncbi_genome(query: str) -> str:
     """
-    The primary tool for searching genome metadata on NCBI.
+    Search for genome assembly metadata on NCBI (e.g., sequence length, chromosomes, GC percentage, gene counts).
+    Use this tool when the user asks for general information about a species' genome or a specific cultivar's assembly.
     
     CRITICAL PROMPT RULES:
-    1. The query MUST be concise keywords. 
-    2. DO NOT use long sentences or complex hybrid taxonomic names (e.g., NEVER use 'Saccharum officinarum X spontaneum var R570').
-    3. Use simple combinations of common name + cultivar (e.g., 'sugarcane r570') or base scientific name (e.g., 'Saccharum officinarum').
+    1. CONCISE KEYWORDS ONLY: The query must be short and focused (e.g., 'sugarcane', 'sugarcane r570', 'Saccharum').
+    2. NO CONVERSATION: Never pass full sentences or questions (e.g., BAD: "what is the genome of sugarcane r570").
+    3. AVOID COMPLEX HYBRIDS: Do not use long taxonomic crosses. Stick to the base scientific name or common name + cultivar.
     """
     logger.debug(f"[NCBI Tool] Searching for genome metadata: {query}")
-    safe_query = urllib.parse.quote(query.strip())
+    clean_query = query.strip()
     
     async with aiohttp.ClientSession() as session:
         try:
             # 1. Fuzzy search using E-utilities (esearch)
-            search_url = f"{EUTILS_BASE}/esearch.fcgi?db=assembly&term={safe_query}&retmode=json&retmax=1"
-            async with session.get(search_url) as resp:
-                if resp.status != 200:
-                    raise ValueError(f"NCBI E-search failed with status {resp.status}")
-                search_data = await resp.json()
+            search_url = f"{EUTILS_BASE}/esearch.fcgi"
+            params = build_eutils_params(db="assembly", term=clean_query, retmode="json", retmax=1)
+            
+            async with limiter:
+                async with session.get(search_url, params=params) as resp:
+                    if resp.status != 200:
+                        # LOG THE ACTUAL ERROR FROM NCBI TO DEBUG
+                        error_text = await resp.text()
+                        raise ValueError(f"NCBI E-search failed with status {resp.status}. Details: {error_text}")
+                    search_data = await resp.json()
             
             id_list = search_data.get("esearchresult", {}).get("idlist", [])
             
             if not id_list:
-                # FALLBACK: Try Datasets Taxonomy search if Entrez fails
                 return await _fallback_taxon_search(session, query)
 
             # 2. Retrieve detailed summary to get the Accession (esummary)
             assembly_id = id_list[0]
-            summary_url = f"{EUTILS_BASE}/esummary.fcgi?db=assembly&id={assembly_id}&retmode=json"
-            async with session.get(summary_url) as resp:
-                summary_data = await resp.json()
+            summary_url = f"{EUTILS_BASE}/esummary.fcgi"
+            summary_params = build_eutils_params(db="assembly", id=assembly_id, retmode="json")
+            
+            async with limiter:
+                async with session.get(summary_url, params=summary_params) as resp:
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        raise ValueError(f"NCBI E-summary failed with status {resp.status}. Details: {error_text}")
+                    summary_data = await resp.json()
             
             result = summary_data.get("result", {}).get(assembly_id, {})
             accession = result.get("assemblyaccession")
@@ -50,10 +98,12 @@ async def search_ncbi_genome(query: str) -> str:
 
             # 3. Fetch standard Dataset Report using the Accession
             ds_url = f"{DATASETS_BASE}/genome/accession/{accession}/dataset_report"
-            async with session.get(ds_url, headers={"Accept": "application/json"}) as resp:
-                if resp.status != 200:
-                    raise ValueError(f"NCBI Datasets API failed to find report for {accession}.")
-                ds_data = await resp.json()
+            
+            async with limiter:
+                async with session.get(ds_url, headers=get_datasets_headers()) as resp:
+                    if resp.status != 200:
+                        raise ValueError(f"NCBI Datasets API failed to find report for {accession}.")
+                    ds_data = await resp.json()
             
             reports = ds_data.get("reports", [])
             if not reports:
@@ -65,6 +115,7 @@ async def search_ncbi_genome(query: str) -> str:
             logger.error(f"[NCBI Tool] System Error: {str(e)}")
             raise e
 
+
 @tool
 async def search_ncbi_genes(query: str, limit: int = 5) -> str:
     """
@@ -72,29 +123,42 @@ async def search_ncbi_genes(query: str, limit: int = 5) -> str:
     Use this when the user asks 'which gene regulates trait X' or 'find genes related to Y'.
     
     CRITICAL PROMPT RULES:
-    1. The query MUST be a concise, short keyword or phrase (e.g., 'r570', 'sucrose metabolism', 'ScDir').
-    2. DO NOT pass long biological names, full hybrid names, or conversational sentences.
+    1. STRIP REDUNDANT WORDS: NEVER include the word "gene", "protein", or "content" in the query.
+    2. USE SCIENTIFIC NAMES: Translate common names to their base scientific genus (e.g., use 'Saccharum' instead of 'sugarcane').
+    3. BE CONCISE: Only pass the organism name and the strict gene symbol/acronym. 
+       - BAD: "sugarcane SuSy gene sugar content"
+       - GOOD: "Saccharum SuSy" or "Saccharum SPS"
     """
     logger.debug(f"[NCBI Gene Tool] Searching for genes: {query}")
-    safe_query = urllib.parse.quote(query.strip())
+    clean_query = query.strip()
     
     async with aiohttp.ClientSession() as session:
         try:
             # 1. Search Gene DB (db=gene)
-            search_url = f"{EUTILS_BASE}/esearch.fcgi?db=gene&term={safe_query}&retmode=json&retmax={limit}"
-            async with session.get(search_url) as resp:
-                if resp.status != 200:
-                    raise ValueError(f"NCBI E-search failed with status {resp.status}")
-                search_data = await resp.json()
+            search_url = f"{EUTILS_BASE}/esearch.fcgi"
+            params = build_eutils_params(db="gene", term=clean_query, retmode="json", retmax=limit)
+            
+            async with limiter:
+                async with session.get(search_url, params=params) as resp:
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        raise ValueError(f"NCBI E-search failed with status {resp.status}. Details: {error_text}")
+                    search_data = await resp.json()
             
             gene_ids = search_data.get("esearchresult", {}).get("idlist", [])
             if not gene_ids:
                 raise ValueError(f"No genes found on NCBI matching the keywords: '{query}'")
 
             # 2. Fetch Gene Summaries
-            summary_url = f"{EUTILS_BASE}/esummary.fcgi?db=gene&id={','.join(gene_ids)}&retmode=json"
-            async with session.get(summary_url) as resp:
-                summary_data = await resp.json()
+            summary_url = f"{EUTILS_BASE}/esummary.fcgi"
+            summary_params = build_eutils_params(db="gene", id=",".join(gene_ids), retmode="json")
+            
+            async with limiter:
+                async with session.get(summary_url, params=summary_params) as resp:
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        raise ValueError(f"NCBI E-summary failed with status {resp.status}. Details: {error_text}")
+                    summary_data = await resp.json()
             
             results = []
             for uid in gene_ids:
@@ -110,22 +174,29 @@ async def search_ncbi_genes(query: str, limit: int = 5) -> str:
             logger.error(f"Error searching NCBI Genes: {str(e)}")
             raise e
 
+
 @tool
 async def get_ncbi_gene_metadata(gene_id: str) -> str:
     """
     Retrieve deep, specific metadata for a single Gene using the NCBI Datasets v2 API.
-    Use this AFTER you have discovered a Gene ID using 'search_ncbi_genes'.
-    Accepts a single numeric NCBI Gene ID (e.g., '19171').
+    Use this tool to find gene ontology (GO terms), chromosome location, synonyms, and functional summaries.
+    
+    CRITICAL PROMPT RULES:
+    1. EXACT ID REQUIRED: You MUST pass a single numeric NCBI Gene ID as a string (e.g., '19171', '10582').
+    2. DO NOT PASS NAMES: Never pass gene symbols, text, or query strings (e.g., BAD: 'SuSy', 'Saccharum SPS').
+    3. EXECUTION ORDER: You must successfully run the 'search_ncbi_genes' tool FIRST to discover the correct numeric Gene ID before calling this tool.
     """
     logger.debug(f"[NCBI Tool] Fetching deep metadata for Gene ID: {gene_id}")
 
     async with aiohttp.ClientSession() as session:
         try:
             ds_url = f"{DATASETS_BASE}/gene/id/{gene_id}/dataset_report"
-            async with session.get(ds_url, headers={"Accept": "application/json"}) as resp:
-                if resp.status != 200:
-                    raise ValueError(f"NCBI Datasets API failed to find metadata for Gene ID {gene_id}.")
-                ds_data = await resp.json()
+            
+            async with limiter:
+                async with session.get(ds_url, headers=get_datasets_headers()) as resp:
+                    if resp.status != 200:
+                        raise ValueError(f"NCBI Datasets API failed to find metadata for Gene ID {gene_id}.")
+                    ds_data = await resp.json()
                 
             reports = ds_data.get("reports", [])
             if not reports:
@@ -162,22 +233,19 @@ async def get_ncbi_gene_metadata(gene_id: str) -> str:
             logger.error(f"Error fetching gene metadata: {str(e)}")
             raise e
 
+
 async def _fallback_taxon_search(session: aiohttp.ClientSession, query: str) -> str:
-    """
-    Fallback mechanism: If E-utilities fails, we do a broad search using the taxon endpoint.
-    NCBI's {taxons} parameter accepts both numeric IDs and string names directly!
-    """
-    # E.g., turns "sugarcane" into "sugarcane" or "sugarcane r570" into "sugarcane%20r570"
+    """Fallback mechanism for Datasets v2 API."""
+    import urllib.parse
     safe_query = urllib.parse.quote(query.strip())
-    
-    # We use your exact allowed endpoint: /genome/taxon/{taxons}/dataset_report
     genome_url = f"{DATASETS_BASE}/genome/taxon/{safe_query}/dataset_report"
     
     try:
-        async with session.get(genome_url, headers={"Accept": "application/json"}) as resp:
-            if resp.status != 200:
-                raise ValueError(f"No genome dataset found for taxon '{query}'.")
-            genome_data = await resp.json()
+        async with limiter:
+            async with session.get(genome_url, headers=get_datasets_headers()) as resp:
+                if resp.status != 200:
+                    raise ValueError(f"No genome dataset found for taxon '{query}'.")
+                genome_data = await resp.json()
             
         reports = genome_data.get("reports", [])
         if reports:
@@ -189,6 +257,7 @@ async def _fallback_taxon_search(session: aiohttp.ClientSession, query: str) -> 
     except Exception as e:
         logger.error(f"System Error during fallback search: {str(e)}")
         raise e
+
 
 def _format_dataset_report(report: Dict[str, Any]) -> str:
     """Formats the complex JSON report into a clean string for the LLM."""

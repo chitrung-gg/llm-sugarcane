@@ -1,12 +1,12 @@
 import time
-from typing import Literal, Union
+from typing import List, Literal, Union
 from loguru import logger
 
 from app.core.graph.routing.route_action import RouteDecision, get_routing_destinations
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 from langchain_core.tools import render_text_description_and_args, BaseTool
 from langgraph.types import Command
 
@@ -44,10 +44,26 @@ def make_router_node(
 
         execution_history = ""
         failed_tools = []
+        
         if rag_results or tool_results or web_results:
             execution_history += "\n--- CURRENT SEARCH/TOOL RESULTS ---\n"
+            
             if rag_results:
-                execution_history += f"- Found {len(rag_results)} chunks from local RAG.\n"
+                rag_preview = str(rag_results)[:500] + "..." if len(str(rag_results)) > 500 else str(rag_results)
+                execution_history += (
+                    f"⛔ ALREADY EXECUTED: Local RAG for query: '{query}'\n"
+                    f"  Preview: {rag_preview}\n"
+                    f"  -> RULE: DO NOT use 'rag_only' again.\n\n"
+                )
+            
+            if web_results:
+                web_preview = str(web_results)[:600] + "..." if len(str(web_results)) > 600 else str(web_results)
+                execution_history += (
+                    f"⛔ ALREADY EXECUTED: Web Search for query: '{query}'\n"
+                    f"  Result Preview ({len(web_results)} items): {web_preview}\n"
+                    f"  -> RULE: DO NOT use 'web_search' again for this specific query.\n\n"
+                )
+
             if tool_results:
                 execution_history += "- Tool History:\n"
                 for res in tool_results:
@@ -58,23 +74,29 @@ def make_router_node(
 
                     tool_args = res.get('args', {})
                     execution_history += f"  {status_emoji} {res['tool_name']}({tool_args}): {res['output'][:300]}...\n"
-            if web_results:
-                execution_history += f"- Found {len(web_results)} web results.\n"
-            
-            execution_history += """
-                REASONING GUIDELINES:
-                1. If the results above are SUFFICIENT to fully answer the user, choose 'direct_answer' to finish.
-                2. If a tool returned 'Unknown', 'Error', or generic metadata (like 'GCA_...' without names), DO NOT repeat it. Instead, try a different tool.
-                3. If you have partial info, decide which specific tool can fill the remaining gap.
-                4. AVOID REDUNDANT CALLS: DO NOT call the exact same tool with the exact same arguments if it already succeeded in the current EXECUTION HISTORY. If you are still missing information but have no other appropriate tools to fetch it, you MUST choose 'direct_answer' to proceed to the synthesizer.
-            """
 
         failover_instruction = ""
         if failed_tools:
             failed_str = ", ".join(set(failed_tools))
-            failover_instruction = f"\nFAIL-OVER ALERT: The following tools FAILED or TIMED OUT in the previous step: [{failed_str}]. DO NOT USE THEM AGAIN! Route to 'web_search', 'rag_only', or use alternative available tools.\n"
+            failover_instruction = f"\nFAIL-OVER ALERT: The following tools FAILED or TIMED OUT in the previous step: [{failed_str}]. DO NOT USE THEM AGAIN!\n"
 
+        # --- DYNAMIC INTENTS BUILDER ---
+        # Only provide options to the LLM that are actually valid for this iteration.
+        available_intents_list = [
+            "- 'direct_answer': Use ONLY when the answer is complete OR no further improvement is possible.",
+            "- 'all': For general biological queries (First turn only).",
+            "- 'tool_only': For specialized bioinformatics analysis."
+        ]
         
+        if not web_results:
+            available_intents_list.append("- 'web_search': For latest or external information.")
+            
+        if not rag_results:
+            available_intents_list.append("- 'rag_only': For local document queries.")
+            
+        intents_str = "\n            ".join(available_intents_list)
+
+        # 1. Base System Instructions (Static knowledge)
         system_instructions = f"""
             You are an expert routing assistant for a Sugarcane Genomics system.
             Your job is to analyze the user's query and route it to the correct execution path.
@@ -84,60 +106,52 @@ def make_router_node(
 
             CONVERSATION SUMMARY
             {state.get('summary', 'No summary available yet.')}
-
-            EXECUTION HISTORY
-            {execution_history if execution_history else "No tools have been run yet."}
-
-            FAILOVER INSTRUCTION
-            {failover_instruction}
-
-            CRITICAL ROUTING RULES:
-            - Choose 'direct_answer': If you have enough information to answer, or if the user asks a simple question (about uploaded files or not).
-            - Choose 'all' (RECOMMENDED FOR FIRST TURN): For general biological queries.
-            - Choose 'web_search': For latest news or when internal databases (RAG/Tools) fail.
-            - Choose 'rag_only': For queries specifically about local documents.
-            - Choose 'tool_only': For specialized bioinformatic analyses (NCBI, BLAST, etc.).
-               * EXCEPTION: DO NOT use local backend tools (like list_genome_files, get_genes_list) for general information queries. ONLY use them if the user EXPLICITLY specifies running a tool or querying their uploaded backend files.
-
-            CRITICAL: Use EXACT tool names. Do not hallucinate tools.
         """
-        
-        user_input = f"User Query: {query}"
 
-        messages_to_send = [
-            SystemMessage(content=system_instructions),
-            HumanMessage(content=user_input),
+        messages_to_send: List[BaseMessage] = [
+            SystemMessage(content=system_instructions)
         ]
 
-        # Include previous chat history if it exists
+        # 2. Add conversation history
         if state.get("messages"):
-            # history_messages = state["messages"]
-            # logger.debug(
-            #     f"[Router] Including chat history | total_messages={len(history_messages)}"
-            # )
-            
-            # # 1. Extract up to the last 5 messages
-            # last_5_msgs = history_messages[-5:]
-            
-            # logger.debug("[Router] --- Last 5 Messages in Context ---")
-            # for idx, msg in enumerate(last_5_msgs):
-            #     # Identify if it is a HumanMessage, AIMessage, etc.
-            #     msg_type = msg.__class__.__name__ 
-                
-            #     # Truncate the content to 150 characters for clean terminal output
-            #     raw_content = str(msg.content).replace("\n", " ")
-            #     content_preview = raw_content[:150] + ("..." if len(raw_content) > 150 else "")
-                
-            #     logger.debug(f"  {idx + 1}. [{msg_type}]: {content_preview}")
-            # logger.debug("--------------------------------------------")
-
-            # # 2. Append the history to the prompt
-            # # Pro-tip: If conversations get very long, you might want to change this to:
-            # # messages_to_send.extend(history_messages[-10:]) 
-            # # to prevent the Router from exceeding its context window!
-
-            # Already use the @summarizer_node to summarize the content 
             messages_to_send.extend(state["messages"])
+        else:
+            messages_to_send.append(HumanMessage(content=f"User Query: {query}"))
+
+        # 3. Inject the State, Previews and Anti-Loop Rules at the VERY END.
+        final_state_enforcement = f"""
+            {execution_history}
+            {failover_instruction}
+
+            CRITICAL ROUTING RULES & ANTI-LOOP MECHANISM:
+
+            1. EVALUATE TOOL RESULTS (MULTI-STEP AWARE):
+            - If information is FULLY sufficient → choose 'direct_answer'
+            - If information is PARTIALLY sufficient → DO NOT stop. Use OTHER available tools.
+            - If you have exhausted available tools or the tools return irrelevant data → fallback to 'direct_answer' and explain what information is missing.
+
+            2. SMART TOOL CHAINING:
+            - If one tool returns partial results, analyze what is missing and select the MOST APPROPRIATE next tool.
+            - Combine results from multiple tools when necessary.
+
+            3. STRICT ANTI-LOOP RULE:
+            - If you see "⛔ ALREADY EXECUTED" in the history, you are STRICTLY FORBIDDEN from trying to execute that action again.
+            - Move to 'direct_answer' if you have no other tools left to try.
+
+            4. MANDATORY TOOL CALLING RULES (CRITICAL):
+            - If you choose 'tool_only' or 'all', you MUST extract the necessary tools and populate the `required_tools` list with the correct tool name and arguments. 
+            - DO NOT output an empty tool list if you intend to use bioinformatics tools.
+            - TRANSLATION & KEYWORD EXTRACTION: If the user's query is in Vietnamese (e.g., "mía r570"), you MUST translate and extract short English keywords (e.g., "sugarcane r570") before passing it into the tool arguments.
+
+            ---
+
+            AVAILABLE INTENTS FOR THIS ITERATION:
+            {intents_str}
+            (Note: If you select 'all' or 'tool_only', you MUST provide the tool details in `required_tools`)
+        """
+
+        # Append as a SystemMessage at the end of the array to force compliance
+        messages_to_send.append(SystemMessage(content=final_state_enforcement))
         
         logger.debug(
             f"[Router] Sending {len(messages_to_send)} messages to LLM (Iteration: {current_iteration})"

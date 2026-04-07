@@ -101,11 +101,19 @@ class Settings(BaseSettings):
         default="http://localhost:8001", validation_alias="GENOME_BACKEND_API_URL"
     )
 
+    # --- NCBI Tool ---
     ncbi_openapi_yaml_path: str = Field(
         default="resources/ncbi_dataset_openapi_truncated.yaml", 
         validation_alias="NCBI_OPENAPI_YAML_PATH"
     )
-
+    ncbi_tool: SecretStr | None = Field(
+        default=None, 
+        validation_alias="NCBI_TOOL"
+    )
+    ncbi_email: SecretStr | None = Field(
+        default=None, 
+        validation_alias="NCBI_EMAIL"
+    )
     ncbi_api_key: SecretStr | None = Field(
         default=None, 
         validation_alias="NCBI_API_KEY"
