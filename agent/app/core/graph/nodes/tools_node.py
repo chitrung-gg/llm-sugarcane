@@ -55,7 +55,11 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
                 error_msg = f"Tool '{tool_name}' is not recognized."
                 logger.error(error_msg)
                 new_tool_results.append(ToolResult(
-                    tool_name=tool_name, status="error", output=error_msg, execution_time_ms=0
+                    tool_name=tool_name,
+                    args = tool_args,
+                    status="error",
+                    output=error_msg,
+                    execution_time_ms=0
                 ))
                 continue
 
@@ -63,12 +67,12 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
                 # Execute the actual LangChain tool
                 tool_instance = available_tools[tool_name]
                 raw_output = await tool_instance.ainvoke(tool_args)     # async
-                
+
                 # Format output safely to string
                 output_text = json.dumps(raw_output) if isinstance(raw_output, (dict, list)) else str(raw_output)
                 status = "success"
 
-                elapsed = int((time.time() - tool_start) * 1000)
+                elapsed = int((time.time() - tool_start) * 1000)  
                 logger.debug(
                     "[Tools] ✅ Tool completed | name={tool_name} | status={status} | latency={elapsed}ms",
                     tool_name=tool_name, status=status, elapsed=elapsed
@@ -79,13 +83,14 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
                 output_text = f"Tool execution failed: {str(e)}"
                 status = "error"
 
-                logger.exception(
-                    "[Tools] ❌ Tool failed | name={tool_name} | latency={elapsed}ms",
-                    tool_name=tool_name, elapsed=elapsed
+                logger.error(
+                    "[Tools] ❌ Tool failed | name={tool_name} | error={error} | latency={elapsed}ms",
+                    tool_name=tool_name, error=str(e), elapsed=elapsed
                 )
 
             tool_item = ToolResult(
                 tool_name=tool_name,
+                args=tool_args,
                 status=status, 
                 output=output_text,
                 execution_time_ms=elapsed

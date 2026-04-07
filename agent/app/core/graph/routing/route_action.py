@@ -28,6 +28,7 @@ def get_routing_destinations(intent: str) -> Union[Nodes, List[Nodes]]:
         return "synthesizer"
     
 class RouteDecision(BaseModel):
+    reasoning: str = Field(description="Brief explanation of why this route/tool was chosen based on history.")
     intent: Literal["rag_only", "tool_only", "all", "unclear", "web_search", "direct_answer"] = Field(
         description="Determine the routing intent based on the user query. "
                     "Use 'web_search' for fetching the latest news, external databases, or information not found in vector stores."

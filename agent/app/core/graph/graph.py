@@ -7,6 +7,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
+from app.core.graph.nodes.summarizer_node import make_summarizer_node
 from app.core.graph.nodes.input_analyzer_node import make_input_analyzer_node
 from app.utils.document_processor import DocumentProcessor
 from app.core.graph.routing.check_rag_fallback import check_rag_fallback
@@ -56,6 +57,10 @@ async def build_agent_graph(
     workflow.add_node(
         "synthesizer",
         make_synthesizer_node(llm_service)
+    )
+    workflow.add_node(
+        "summarizer",
+        make_summarizer_node(llm_service)
     )
 
     # Define flows

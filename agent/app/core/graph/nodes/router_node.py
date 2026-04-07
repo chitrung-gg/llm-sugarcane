@@ -19,12 +19,21 @@ def make_router_node(
     async def router(state: AgentState) -> Command[after_router_node]:
         logger.debug("[Router] 🧭 Starting intent analysis")
 
+        current_iteration = state.get("iteration_count", 0)
+
+        if current_iteration >= 3:
+            logger.warning(f"[Router] 🛑 Max iterations reached ({current_iteration}). Forcing exit to synthesizer.")
+            return Command(
+                goto="synthesizer",
+                update={"iteration_count": current_iteration + 1}
+            )
+
         start_time = time.time()
 
         query = state["query"]
         logger.debug(f"[Router] Query: {query}")
 
-        llm = llm_service.get_secondary_model()
+        llm = llm_service.get_primary_model()
         router_llm = llm.with_structured_output(RouteDecision)
 
         tool_list_str = render_text_description_and_args(list(available_tools.values()))
@@ -34,6 +43,7 @@ def make_router_node(
         web_results = state.get("web_results", [])
 
         execution_history = ""
+        failed_tools = []
         if rag_results or tool_results or web_results:
             execution_history += "\n--- CURRENT SEARCH/TOOL RESULTS ---\n"
             if rag_results:
@@ -42,34 +52,53 @@ def make_router_node(
                 execution_history += "- Tool History:\n"
                 for res in tool_results:
                     status_emoji = "✅" if res['status'] == "success" else "❌"
-                    execution_history += f"  {status_emoji} {res['tool_name']}: {res['output'][:300]}...\n"
+
+                    if res['status'] == "error":
+                        failed_tools.append(res['tool_name'])
+
+                    tool_args = res.get('args', {})
+                    execution_history += f"  {status_emoji} {res['tool_name']}({tool_args}): {res['output'][:300]}...\n"
             if web_results:
                 execution_history += f"- Found {len(web_results)} web results.\n"
             
             execution_history += """
+                REASONING GUIDELINES:
                 1. If the results above are SUFFICIENT to fully answer the user, choose 'direct_answer' to finish.
-                2. If a tool returned 'Unknown', 'Error', or generic metadata (like 'GCA_...' without names), DO NOT repeat it. Instead, try a different tool (e.g., if genome search failed, try gene search or web search).
+                2. If a tool returned 'Unknown', 'Error', or generic metadata (like 'GCA_...' without names), DO NOT repeat it. Instead, try a different tool.
                 3. If you have partial info, decide which specific tool can fill the remaining gap.
+                4. AVOID REDUNDANT CALLS: DO NOT call the exact same tool with the exact same arguments if it already succeeded in the current EXECUTION HISTORY. If you are still missing information but have no other appropriate tools to fetch it, you MUST choose 'direct_answer' to proceed to the synthesizer.
             """
+
+        failover_instruction = ""
+        if failed_tools:
+            failed_str = ", ".join(set(failed_tools))
+            failover_instruction = f"\nFAIL-OVER ALERT: The following tools FAILED or TIMED OUT in the previous step: [{failed_str}]. DO NOT USE THEM AGAIN! Route to 'web_search', 'rag_only', or use alternative available tools.\n"
 
         
         system_instructions = f"""
             You are an expert routing assistant for a Sugarcane Genomics system.
             Your job is to analyze the user's query and route it to the correct execution path.
 
-            {execution_history}
+            AVAILABLE BIOINFORMATICS TOOLS:
+            {tool_list_str}
+
+            CONVERSATION SUMMARY
+            {state.get('summary', 'No summary available yet.')}
+
+            EXECUTION HISTORY
+            {execution_history if execution_history else "No tools have been run yet."}
+
+            FAILOVER INSTRUCTION
+            {failover_instruction}
 
             CRITICAL ROUTING RULES:
             - Choose 'direct_answer': If you have enough information to answer, or if the user asks a simple question (about uploaded files or not).
             - Choose 'all' (RECOMMENDED FOR FIRST TURN): For general biological queries.
             - Choose 'web_search': For latest news or when internal databases (RAG/Tools) fail.
             - Choose 'rag_only': For queries specifically about local documents.
-            - Choose 'tool_only': For specialized bioinformatic analyses (NCBI, BLAST, etc.)
+            - Choose 'tool_only': For specialized bioinformatic analyses (NCBI, BLAST, etc.).
+               * EXCEPTION: DO NOT use local backend tools (like list_genome_files, get_genes_list) for general information queries. ONLY use them if the user EXPLICITLY specifies running a tool or querying their uploaded backend files.
 
-            AVAILABLE BIOINFORMATICS TOOLS:
-            {tool_list_str}
-            
-            
             CRITICAL: Use EXACT tool names. Do not hallucinate tools.
         """
         
@@ -106,10 +135,12 @@ def make_router_node(
             # # Pro-tip: If conversations get very long, you might want to change this to:
             # # messages_to_send.extend(history_messages[-10:]) 
             # # to prevent the Router from exceeding its context window!
+
+            # Already use the @summarizer_node to summarize the content 
             messages_to_send.extend(state["messages"])
         
         logger.debug(
-            f"[Router] Sending {len(messages_to_send)} messages to LLM (Iteration: {state.get('iteration_count', 0)})"
+            f"[Router] Sending {len(messages_to_send)} messages to LLM (Iteration: {current_iteration})"
         )
 
         try:
@@ -131,7 +162,8 @@ def make_router_node(
         return Command(
             goto=destinations,
             update={
-                "required_tools": decision.required_tools
+                "required_tools": decision.required_tools,
+                "iteration_count": current_iteration + 1
             }
         )
 

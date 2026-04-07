@@ -13,7 +13,7 @@ from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 from langgraph.types import Command
 
 # after_synthesizer_node to go to after completed this step
-after_synthesizer_node = Literal["__end__"]
+after_synthesizer_node = Literal["summarizer", "__end__"]
 
 # Define how the LLM should output its answer
 class SynthesizerOutput(BaseModel):
@@ -133,8 +133,9 @@ def make_synthesizer_node(llm_service: LLMService):
         # This handler logic must in Router node
         # destination = check_if_resolved(preview_state)
 
+    
         return Command(
-            goto="__end__",
+            goto="summarizer",
             update=updates
         )
 

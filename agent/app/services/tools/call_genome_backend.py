@@ -5,6 +5,8 @@ from app.configs.settings.settings import get_settings
 
 
 TIMEOUT = 120
+
+# Raise Error instead of return an error dict, to handle at @tool_node
 async def call_genome_backend(method: str, endpoint: str, params=None, json_data=None) -> dict:
     settings = get_settings()
 
@@ -25,7 +27,13 @@ async def call_genome_backend(method: str, endpoint: str, params=None, json_data
             return response.json()
     except httpx.HTTPStatusError as e:
         logger.error(f"HTTP Error {e.response.status_code} for {url}: {e.response.text}")
-        return {"error": str(e), "details": e.response.text, "status": "failed"}
+        raise RuntimeError(
+            f"Genome Backend HTTP {e.response.status_code}: {e.response.text}"
+        )
+    except httpx.RequestError as e:
+        logger.error(f"Request failed for {url}: {str(e)}")
+        raise RuntimeError(f"Failed to connect to Genome Backend: {str(e)}")
+
     except Exception as e:
-        logger.error(f"Backend API Call Failed: {url} - {str(e)}")
-        return {"error": str(e), "status": "failed"}
+        logger.error(f"Unexpected error for {url}: {str(e)}")
+        raise

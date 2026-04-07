@@ -1,5 +1,5 @@
 import operator
-from typing import Annotated, Dict, List, Literal, Optional, TypedDict
+from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
 from langgraph.graph import add_messages
 from langchain_core.messages import BaseMessage
@@ -34,6 +34,7 @@ class WebResult(TypedDict):
 class ToolResult(TypedDict):
     """Stores tool executions' results."""
     tool_name: str
+    args: Dict[str, Any]
     status: Literal["success", "error"]
     output: str 
     execution_time_ms: Optional[int] 
@@ -42,6 +43,7 @@ class AgentState(TypedDict):
     # Core
     query: str
     messages: Annotated[List[BaseMessage], add_messages]
+    summary: str # Stores the rolling summary of the conversation
     uploaded_files: List[UploadedFile]
     uploaded_chunks: Annotated[List[Document], operator.add]
 
