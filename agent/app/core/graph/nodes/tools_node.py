@@ -74,8 +74,8 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
 
                 elapsed = int((time.time() - tool_start) * 1000)  
                 logger.debug(
-                    "[Tools] ✅ Tool completed | name={tool_name} | status={status} | latency={elapsed}ms",
-                    tool_name=tool_name, status=status, elapsed=elapsed
+                    "[Tools] ✅ Tool completed | name={tool_name} | status={status} | latency={elapsed}ms | output_text={output_text}",
+                    tool_name=tool_name, status=status, elapsed=elapsed, output_text=output_text[:500]
                 )
 
             except Exception as e:
@@ -84,8 +84,8 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
                 status = "error"
 
                 logger.error(
-                    "[Tools] ❌ Tool failed | name={tool_name} | error={error} | latency={elapsed}ms",
-                    tool_name=tool_name, error=str(e), elapsed=elapsed
+                    "[Tools] ❌ Tool failed | name={tool_name} | error={error} | latency={elapsed}ms | ouptut_text={output_text}",
+                    tool_name=tool_name, error=str(e), elapsed=elapsed, output_text=output_text[:500]
                 )
 
             tool_item = ToolResult(

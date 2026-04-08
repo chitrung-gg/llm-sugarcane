@@ -170,7 +170,7 @@ def make_router_node(
         elapsed = int((time.time() - start_time) * 1000)
 
         logger.debug(
-            f"[Router] ✅ Decision: {decision.intent} | Tools: {decision.required_tools} | Latency: {elapsed}ms"
+            f"[Router] ✅ Decision: {decision.intent} | Tools: {decision.required_tools} | Reasoning: {decision.reasoning[:500]} | Latency: {elapsed}ms"
         )
 
         return Command(

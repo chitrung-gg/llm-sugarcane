@@ -8,7 +8,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 from botocore.client import BaseClient
 
-from app.core.tools.ncbi_dataset_tool import get_ncbi_gene_metadata, search_ncbi_genes, search_ncbi_genome
+from app.core.tools.ncbi_eutils_tool import get_gene_metadata_by_symbol, search_literature_for_traits, search_ncbi_genome
 from app.core.tools.openapi_tool import build_openapi_tools
 from app.core.graph.graph import build_agent_graph
 from app.configs.settings.settings import get_settings
@@ -98,8 +98,7 @@ class AppContainer:
         static_tools = [
             list_genome_files, get_genes_list, search_genes_full,
             get_gene_detail, run_blast, run_synteny_analysis, 
-            run_crispor, design_polyploid_primer, search_ncbi_genome,
-            search_ncbi_genes, get_ncbi_gene_metadata
+            run_crispor, design_polyploid_primer, search_literature_for_traits, get_gene_metadata_by_symbol, search_ncbi_genome
         ]
         # Combine static and dynamic tools into a dictionary
         # all_tools = {tool.name: tool for tool in static_tools + self.ncbi_tools}

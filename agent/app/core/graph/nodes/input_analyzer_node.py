@@ -80,7 +80,11 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
             update={
                 "messages": [msg] if msg else [],
                 "uploaded_chunks": ephemeral_chunks,
-                "iteration_count": current_iter
+                "tool_results": [],
+                "web_results": [],
+                "rag_results": [],
+                "iteration_count": 0,
+                "required_tools": []
             }
         )
 
