@@ -146,6 +146,60 @@ class AgentService:
             execution_time=process_time
         )
 
+
+    async def get_conversation_history(self, thread_id: uuid.UUID) -> dict:
+        """Retrieves the conversation history and execution data from the LangGraph checkpointer."""
+        config: RunnableConfig = {
+            "configurable": {
+                "thread_id": str(thread_id)
+            }
+        }
+
+        # Retrieve the latest state snapshot for this thread
+        state_snapshot = await self.graph.aget_state(config)
+
+        # If the thread doesn't exist or has no state, return empty structure
+        if not state_snapshot or not state_snapshot.values:
+            return {
+                "thread_id": thread_id, 
+                "messages": [],
+                "rag_results": [],
+                "tool_results": [],
+                "web_results": []
+            }
+
+        state_values = state_snapshot.values
+
+        # 1. Extract the custom execution lists from your AgentState
+        rag_results = state_values.get("rag_results", [])
+        tool_results = state_values.get("tool_results", [])
+        web_results = state_values.get("web_results", [])
+
+        # 2. Format standard chat messages for the API response
+        raw_messages = state_values.get("messages", [])
+        formatted_messages = []
+        
+        for msg in raw_messages:
+            msg_type = msg.type # Usually 'human', 'ai', 'tool', etc.
+            
+            # We only map human and AI messages here because your custom 
+            # tool_results array already holds the beautifully structured tool data
+            if msg_type in ["human", "ai"]:
+                formatted_messages.append({
+                    "role": "user" if msg_type == "human" else "assistant",
+                    "content": msg.content
+                })
+
+        # 3. Return the rich payload
+        return {
+            "thread_id": thread_id,
+            "messages": formatted_messages,
+            "rag_results": rag_results,
+            "tool_results": tool_results,
+            "web_results": web_results,
+            "summary": state_values.get("summary", "") # Optional: grab the rolling summary too!
+        }
+
     async def _compress_and_upload_to_s3(self, temp_path: Path, original_filename: str, s3_client: BaseClient) -> tuple[str, str]:
         """Compresses file if needed, uploads to RustFS via aioboto3, and returns the S3 URI and new filename."""
         bucket_name = "sugarcane-genomes"

@@ -29,3 +29,15 @@ async def chat_with_langgraph_agent(
     except Exception as e:
         logger.error(f"Graph Execution Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
+    
+@router.get("/agent_langgraph/chat/{thread_id}/history")
+async def get_chat_history(
+    thread_id: uuid.UUID,
+    agent_service: AgentService = Depends(get_agent_service)
+):
+    """Fetch the conversation history for a specific thread_id."""
+    try:
+        return await agent_service.get_conversation_history(thread_id)
+    except Exception as e:
+        logger.error(f"Failed to fetch history for thread {thread_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch conversation history.")
