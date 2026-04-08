@@ -9,7 +9,7 @@ from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.graph.state.agent_state import AgentState, ToolResult
 
 
-after_tools_node = Literal["router"]
+after_tools_node = Literal["enrichment_node", "router"]
 
 def make_tools_node(available_tools: dict[str, BaseTool]):
     async def tools(state: AgentState) -> Command[after_tools_node]:
@@ -104,9 +104,9 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
             total_tools=len(new_tool_results), total_latency=total_elapsed
         )
 
-        # Return Command to route exactly to the synthesizer
+        # Return Command to route exactly to the enrichment_node
         return Command(
-            goto="router",
+            goto="enrichment_node",
             update={"tool_results": new_tool_results}
         )
     

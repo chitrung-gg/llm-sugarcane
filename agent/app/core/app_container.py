@@ -23,6 +23,7 @@ from app.core.tools.genome_tool import (
     get_genes_list, list_genome_files, run_blast, run_crispor,
     run_synteny_analysis, search_genes_full
 )
+from app.core.tools.graph_rag_tool import make_graph_rag_tool
 
 class AppContainer:
     """Central dependency container."""
@@ -34,6 +35,7 @@ class AppContainer:
         self._document_processor: DocumentProcessor | None = None
         self._searx_wrapper: SearxSearchWrapper | None = None
         self._agent_graph: CompiledStateGraph | None = None
+        self._graph_rag_tool: BaseTool | None = None
         self._rustfs_client: BaseClient | None = None
 
     async def initialize(self):
@@ -62,14 +64,14 @@ class AppContainer:
 
         if settings.qdrant_collection_name is None:
             raise ValueError("Qdrant Collection Name is not configured")
-        
+
         qdrant_config = VectorStore(
             collection_name=settings.qdrant_collection_name,
             vector_size=settings.qdrant_vector_size, # 768
             url=settings.qdrant_url,
             dense_embedding=self.embedding_model 
         )
-        
+
         self._vector_store = qdrant_config.get_vector_store()
 
     async def _init_searx_wrapper(self):
@@ -78,7 +80,7 @@ class AppContainer:
 
         if settings.searx_host is None:
             raise ValueError("SEARX_HOST is not configured")
-        
+
         self._searx_wrapper = SearxSearchWrapper(
             searx_host=settings.searx_host.get_secret_value()
         )
@@ -92,15 +94,16 @@ class AppContainer:
     async def _init_agent_graph(self):
         """
         Builds the LangGraph once during startup.
-        
+
         Because each method return the name depends on the OpenAPI specs, and can be changed over time, so we should build the list dynamically
         """
+        self._graph_rag_tool = make_graph_rag_tool(self.vector_store)
+
         static_tools = [
             list_genome_files, get_genes_list, search_genes_full,
             get_gene_detail, run_blast, run_synteny_analysis, 
-            run_crispor, design_polyploid_primer, search_literature_for_traits, get_gene_metadata_by_symbol, search_ncbi_genome
-        ]
-        # Combine static and dynamic tools into a dictionary
+            run_crispor, design_polyploid_primer, search_literature_for_traits, get_gene_metadata_by_symbol, search_ncbi_genome, self._graph_rag_tool
+        ]        # Combine static and dynamic tools into a dictionary
         # all_tools = {tool.name: tool for tool in static_tools + self.ncbi_tools}
         all_tools = {tool.name: tool for tool in static_tools}
 

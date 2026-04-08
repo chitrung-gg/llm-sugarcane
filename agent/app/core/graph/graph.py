@@ -18,6 +18,7 @@ from app.core.graph.nodes.rag_node import make_rag_node
 from app.core.graph.nodes.router_node import make_router_node
 from app.core.graph.nodes.synthesizer_node import make_synthesizer_node
 from app.core.graph.nodes.tools_node import make_tools_node
+from app.core.graph.nodes.enrichment_node import make_enrichment_node
 from app.core.graph.routing.check_if_resolved import check_if_resolved
 from app.core.graph.state.agent_state import AgentState
 from app.configs.storage.databases import langgraph_connection_pool
@@ -53,6 +54,10 @@ async def build_agent_graph(
     workflow.add_node(
         "tool_execution",
         make_tools_node(available_tools)
+    )
+    workflow.add_node(
+        "enrichment_node",
+        make_enrichment_node(llm_service, vector_store)
     )
     workflow.add_node(
         "synthesizer",
