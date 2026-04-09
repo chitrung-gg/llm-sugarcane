@@ -18,6 +18,15 @@ langgraph_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = Async
     open=False
 )
 
+genome_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
+    conninfo=settings.genome_postgres_url,
+    # max_size=20,
+    kwargs={
+        "autocommit": True,
+        "row_factory": dict_row,
+    },
+    open=False
+)
 
 
 neo4j_driver = AsyncGraphDatabase.driver(

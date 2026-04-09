@@ -62,10 +62,28 @@ class Settings(BaseSettings):
     # --- InMemory Store ---
     inmemory_retriever_top_k: int = 3
 
+    # --- Genome Postgres ---
+    genome_postgres_url: str = Field(
+        default="postgresql+asyncpg://genome:genome@localhost:5432/sugarcane",
+        validation_alias="GENOME_POSTGRES_URL"
+    )
+
     # --- LangGraph's Postgres Checkpointer ---
     langgraph_postgres_url: str = Field(
         default="postgresql+asyncpg://langgraph:langgraph@localhost:5432/sugarcane",
         validation_alias="LANGGRAPH_POSTGRES_URL"
+    )
+
+    # --- KnowledgeGraph's Postgres ---
+    knowledgegraph_postgres_url: str = Field(
+        default="postgresql+asyncpg://knowledge:knowledge@localhost:5432/sugarcane",
+        validation_alias="KNOWLEDGEGRAPH_POSTGRES_URL"
+    )
+
+    # --- RabbitMQ ---
+    knowledgegraph_rabbitmq_url: str = Field(
+        default="amqp://rabbitmq:rabbitmq@localhost:5672/llm-ingest-knowledgegraph",
+        validation_alias="KNOWLEDGEGRAPH_RABBITMQ_URL"
     )
 
     # --- SearxNG ---
@@ -123,7 +141,7 @@ class Settings(BaseSettings):
         default=None, 
         validation_alias="NCBI_API_KEY"
     )
-    
+
     # --- App ---
     app_env: str = Field(default="development", validation_alias="APP_ENV")
     debug: bool = False

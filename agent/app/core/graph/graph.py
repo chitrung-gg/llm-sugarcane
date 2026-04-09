@@ -57,7 +57,7 @@ async def build_agent_graph(
     )
     workflow.add_node(
         "enrichment_node",
-        make_enrichment_node(llm_service, vector_store)
+        make_enrichment_node()
     )
     workflow.add_node(
         "synthesizer",

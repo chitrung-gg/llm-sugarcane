@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from loguru import logger
 
 from app.configs.loggings.loggings import setup_logging
-from app.configs.storage.databases import langgraph_connection_pool
+from app.configs.storage.databases import genome_connection_pool, langgraph_connection_pool
 from app.configs.storage.object_storage import rustfs_client
 
 
@@ -22,8 +22,13 @@ from app.api.v1 import chat_endpoint
 async def lifespan(app: FastAPI):
     """Initialize all services on startup, clean up on shutdown."""
 
-    logger.info("🔌 Opening PostgreSQL connection pool...")
+    logger.info("🔌 Opening Genome PostgreSQL connection pool...")
+    await genome_connection_pool.open()
+    
+    logger.info("🔌 Opening LangGraph PostgreSQL connection pool...")
     await langgraph_connection_pool.open()
+
+    logger.info("🔌 Opening RustFS client ...")
     await rustfs_client.__aenter__()
 
     logger.info("⚙️ Initializing app container and compiling graph...")
@@ -32,10 +37,15 @@ async def lifespan(app: FastAPI):
     # teardown if needed (e.g. close DB connections)
 
     logger.info("🛑 Shutting down server...")
-    logger.info("🔌 Closing PostgreSQL connection pool...")
-    logger.info("🔌 Closing RustFS client ...")
+
+    logger.info("🔌 Closing Genome PostgreSQL connection pool...")
+    await genome_connection_pool.close()
+
+    logger.info("🔌 Closing LangGraph PostgreSQL connection pool...")
     await langgraph_connection_pool.close()
-    await rustfs_client.__aexit__()
+
+    logger.info("🔌 Closing RustFS client ...")
+    await rustfs_client.__aexit__(None, None, None)
 
 
 app = FastAPI(
