@@ -39,7 +39,7 @@ def setup_logging():
     # Remove the default Loguru handler
     logger.remove()
 
-    # Add our custom Loguru handler targeting standard output
+    # 1. Add our custom Loguru handler targeting standard output (Console)
     logger.add(
         sys.stdout,
         level=log_level,
@@ -50,6 +50,18 @@ def setup_logging():
         enqueue=True,  # Thread-safe for FastAPI async operations
         colorize=True
     )
+
+    # # 2. Add the File Logging handler
+    # logger.add(
+    #     "logs/app_{time:YYYY-MM-DD}.log",  # Creates a 'logs' folder and names file by date
+    #     level=log_level,
+    #     format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+    #     rotation="10 MB",     # Create a new log file when the current one reaches 10 MB
+    #     retention="30 days",  # Keep log files for 30 days, then delete them
+    #     compression="zip",    # Compress older log files to save disk space
+    #     enqueue=True,         # Thread-safe writing
+    #     colorize=False        # Disable color codes for file logs so they are readable in text editors
+    # )
 
     # Intercept everything at the root logger level
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)

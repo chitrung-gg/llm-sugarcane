@@ -29,7 +29,7 @@ class Settings(BaseSettings):
         validation_alias="GEMINI_SECONDARY_MODEL"
     )
     gemini_tertiary_model: str = Field(
-        default="gemma-4-26b-a4b-it", 
+        default="gemini-2.5-flash-lite", 
         validation_alias="GEMINI_TERTIARY_MODEL"
     )
     gemini_quaternary_model: str = Field(
