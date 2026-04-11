@@ -6,7 +6,7 @@ COPY environment.yml .
 
 RUN conda env update --file environment.yml --prune
 
-ENV PATH /opt/conda/envs/llm-sugarcane/bin:$PATH
+ENV PATH=/opt/conda/envs/llm-sugarcane/bin:$PATH
 
 COPY . .
 

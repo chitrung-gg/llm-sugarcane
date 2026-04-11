@@ -55,9 +55,18 @@ class Settings(BaseSettings):
     rag_score_threshold: float = 0.70
 
     # --- Neo4j ---
-    neo4j_uri: str = Field(default="neo4j://localhost:7687", validation_alias="NEO4J_URI")
-    neo4j_username: str = Field(default="neo4j", validation_alias="NEO4J_USERNAME")
-    neo4j_password: str = Field(default="neo4j", validation_alias="NEO4J_PASSWORD")
+    neo4j_uri: str = Field(
+        default="neo4j://localhost:7687",
+        validation_alias="NEO4J_URI"
+    )
+    neo4j_username: str = Field(
+        default="neo4j",
+        validation_alias="NEO4J_USERNAME"
+    )
+    neo4j_password: SecretStr = Field(
+        default=SecretStr("neo4j"), 
+        validation_alias="NEO4J_PASSWORD"
+    )
 
     # --- InMemory Store ---
     inmemory_retriever_top_k: int = 3
