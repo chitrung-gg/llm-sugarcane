@@ -1,10 +1,12 @@
+from enum import StrEnum
 import time
-from typing import Literal, cast
+from typing import Literal, TypeAlias, cast
 from loguru import logger
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.retrievers import BM25Retriever
 from langgraph.types import Command
 
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.routing.check_rag_fallback import check_rag_fallback
 from app.configs.settings.settings import get_settings
 from app.core.graph.state.agent_state import AgentState, RAGResult
@@ -16,12 +18,13 @@ from langchain_qdrant import QdrantVectorStore
 
 from app.core.graph.state.agent_state import AgentState, RAGResult
 
-after_rag_node = Literal["router"]
 RELEVANCE_SCORE = 0.90
 
 def make_rag_node(vector_store: QdrantVectorStore):
 
-    async def rag(state: AgentState) -> Command[after_rag_node]:
+    async def rag(state: AgentState) -> Command[
+        Literal[AgentGraphNode.SYNTHESIZER]
+    ]:
         settings = get_settings()
 
         logger.debug("[RAG] 🔎 Starting vector search")
@@ -128,7 +131,7 @@ def make_rag_node(vector_store: QdrantVectorStore):
 
         # Return to Router node as following the ReAct pattern (Reasoning Loop)
         return Command(
-            goto="router",
+            goto=AgentGraphNode.SYNTHESIZER,
             update=updates
         )
 

@@ -1,3 +1,4 @@
+from enum import StrEnum
 import json
 import time
 from typing import Literal
@@ -5,14 +6,14 @@ from loguru import logger
 from langgraph.types import Command
 from langchain_core.tools import BaseTool
 
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.graph.state.agent_state import AgentState, ToolResult
 
-
-after_tools_node = Literal["enrichment_node", "router"]
-
 def make_tools_node(available_tools: dict[str, BaseTool]):
-    async def tools(state: AgentState) -> Command[after_tools_node]:
+    async def tools(state: AgentState) -> Command[
+        Literal[AgentGraphNode.ENRICHMENT]
+    ]:
         tools_to_run = state.get("required_tools", [])
 
         logger.debug(
@@ -23,7 +24,7 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
         if not tools_to_run:
             logger.debug("[Tools] No tools required.")
             return Command(
-                goto="router",
+                goto=AgentGraphNode.ENRICHMENT,
                 update={"tool_results": []}
             )
 
@@ -106,7 +107,7 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
 
         # Return Command to route exactly to the enrichment_node
         return Command(
-            goto="enrichment_node",
+            goto=AgentGraphNode.ENRICHMENT,
             update={"tool_results": new_tool_results}
         )
     

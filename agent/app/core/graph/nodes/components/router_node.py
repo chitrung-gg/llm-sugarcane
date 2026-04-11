@@ -1,7 +1,10 @@
+from enum import StrEnum
 import time
-from typing import List, Literal, Union
+from typing import List, Literal, Union, cast
 from loguru import logger
 
+
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.routing.route_action import RouteDecision, get_routing_destinations
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
@@ -10,13 +13,18 @@ from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 from langchain_core.tools import render_text_description_and_args, BaseTool
 from langgraph.types import Command
 
-after_router_node = Literal["rag_execution", "tool_execution", "web_search", "synthesizer"]
-
 def make_router_node(
     llm_service: LLMService,
     available_tools: dict[str, BaseTool]
 ):
-    async def router(state: AgentState) -> Command[after_router_node]:
+    async def router(state: AgentState) -> Command[
+        Literal[
+            AgentGraphNode.RAG,
+            AgentGraphNode.TOOL,
+            AgentGraphNode.WEB_SEARCH,
+            AgentGraphNode.SYNTHESIZER,
+        ]
+    ]:
         logger.debug("[Router] 🧭 Starting intent analysis")
 
         current_iteration = state.get("iteration_count", 0)
@@ -24,7 +32,7 @@ def make_router_node(
         if current_iteration >= 3:
             logger.warning(f"[Router] 🛑 Max iterations reached ({current_iteration}). Forcing exit to synthesizer.")
             return Command(
-                goto="synthesizer",
+                goto=AgentGraphNode.SYNTHESIZER,
                 update={"iteration_count": current_iteration + 1}
             )
 
@@ -163,9 +171,27 @@ def make_router_node(
 
         except Exception as e:
             logger.exception("[Router] ❌ LLM routing failed")
-            raise
+            raise e
         
-        destinations = get_routing_destinations(decision.intent)
+        destinations = cast(
+            Union[
+                Literal[
+                    AgentGraphNode.RAG,
+                    AgentGraphNode.TOOL,
+                    AgentGraphNode.WEB_SEARCH,
+                    AgentGraphNode.SYNTHESIZER,
+                ],
+                List[
+                    Literal[
+                        AgentGraphNode.RAG,
+                        AgentGraphNode.TOOL,
+                        AgentGraphNode.WEB_SEARCH,
+                        AgentGraphNode.SYNTHESIZER,
+                    ]
+                ]
+            ],
+            get_routing_destinations(decision.intent)
+        )
 
         elapsed = int((time.time() - start_time) * 1000)
 

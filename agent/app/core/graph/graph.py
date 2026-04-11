@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -7,27 +9,30 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
-from app.core.graph.nodes.summarizer_node import make_summarizer_node
-from app.core.graph.nodes.input_analyzer_node import make_input_analyzer_node
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
+from app.core.graph.nodes.components.summarizer_node import make_summarizer_node
+from app.core.graph.nodes.components.input_analyzer_node import make_input_analyzer_node
 from app.utils.document_processor import DocumentProcessor
 from app.core.graph.routing.check_rag_fallback import check_rag_fallback
-from app.core.graph.nodes.web_search_node import make_web_search_node
+from app.core.graph.nodes.components.web_search_node import make_web_search_node
 from app.services.llm.llm_service import LLMService
-from app.core.graph.nodes.rag_node import make_rag_node
+from app.core.graph.nodes.components.rag_node import make_rag_node
 
-from app.core.graph.nodes.router_node import make_router_node
-from app.core.graph.nodes.synthesizer_node import make_synthesizer_node
-from app.core.graph.nodes.tools_node import make_tools_node
-from app.core.graph.nodes.enrichment_node import make_enrichment_node
-from app.core.graph.routing.check_if_resolved import check_if_resolved
+from app.core.graph.nodes.components.router_node import make_router_node
+from app.core.graph.nodes.components.synthesizer_node import make_synthesizer_node
+from app.core.graph.nodes.components.tools_node import make_tools_node
+from app.core.graph.nodes.components.enrichment_node import make_enrichment_node
 from app.core.graph.state.agent_state import AgentState
 from app.configs.storage.databases import langgraph_connection_pool
+
+from app.services.knowledge.graph_ingestion_service import GraphIngestionService
 
 async def build_agent_graph(
     llm_service: LLMService,
     vector_store: QdrantVectorStore,
     searx_wrapper: SearxSearchWrapper,
     document_processor: DocumentProcessor, 
+    graph_ingestion_service: GraphIngestionService,
     available_tools: dict[str, BaseTool]
 ):
     # Initialize graph
@@ -35,41 +40,41 @@ async def build_agent_graph(
 
     # Add nodes
     workflow.add_node(
-        "input_analyzer",
+        AgentGraphNode.INPUT_ANALYZER,
         make_input_analyzer_node(document_processor),
         retry_policy=RetryPolicy(max_attempts=3, initial_interval=1.0)
     )
     workflow.add_node(
-        "router",
+        AgentGraphNode.ROUTER,
         make_router_node(llm_service, available_tools)
     )
     workflow.add_node(
-        "rag_execution",
+        AgentGraphNode.RAG,
         make_rag_node(vector_store)
     )
     workflow.add_node(
-        "web_search",
+        AgentGraphNode.WEB_SEARCH,
         make_web_search_node(searx_wrapper)
     )
     workflow.add_node(
-        "tool_execution",
+        AgentGraphNode.TOOL,
         make_tools_node(available_tools)
     )
     workflow.add_node(
-        "enrichment_node",
-        make_enrichment_node()
+        AgentGraphNode.ENRICHMENT,
+        make_enrichment_node(graph_ingestion_service)
     )
     workflow.add_node(
-        "synthesizer",
+        AgentGraphNode.SYNTHESIZER,
         make_synthesizer_node(llm_service)
     )
     workflow.add_node(
-        "summarizer",
+        AgentGraphNode.SUMMARIZER,
         make_summarizer_node(llm_service)
     )
 
     # Define flows
-    workflow.add_edge(START, "input_analyzer")
+    workflow.add_edge(START, AgentGraphNode.INPUT_ANALYZER)
     # workflow.add_edge("input_analyzer", "router")
 
     # Conditional Routing

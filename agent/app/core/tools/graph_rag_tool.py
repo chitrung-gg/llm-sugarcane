@@ -1,12 +1,16 @@
 from typing import List, Dict, Any
 from langchain_core.tools import tool
+from langchain_neo4j import Neo4jGraph
 from langchain_qdrant import QdrantVectorStore
 from loguru import logger
 
 from app.configs.storage.databases import neo4j_driver
 
 
-def make_graph_rag_tool(vector_store: QdrantVectorStore):
+def make_graph_rag_tool(
+    vector_store: QdrantVectorStore,
+    knowledge_graph: Neo4jGraph
+):
     @tool("search_knowledge_graph")
     async def search_knowledge_graph(query: str, top_k: int = 5) -> str:
         """
@@ -31,31 +35,31 @@ def make_graph_rag_tool(vector_store: QdrantVectorStore):
                 return "Found documents but no valid graph entities."
 
             # 2. Graph Retrieval from Neo4j
-            # We query for 1-hop relationships from the retrieved entities.
-            subgraph = []
-            async with neo4j_driver.session() as session:
-                # We use APOC or general match if we have many labels. Since we know labels, we can just match any node
-                cypher_query = """
-                    MATCH (e)-[r1]-(n1)
-                    WHERE e.id IN $entity_ids
-                    OPTIONAL MATCH (n1)-[r2]-(n2)
-                    RETURN e, r1 AS r, n1 AS related, r2, n2
-                    LIMIT 50
-                """
-                result = await session.run(cypher_query, entity_ids=entity_ids)
-                records = await result.data()
+            # OPTIMIZATION: We use type(r) to get clean string names for relationships
+            cypher_query = """
+                MATCH (e)-[r1]-(n1)
+                WHERE e.id IN $entity_ids
+                OPTIONAL MATCH (n1)-[r2]-(n2)
+                RETURN e, type(r1) AS r1_type, n1, type(r2) AS r2_type, n2
+                LIMIT 50
+            """
+
+            # Use LangChain's built-in query execution
+            records = knowledge_graph.query(cypher_query, params={"entity_ids": entity_ids})
                 
-                for record in records:
-                    e_name = record["e"].get("name", "Unknown")
-                    rel_type = record["r"][1] if record["r"] else "RELATED_TO"
-                    related_name = record["related"].get("name", "Unknown")
-                    
-                    subgraph.append(f"{e_name} -[{rel_type}]-> {related_name}")
-                    
-                    if record["r2"] and record["n2"]:
-                        r2_type = record["r2"][1] if record["r2"] else "RELATED_TO"
-                        n2_name = record["n2"].get("name", "Unknown")
-                        subgraph.append(f"{related_name} -[{r2_type}]-> {n2_name}")
+            subgraph = []
+            for record in records:
+                # LangChain automatically parses nodes into dicts
+                e_name = record.get("e", {}).get("name", "Unknown")
+                rel1_type = record.get("r1_type") or "RELATED_TO"
+                n1_name = record.get("n1", {}).get("name", "Unknown")
+                
+                subgraph.append(f"{e_name} -[{rel1_type}]-> {n1_name}")
+                
+                if record.get("r2_type") and record.get("n2"):
+                    rel2_type = record.get("r2_type")
+                    n2_name = record.get("n2", {}).get("name", "Unknown")
+                    subgraph.append(f"{n1_name} -[{rel2_type}]-> {n2_name}")
 
             # 3. Format result
             if not subgraph:

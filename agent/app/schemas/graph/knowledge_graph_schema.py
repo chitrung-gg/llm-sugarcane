@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-class GraphNode(BaseModel):
+class KnowledgeGraphNode(BaseModel):
     name: str = Field(
         description="The primary name of the entity."
     )
@@ -19,7 +19,7 @@ class GraphNode(BaseModel):
     )
 
 
-class GraphRelationship(BaseModel):
+class KnowledgeGraphRelationship(BaseModel):
     source_name: str = Field(description="The exact name of the source node.")
     target_name: str = Field(description="The exact name of the target node.")
     type: str = Field(
@@ -34,6 +34,6 @@ class GraphRelationship(BaseModel):
     )
 
 
-class GraphComponents(BaseModel):
-    nodes: List[GraphNode] = Field(description="List of entities extracted from the text.")
-    relationships: List[GraphRelationship] = Field(description="List of relationships between entities.")
+class KnowledgeGraphComponents(BaseModel):
+    nodes: List[KnowledgeGraphNode] = Field(description="List of entities extracted from the text.")
+    relationships: List[KnowledgeGraphRelationship] = Field(description="List of relationships between entities.")

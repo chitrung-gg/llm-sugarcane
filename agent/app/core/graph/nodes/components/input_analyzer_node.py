@@ -2,6 +2,7 @@ import time
 from loguru import logger
 from typing import Dict, Any, Literal
 
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.configs.settings.settings import get_settings
 from app.utils.document_processor import DocumentProcessor
 from app.core.graph.state.agent_state import AgentState
@@ -9,10 +10,11 @@ from langchain_core.messages import SystemMessage
 from langgraph.types import Command
 
 
-after_input_analyzer_node = Literal["router"]
 # Wrap in factory method
 def make_input_analyzer_node(document_processor: DocumentProcessor):
-    async def input_analyzer(state: AgentState) -> Command[after_input_analyzer_node]:
+    async def input_analyzer(state: AgentState) -> Command[
+        Literal[AgentGraphNode.ROUTER]
+    ]:
         settings = get_settings()
         start_time = time.time()
 
@@ -76,7 +78,7 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
         logger.debug(f"Input Analyzer execution time: {elapsed} ms")
 
         return Command(
-            goto="router",
+            goto=AgentGraphNode.ROUTER,
             update={
                 "messages": [msg] if msg else [],
                 "uploaded_chunks": ephemeral_chunks,

@@ -2,21 +2,30 @@ import json
 import uuid
 import asyncio
 from typing import List, Dict, LiteralString, Optional, Any, cast
+from langchain_neo4j import Neo4jGraph
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.schemas.graph.knowledge_graph_schema import GraphComponents
+from app.schemas.graph.knowledge_graph_schema import KnowledgeGraphComponents
 from app.services.llm.llm_service import LLMService
-from app.configs.storage.databases import genome_connection_pool, neo4j_driver
+from app.configs.storage.databases import genome_connection_pool
 from langchain_qdrant import QdrantVectorStore
+from langchain_neo4j.graphs.graph_document import GraphDocument, Node, Relationship
+from langchain_core.documents import Document
 
 class GraphIngestionService:
-    def __init__(self, llm_service: LLMService, vector_store: QdrantVectorStore):
+    def __init__(
+        self,
+        llm_service: LLMService,
+        knowledge_graph: Neo4jGraph,
+        vector_store: QdrantVectorStore
+    ):
         self.llm_service = llm_service
+        self.knowledge_graph = knowledge_graph
         self.vector_store = vector_store
         self.allowed_labels = {"Gene", "Cultivar", "Paper", "Trait", "Disease", "Tissue", "Stress"}
 
-    async def extract_components(self, text: str) -> GraphComponents:
+    async def extract_components(self, text: str) -> KnowledgeGraphComponents:
         prompt = f"""
             You are a precise biological knowledge graph relationship extractor.
             Extract all relationships from the text.
@@ -29,9 +38,9 @@ class GraphIngestionService:
             Text to analyze:
             {text}
         """
-        model = self.llm_service.get_secondary_model().with_structured_output(GraphComponents)
+        model = self.llm_service.get_secondary_model().with_structured_output(KnowledgeGraphComponents)
         result = await model.ainvoke(prompt)
-        return cast(GraphComponents, result)
+        return cast(KnowledgeGraphComponents, result)
 
     async def ingest_knowledge(self, source_text: str, source_metadata: Optional[Dict[str, Any]] = None):
         try:
@@ -68,32 +77,59 @@ class GraphIngestionService:
                         (global_id, node.name, node.label, meta_payload)
                     )
             
-            logger.info("Saving to Neo4j...")
-            async with neo4j_driver.session() as session:
-                for node in components.nodes:
-                    if node.name in node_registry:
-                        node_info = node_registry[node.name]
-                        # MERGE handles the duplicate check. We only set the UUID if it's newly created.
-                        query = f"""
-                        MERGE (n:{node_info['label']} {{name: $name}})
-                        ON CREATE SET n.id = $id, n.description = $desc
-                        ON MATCH SET n.description = coalesce($desc, n.description)
-                        """
-                        await session.run(cast(LiteralString, query), name=node.name, id=str(node_info['id']), desc=node.description)
-                
-                for rel in components.relationships:
-                    if rel.source_name in node_registry and rel.target_name in node_registry:
-                        source = node_registry[rel.source_name]
-                        target = node_registry[rel.target_name]
-                        
-                        # SANITIZE relationship type to prevent Cypher syntax crashes
-                        safe_rel_type = rel.type.strip().upper().replace(" ", "_").replace("-", "_")
-                        
-                        query = f"""
-                        MATCH (a:{source['label']} {{name: $source_name}}), (b:{target['label']} {{name: $target_name}})
-                        MERGE (a)-[r:{safe_rel_type}]->(b)
-                        """
-                        await session.run(cast(LiteralString, query), source_name=rel.source_name, target_name=rel.target_name)
+            logger.info("Saving to Neo4j safely via LangChain...")
+
+            # 1. Convert your custom Pydantic Nodes into LangChain Nodes
+            langchain_nodes = {}
+            for node in components.nodes:
+                if node.name in node_registry:
+                    node_info = node_registry[node.name]
+                    
+                    # Langchain's Node safely escapes labels and properties
+                    lc_node = Node(
+                        id=node.name, # Primary match key
+                        type=node_info['label'], 
+                        properties={
+                            "global_id": str(node_info['id']), # Syncs with Postgres/Qdrant
+                            "description": node.description
+                        }
+                    )
+                    langchain_nodes[node.name] = lc_node
+
+            # 2. Convert your custom Pydantic Relationships into LangChain Relationships
+            langchain_rels = []
+            for rel in components.relationships:
+                if rel.source_name in langchain_nodes and rel.target_name in langchain_nodes:
+                    source_node = langchain_nodes[rel.source_name]
+                    target_node = langchain_nodes[rel.target_name]
+                    
+                    # LangChain safely sanitizes the relationship type
+                    safe_type = rel.type.strip().upper().replace(" ", "_").replace("-", "_")
+                    
+                    lc_rel = Relationship(
+                        source=source_node,
+                        target=target_node,
+                        type=safe_type,
+                        properties={
+                            "evidence": rel.evidence,
+                            "context": rel.context
+                        }
+                    )
+                    langchain_rels.append(lc_rel)
+
+            # 3. Create a GraphDocument and let LangChain handle the complex MERGE logic!
+            graph_document = GraphDocument(
+                nodes=list(langchain_nodes.values()),
+                relationships=langchain_rels,
+                source=Document(page_content=source_text) # Keeps track of where this came from
+            )
+
+            # This single line safely upserts the nodes and relationships into Neo4j
+            await asyncio.to_thread(
+                self.knowledge_graph.add_graph_documents,
+                [graph_document],
+                baseEntityLabel=True
+            )
             
             logger.info("Saving to Qdrant...")
             documents, metadatas, ids = [], [], []

@@ -1,17 +1,19 @@
+from enum import StrEnum
 import time
 from typing import Literal
 from loguru import logger
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.types import Command
 
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState, WebResult
-
-after_web_search_node = Literal["router"]
 
 def make_web_search_node(searx_wrapper: SearxSearchWrapper):
     """Factory to create the web search node with injected dependency."""
 
-    async def web_search(state: AgentState) -> Command[after_web_search_node]:
+    async def web_search(state: AgentState) -> Command[
+        Literal[AgentGraphNode.SYNTHESIZER]
+    ]:
         logger.debug("--- 🌐 TRIGGERING SEARXNG WEB SEARCH ---")
 
         query = state["query"]
@@ -54,7 +56,7 @@ def make_web_search_node(searx_wrapper: SearxSearchWrapper):
 
         # Because web_results uses operator.add, returning a list appends it to state
         return Command(
-            goto="router",
+            goto=AgentGraphNode.SYNTHESIZER,
             update={"web_results": new_web_results}
         )
     

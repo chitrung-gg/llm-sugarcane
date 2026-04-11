@@ -14,7 +14,6 @@ def celery_ingest_graph_knowledge(self, source_text: str, source_metadata: Optio
     to initialize dependencies and execute the GraphIngestionService.
     """
     logger.info(f"Celery picked up graph ingestion task. Text length: {len(source_text)}")
-    
     # Define a single async entrypoint so all DB connection pools 
     # are attached to the exact same event loop.
     async def async_runner():
@@ -30,6 +29,7 @@ def celery_ingest_graph_knowledge(self, source_text: str, source_metadata: Optio
         # Instantiate the service with the initialized dependencies
         ingestion_service = GraphIngestionService(
             llm_service=container.llm_service,
+            knowledge_graph=container.knowledge_graph, 
             vector_store=container.vector_store
         )
         

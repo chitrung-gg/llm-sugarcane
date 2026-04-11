@@ -1,25 +1,31 @@
+from enum import StrEnum
 from typing import Literal
 from loguru import logger
 from langchain_core.messages import HumanMessage, SystemMessage, RemoveMessage
 from langgraph.types import Command
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 
-after_summarizer_node = Literal["__end__"]
 
 def make_summarizer_node(llm_service: LLMService):
     """
     Creates a node that summarizes the conversation history to keep the context window lean.
     This follows the 'Summarize-and-Delete' pattern from LangGraph.
     """
-    async def summarize_conversation(state: AgentState):
+    async def summarize_conversation(state: AgentState) -> Command[
+        Literal[AgentGraphNode.END_NODE]
+    ]:
         summary = state.get("summary", "")
         messages = state.get("messages", [])
 
         # Only summarize if we have a significant number of messages (e.g., > 6)
         # to avoid summarizing every single turn which is expensive.
         if len(messages) <= 6:
-            return {"summary": summary}
+            logger.debug("[Summarizer] Not enough messages to summarize. Skipping.")
+            return Command(
+                goto=AgentGraphNode.END_NODE
+            )
 
         logger.debug(f"[Summarizer] 📝 Summarizing {len(messages)} messages...")
 
@@ -51,7 +57,7 @@ def make_summarizer_node(llm_service: LLMService):
         logger.debug("[Summarizer] ✅ Summary updated and old messages marked for removal.")
 
         return Command(
-            goto="__end__", # <--- Changed from "router"
+            goto=AgentGraphNode.END_NODE,
             update={
                 "summary": new_summary,
                 "messages": delete_messages

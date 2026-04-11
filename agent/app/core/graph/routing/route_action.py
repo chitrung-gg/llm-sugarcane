@@ -4,28 +4,30 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from langgraph.types import Command
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.schemas.tool.tool_call_request import ToolCallRequest
-from app.core.graph.state.agent_state import AgentState
 
 
-Nodes = Literal["rag_execution", "tool_execution", "web_search", "synthesizer"]
-
-def get_routing_destinations(intent: str) -> Union[Nodes, List[Nodes]]:
+def get_routing_destinations(intent: str) -> Union[AgentGraphNode, List[AgentGraphNode]]:
     """Helper function to map LLM intent to graph node destinations."""
     if intent == "rag_only":
-        return "rag_execution"
+        return AgentGraphNode.RAG
     elif intent == "tool_only":  
-        return "tool_execution"
+        return AgentGraphNode.TOOL
     elif intent == "web_search": 
-        return "web_search"
+        return AgentGraphNode.WEB_SEARCH
     elif intent == "all":
         # Return list of nodes so LangGraph runs them in parallel
-        return ["rag_execution", "tool_execution", "web_search"] 
+        return [
+            AgentGraphNode.RAG, 
+            AgentGraphNode.TOOL, 
+            AgentGraphNode.WEB_SEARCH
+        ] 
     elif intent == "direct_answer": 
-        return "synthesizer"
+        return AgentGraphNode.SYNTHESIZER
     else:
         # Fallback for "unclear" or any unexpected intent
-        return "synthesizer"
+        return AgentGraphNode.SYNTHESIZER
     
 class RouteDecision(BaseModel):
     reasoning: str = Field(description="Brief explanation of why this route/tool was chosen based on history.")

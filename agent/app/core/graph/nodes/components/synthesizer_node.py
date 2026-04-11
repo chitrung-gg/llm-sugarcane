@@ -1,10 +1,11 @@
+from enum import StrEnum
 import time
 from typing import Literal, cast
 from langgraph.graph import END
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.graph.routing.check_if_resolved import check_if_resolved
+from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.core.graph.workflow.agent_workflow import SynthesizerDecision
 from app.services.llm.llm_service import LLMService
@@ -12,8 +13,6 @@ from app.services.llm.llm_service import LLMService
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 from langgraph.types import Command
 
-# after_synthesizer_node to go to after completed this step
-after_synthesizer_node = Literal["summarizer", "__end__"]
 
 # Define how the LLM should output its answer
 class SynthesizerOutput(BaseModel):
@@ -23,15 +22,18 @@ class SynthesizerOutput(BaseModel):
     
 def make_synthesizer_node(llm_service: LLMService):
 
-    async def synthesizer(state: AgentState) -> Command[after_synthesizer_node]:
+    async def synthesizer(state: AgentState) -> Command[
+        Literal[AgentGraphNode.SUMMARIZER, AgentGraphNode.ROUTER]
+    ]:
         logger.debug("[Synthesizer] ✍️ Generating final response")
         
         current_iteration = state.get("iteration_count", 0)
         max_iterations = state.get("max_iterations", 3)
         query = state["query"]
+        messages = state.get("messages", [])
 
         # Detect if this is the final allowed loop
-        is_final_attempt = (current_iteration + 1) >= max_iterations
+        is_final_attempt = current_iteration >= max_iterations
 
         # Extract the uploaded file text from the messages
         file_context = ""
@@ -70,7 +72,7 @@ def make_synthesizer_node(llm_service: LLMService):
         """
         
             
-        prompt = f"""
+        system_prompt = f"""
             You are an expert Bioinformatics Assistant. Use the provided context to answer the user's query.
             User Query: {query}
             
@@ -87,19 +89,19 @@ def make_synthesizer_node(llm_service: LLMService):
         llm = llm_service.get_primary_model().with_structured_output(SynthesizerOutput)
 
         try:
-            raw_result = await llm.ainvoke(prompt)
+            llm_input = [SystemMessage(content=system_prompt)] + messages
+            raw_result = await llm.ainvoke(llm_input)
             result = SynthesizerOutput.model_validate(raw_result)
         except Exception as e:
             logger.error("[Synthesizer] LLM Generation failed: {error}", error=str(e))
             # Force END on fatal errors to avoid loops
-            updates = {
-                "final_answer": "I apologize, but I encountered an error while synthesizing the information.",
-                "is_complete": True, 
-                "iteration_count": current_iteration + 1
-            }
             return Command(
-                goto="__end__",         # langgraph.graph.END equals to __end__ 
-                update=updates
+                goto=AgentGraphNode.SUMMARIZER,
+                update={
+                    "final_answer": "I apologize, but I encountered an error while synthesizing the information.",
+                    "is_complete": True, 
+                    "iteration_count": current_iteration + 1
+                }
             )
 
         logger.debug(
@@ -113,29 +115,30 @@ def make_synthesizer_node(llm_service: LLMService):
             "is_complete": result.is_complete,
             "iteration_count": current_iteration + 1 # Increment loop counter!
         }
+        
 
         # Evaluator-optimizer pattern
-        if not result.is_complete:
-            feedback_msg = AIMessage(
-                content=f"Internal Note: I partially answered the user, but I am still missing: {result.missing_info}. "
-                        f"Please route to a different tool to find this missing information."
-            )
-
-            # Memory Persistence
-            updates["messages"] = [feedback_msg]
+        if is_final_attempt:
+            logger.error("🛑 Max iterations reached! Forcing the graph to SUMMARIZER.")
+            updates["messages"] = [AIMessage(content=result.answer)]
+            destination = AgentGraphNode.SUMMARIZER
+            
+        elif result.is_complete:
+            logger.debug("✅ Answer complete. Sending to SUMMARIZER.")
+            updates["messages"] = [AIMessage(content=result.answer)]
+            destination = AgentGraphNode.SUMMARIZER
+            
         else:
-            final_msg = AIMessage(content=result.answer)
-            updates["messages"] = [final_msg]
+            logger.warning("⚠️ Answer incomplete. Sending back to ROUTER.")
+            feedback_msg = AIMessage(
+                content=f"Internal Thought: I partially answered the user, but I am still missing: {result.missing_info}. "
+                        f"I need to route to a different tool to find this missing information."
+            )
+            updates["messages"] = [feedback_msg]
+            destination = AgentGraphNode.ROUTER
 
-        
-        preview_state = cast(AgentState, {**state, **updates})
-        
-        # This handler logic must in Router node
-        # destination = check_if_resolved(preview_state)
-
-    
         return Command(
-            goto="summarizer",
+            goto=destination,
             update=updates
         )
 
