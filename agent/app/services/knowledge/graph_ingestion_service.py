@@ -27,13 +27,13 @@ class GraphIngestionService:
 
     async def extract_components(self, text: str) -> KnowledgeGraphComponents:
         prompt = f"""
-            You are a precise biological knowledge graph relationship extractor.
-            Extract all relationships from the text.
+            You are a strict Biological Data Curator for a Sugarcane Knowledge Graph.
+            Your job is to evaluate text and extract precise biological relationships.
             
             CRITICAL RULES:
-            1. Node labels MUST be one of these exact types: Gene, Cultivar, Paper, Trait, Disease, Tissue, Stress.
-            2. Relationship types MUST be uppercase strings (e.g., UPREGULATES, CAUSES, RESISTS, MENTIONS).
-            3. Extract all explicit and implicit biological relationships.
+            1. RELEVANCE CHECK: You must first determine if the text is relevant to plant biology, sugarcane (Saccharum), or genomics. If it is about human diseases (e.g., Giant Cell Arteritis), set 'is_domain_relevant' to False and return empty lists for nodes/relationships.
+            2. Node labels MUST be one of these exact types: Gene, Cultivar, Paper, Trait, Disease, Tissue, Stress.
+            3. Relationship types MUST be uppercase strings (e.g., UPREGULATES, CAUSES, RESISTS).
             
             Text to analyze:
             {text}
@@ -47,6 +47,15 @@ class GraphIngestionService:
             components = await self.extract_components(source_text)
             node_registry = {}
             source_meta = source_metadata or {}
+
+            # 0. Validate the data first
+            if not components.is_domain_relevant:
+                logger.warning("Graph Ingestion Aborted: LLM determined the source text is not relevant to the biological domain.")
+                return
+                
+            if not components.nodes:
+                logger.debug("Graph Ingestion Aborted: No valid nodes extracted.")
+                return
             
             logger.info("Saving to PostgreSQL...")
             async with genome_connection_pool.connection() as conn:

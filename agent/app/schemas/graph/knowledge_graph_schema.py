@@ -35,5 +35,8 @@ class KnowledgeGraphRelationship(BaseModel):
 
 
 class KnowledgeGraphComponents(BaseModel):
+    is_domain_relevant: bool = Field(
+        description="True ONLY if the text is specifically about plant biology, sugarcane, genomics, or related agricultural sciences. False if it is about human medicine, irrelevant news, etc."
+    )
     nodes: List[KnowledgeGraphNode] = Field(description="List of entities extracted from the text.")
     relationships: List[KnowledgeGraphRelationship] = Field(description="List of relationships between entities.")

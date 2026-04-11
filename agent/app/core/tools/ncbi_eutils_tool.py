@@ -5,6 +5,7 @@ from aiolimiter import AsyncLimiter
 from langchain_core.tools import tool
 from loguru import logger
 
+from app.core.tools.registry.registry_tool import ingest_to_knowledge_graph
 from app.configs.settings.settings import get_settings
 from app.schemas.tool.ncbi_eutils_tool_schema import BioProjectSearchArgs, BioSampleSearchArgs, GeneSearchArgs, GenomeSearchArgs, NucleotideSearchArgs, PubMedSearchArgs, TaxonomySearchArgs
 
@@ -16,6 +17,7 @@ DATASETS_BASE = "https://api.ncbi.nlm.nih.gov/datasets/v2"
 RATE_LIMIT = 10 if settings.ncbi_api_key else 3
 limiter = AsyncLimiter(RATE_LIMIT, 1)
 
+@ingest_to_knowledge_graph
 @tool(args_schema=PubMedSearchArgs)
 async def search_literature_for_traits(organism: str, primary_concept: str, secondary_concept: Optional[str] = None) -> str:
     """
@@ -70,6 +72,7 @@ async def search_literature_for_traits(organism: str, primary_concept: str, seco
             logger.error(f"[Literature Tool] Error: {str(e)}")
             raise e
 
+@ingest_to_knowledge_graph
 @tool(args_schema=GeneSearchArgs)
 async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
     """
@@ -162,6 +165,7 @@ async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
             logger.error(f"[Gene Tool] Error: {str(e)}")
             raise e
         
+@ingest_to_knowledge_graph
 @tool(args_schema=GenomeSearchArgs)
 async def search_ncbi_genome(organism_or_cultivar: str) -> str:
     """

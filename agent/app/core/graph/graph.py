@@ -9,6 +9,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
+from app.core.tools.registry.registry_tool import TRUSTED_KNOWLEDGE_GRAPH_TOOLS
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.nodes.components.summarizer_node import make_summarizer_node
 from app.core.graph.nodes.components.input_analyzer_node import make_input_analyzer_node
@@ -62,7 +63,7 @@ async def build_agent_graph(
     )
     workflow.add_node(
         AgentGraphNode.ENRICHMENT,
-        make_enrichment_node(graph_ingestion_service)
+        make_enrichment_node(graph_ingestion_service, TRUSTED_KNOWLEDGE_GRAPH_TOOLS)
     )
     workflow.add_node(
         AgentGraphNode.SYNTHESIZER,

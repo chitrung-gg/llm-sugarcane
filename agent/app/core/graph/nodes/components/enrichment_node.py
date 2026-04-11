@@ -8,7 +8,8 @@ from app.core.graph.state.agent_state import AgentState
 from app.services.knowledge.graph_ingestion_service import GraphIngestionService
 
 def make_enrichment_node(
-    graph_ingestion_service: GraphIngestionService
+    graph_ingestion_service: GraphIngestionService,
+    trusted_ingestion_tools: set[str]
 ):
     async def enrichment(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
@@ -36,7 +37,7 @@ def make_enrichment_node(
             status = result.get("status", "") if isinstance(result, dict) else getattr(result, "status", "")
             output = result.get("output", "") if isinstance(result, dict) else getattr(result, "output", "")
             
-            if status == "success" and len(str(output)) > 50:
+            if status == "success" and len(str(output)) > 50 and tool_name in trusted_ingestion_tools:
                 logger.info(f"[Enrichment] Triggering async ingestion for tool: {tool_name}")
                 
                 # We use asyncio.create_task to run it in the background without blocking the LangGraph workflow

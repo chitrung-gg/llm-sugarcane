@@ -1,25 +1,30 @@
 import asyncio
 from enum import StrEnum
 import time
-from typing import Literal, cast
+from typing import List, Literal, cast
 from langgraph.graph import END
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
-from app.core.graph.workflow.agent_workflow import SynthesizerDecision
 from app.services.llm.llm_service import LLMService
 
-from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, HumanMessage
 from langgraph.types import Command
 
 
 # Define how the LLM should output its answer
 class SynthesizerOutput(BaseModel):
-    answer: str = Field(description="The response to the user based on the provided contexts.")
-    is_complete: bool = Field(description="Set to True if you fully answered the user's original query. Set to False if you are missing information.")
-    missing_info: str = Field(description="If is_complete is False, explicitly state what specific information is missing so the Router can search for it next. If complete, leave empty.")
+    answer: str = Field(
+        description="The response to the user based on the provided contexts. Always politely explain if specific data could not be found."
+    )
+    is_complete: bool = Field(
+        description="Set to True if you fully answered the query OR if you have exhausted the context and no further tools could possibly help. Set to False ONLY if you specifically need the Router to run a new tool you haven't tried yet."
+    )
+    missing_info: str = Field(
+        description="If is_complete is False, explicitly state what specific information is missing so the Router can search for it next. If complete, leave empty."
+    )
     
 def make_synthesizer_node(llm_service: LLMService):
 
@@ -74,36 +79,44 @@ def make_synthesizer_node(llm_service: LLMService):
         
             
         system_prompt = f"""
-            You are an expert Bioinformatics Assistant. Use the provided context to answer the user's query.
+            You are an expert Bioinformatics Assistant specializing in Sugarcane Genomics. 
             User Query: {query}
             
             Context:
             {context_string}
             
             INSTRUCTIONS:
-            - Synthesize the information from all available contexts.
-            - If you can fully answer the query, set 'is_complete' to True.
-            - If you cannot fully answer the query because information is missing from the context, answer what you can, set 'is_complete' to False, and state exactly what is missing in the 'missing_info' field.
+            1. PRIMARY KNOWLEDGE SOURCE: Synthesize the information from the available Context above.
+            2. EXPERT FALLBACK (CRITICAL): If the Context is empty (because no tools were needed) or if the user is asking a theoretical, strategic, or conceptual question, YOU MUST USE YOUR OWN INTERNAL EXPERT KNOWLEDGE to provide a comprehensive and highly technical answer. Do NOT apologize for a lack of context.
+            
+            EVALUATION RULES:
+            - If you can fully answer the query (using Context OR your internal knowledge), set 'is_complete' to True.
+            - If you cannot fully answer the query because you specifically need a tool to fetch external data (like a sequence or paper), answer what you can, set 'is_complete' to False, and state exactly what is missing in the 'missing_info' field.
 
             {final_warning} 
             
             ANTI-REPETITION RULE:
-            Compare the gathered Context above against your previous messages in the Conversation History. If the tools or databases did not return any NEW information beyond what you have already told the user in previous turns, DO NOT repeat yourself.
-
+            Compare the gathered Context against your previous messages. If there is no new information, do not repeat yourself.
+            
             DEAD-END RULE (CRITICAL):
-            If you already asked the Router to find missing information in the previous turn (check your Internal Thoughts in the Conversation History), but the Context above contains NO NEW tool outputs or web results, you have hit a dead end. 
+            If you already asked the Router to find missing information in the previous turn, but the Context above contains NO NEW tool outputs or web results, you have hit a dead end. 
             In this case, you MUST set 'is_complete' to True, and politely inform the user that you have exhausted all available databases and cannot find the specific missing details. Do NOT set it to False again.
         """
 
-        llm = llm_service.get_primary_model().with_structured_output(SynthesizerOutput)
+        llm = llm_service.get_secondary_model().with_structured_output(SynthesizerOutput)
+
+        messages_to_send: List[BaseMessage] = [
+            SystemMessage(content=system_prompt)
+        ]
+
+        if messages:
+            messages_to_send.extend(messages)
 
         try:
-            llm_input = [SystemMessage(content=system_prompt)] + messages
-
-            raw_result = await asyncio.wait_for(llm.ainvoke(llm_input), timeout=45.0)
+            raw_result = await llm.ainvoke(messages_to_send)
             result = SynthesizerOutput.model_validate(raw_result)
         except Exception as e:
-            logger.error("[Synthesizer] LLM Generation failed: {error}", error=str(e))
+            logger.error("[Synthesizer] LLM Generation failed: {e}", e=e)
             # Force END on fatal errors to avoid loops
             return Command(
                 goto=AgentGraphNode.SUMMARIZER,
@@ -127,9 +140,16 @@ def make_synthesizer_node(llm_service: LLMService):
         }
         
 
+        last_intent = state.get("last_intent", "")
+        router_gave_up = (last_intent == "direct_answer")
+
         # Evaluator-optimizer pattern
-        if is_final_attempt:
-            logger.error("🛑 Max iterations reached! Forcing the graph to SUMMARIZER.")
+        if is_final_attempt or router_gave_up:
+            if router_gave_up:
+                logger.warning("🛑 Router chose direct_answer. Forcing the graph to SUMMARIZER to prevent looping.")
+            else:
+                logger.error("🛑 Max iterations reached! Forcing the graph to SUMMARIZER.")
+                
             updates["messages"] = [AIMessage(content=result.answer)]
             destination = AgentGraphNode.SUMMARIZER
             

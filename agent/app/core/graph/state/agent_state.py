@@ -58,6 +58,7 @@ class AgentState(TypedDict):
     extracted_knowledge: Annotated[List[Dict[str, Any]], operator.add]
     iteration_count: int
     max_iterations: int         # Circuit breaker
+    last_intent: str
 
     # Source tracking - will be populated by each node
     sources_used: List[RecordSource]

@@ -69,7 +69,7 @@ def make_router_node(
                 execution_history += (
                     f"⛔ ALREADY EXECUTED: Web Search for query: '{query}'\n"
                     f"  Result Preview ({len(web_results)} items): {web_preview}\n"
-                    f"  -> RULE: DO NOT use 'web_search' again for this specific query.\n\n"
+                    f"  -> RULE: The previous 'web_search' for this query did not yield a complete answer. If you choose to search again, you MUST use significantly different keywords or a more specific search query.\n\n"
                 )
 
             if tool_results:
@@ -136,14 +136,14 @@ def make_router_node(
             1. EVALUATE TOOL RESULTS (MULTI-STEP AWARE):
             - If information is FULLY sufficient → choose 'direct_answer'
             - If information is PARTIALLY sufficient → DO NOT stop. Use OTHER available tools.
-            - If you have exhausted available tools or the tools return irrelevant data → fallback to 'direct_answer' and explain what information is missing.
+            - If you have exhausted available tools or the tools return irrelevant data → fallback to 'direct_answer' and explain what information is missing. Do not use tools that are mathematically or logically unrelated to the query just to try them.
 
             2. SMART TOOL CHAINING:
             - If one tool returns partial results, analyze what is missing and select the MOST APPROPRIATE next tool.
             - Combine results from multiple tools when necessary.
 
             3. STRICT ANTI-LOOP RULE:
-            - If you see "⛔ ALREADY EXECUTED" in the history, you are STRICTLY FORBIDDEN from trying to execute that action again.
+            - If you see "ALREADY EXECUTED" in the history, you are STRICTLY FORBIDDEN from trying to execute that action again.
             - Move to 'direct_answer' if you have no other tools left to try.
 
             4. MANDATORY TOOL CALLING RULES (CRITICAL):
@@ -203,7 +203,8 @@ def make_router_node(
             goto=destinations,
             update={
                 "required_tools": decision.required_tools,
-                "iteration_count": current_iteration + 1
+                "iteration_count": current_iteration + 1,
+                "last_intent": decision.intent
             }
         )
 
