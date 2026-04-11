@@ -15,6 +15,7 @@ def make_enrichment_node(
     ]:
         logger.debug("[Enrichment] Analyzing tool results for knowledge graph ingestion...")
         tool_results = state.get("tool_results", [])
+        required_tools = state.get("required_tools", []) # Add this line
         
         if not tool_results:
             logger.debug("[Enrichment] No tool results to ingest.")
@@ -22,10 +23,11 @@ def make_enrichment_node(
                 goto=AgentGraphNode.SYNTHESIZER
             )
 
-        # ingestion_service = GraphIngestionService(llm_service, vector_store)
-        
-        # tasks = []
-        for result in tool_results:
+        # Only process the results for tools just executed in this turn
+        num_new = len(required_tools)
+        new_results = tool_results[-num_new:] if num_new > 0 else []
+
+        for result in new_results:
             # We only want to enrich data from external sources (e.g., NCBI APIs)
             # Add logic here to filter which tools should trigger ingestion.
             # Assuming any tool that brings back large text output or JSON should be parsed.

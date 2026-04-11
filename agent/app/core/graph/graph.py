@@ -50,11 +50,11 @@ async def build_agent_graph(
     )
     workflow.add_node(
         AgentGraphNode.RAG,
-        make_rag_node(vector_store)
+        make_rag_node(vector_store, llm_service)
     )
     workflow.add_node(
         AgentGraphNode.WEB_SEARCH,
-        make_web_search_node(searx_wrapper)
+        make_web_search_node(searx_wrapper, llm_service)
     )
     workflow.add_node(
         AgentGraphNode.TOOL,

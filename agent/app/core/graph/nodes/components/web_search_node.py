@@ -1,29 +1,71 @@
 from enum import StrEnum
 import time
-from typing import Literal
+from typing import List, Literal, cast
 from loguru import logger
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.types import Command
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
+from pydantic import BaseModel, Field
+
+from app.services.llm.llm_service import LLMService
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState, WebResult
 
-def make_web_search_node(searx_wrapper: SearxSearchWrapper):
+class OptimizedSearchQuery(BaseModel):
+    """Schema to force the LLM to output a clean search string."""
+    search_query: str = Field(
+        description="A standalone, keyword-rich search query optimized for search engines. Omit conversational filler."
+    )
+    
+def make_web_search_node(
+    searx_wrapper: SearxSearchWrapper,
+    llm_service: LLMService
+):
     """Factory to create the web search node with injected dependency."""
 
     async def web_search(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:
         logger.debug("--- 🌐 TRIGGERING SEARXNG WEB SEARCH ---")
-
-        query = state["query"]
         start_time = time.time()
+
+        original_query = state["query"]
+
+        # 1. Query Optimization
+        system_prompt = f"""
+            You are a Search Query Optimizer. The user is asking a conversational question.
+            Convert the user's latest query into a standalone, keyword-dense search engine query.
+            
+            CONVERSATION SUMMARY:
+            {state.get("summary", "No prior context.")}
+            
+            RULES:
+            - DO NOT use conversational filler (remove "I want to know more about", "What is").
+            - Resolve pronouns ("it", "this gene") using the summary.
+            - Output ONLY the optimized search string.
+        """
+
+        messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
+        if state["messages"]:
+            messages.extend(state["messages"])
+        messages.append(HumanMessage(content=f"Latest Query: {original_query}"))
+
+        try:
+            # Use your fastest/cheapest model here (e.g., secondary or tertiary)
+            rewriter_llm = llm_service.get_quaternary_model().with_structured_output(OptimizedSearchQuery)
+            rewritten_result = await rewriter_llm.ainvoke(messages)
+            optimized_query = OptimizedSearchQuery.model_validate(rewritten_result).search_query
+            logger.info(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+        except Exception as e:
+            logger.warning(f"[Web Search] Query optimization failed: {e}. Falling back to original query.")
+            optimized_query = original_query
         
+        # 2. Execute search
         new_web_results = []
 
         try:
-            # .results() gives us structured JSON instead of a raw string!
-            raw_results = searx_wrapper.results(query, num_results=5)
+            raw_results = searx_wrapper.results(optimized_query, num_results=5)
             
             for res in raw_results:
                 web_item = WebResult(
@@ -37,7 +79,6 @@ def make_web_search_node(searx_wrapper: SearxSearchWrapper):
                 
         except Exception as e:
             logger.error("SearXNG search failed: {error}", error=str(e))
-            # Inject an error result so the Synthesizer knows the search failed
             new_web_results.append(
                 WebResult(
                     snippet=f"Web search failed due to an error: {str(e)}",
@@ -54,7 +95,6 @@ def make_web_search_node(searx_wrapper: SearxSearchWrapper):
             execution_time=execution_time, count=len(new_web_results)
         )
 
-        # Because web_results uses operator.add, returning a list appends it to state
         return Command(
             goto=AgentGraphNode.SYNTHESIZER,
             update={"web_results": new_web_results}

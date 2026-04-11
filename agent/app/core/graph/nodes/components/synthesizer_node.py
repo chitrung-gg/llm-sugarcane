@@ -1,3 +1,4 @@
+import asyncio
 from enum import StrEnum
 import time
 from typing import Literal, cast
@@ -83,14 +84,23 @@ def make_synthesizer_node(llm_service: LLMService):
             - Synthesize the information from all available contexts.
             - If you can fully answer the query, set 'is_complete' to True.
             - If you cannot fully answer the query because information is missing from the context, answer what you can, set 'is_complete' to False, and state exactly what is missing in the 'missing_info' field.
+
             {final_warning} 
+            
+            ANTI-REPETITION RULE:
+            Compare the gathered Context above against your previous messages in the Conversation History. If the tools or databases did not return any NEW information beyond what you have already told the user in previous turns, DO NOT repeat yourself.
+
+            DEAD-END RULE (CRITICAL):
+            If you already asked the Router to find missing information in the previous turn (check your Internal Thoughts in the Conversation History), but the Context above contains NO NEW tool outputs or web results, you have hit a dead end. 
+            In this case, you MUST set 'is_complete' to True, and politely inform the user that you have exhausted all available databases and cannot find the specific missing details. Do NOT set it to False again.
         """
 
         llm = llm_service.get_primary_model().with_structured_output(SynthesizerOutput)
 
         try:
             llm_input = [SystemMessage(content=system_prompt)] + messages
-            raw_result = await llm.ainvoke(llm_input)
+
+            raw_result = await asyncio.wait_for(llm.ainvoke(llm_input), timeout=45.0)
             result = SynthesizerOutput.model_validate(raw_result)
         except Exception as e:
             logger.error("[Synthesizer] LLM Generation failed: {error}", error=str(e))
@@ -113,7 +123,7 @@ def make_synthesizer_node(llm_service: LLMService):
         updates = {
             "final_answer": result.answer,
             "is_complete": result.is_complete,
-            "iteration_count": current_iteration + 1 # Increment loop counter!
+            # "iteration_count": current_iteration + 1 # Increment loop counter!
         }
         
 

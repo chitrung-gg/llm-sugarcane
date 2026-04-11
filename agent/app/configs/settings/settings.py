@@ -25,15 +25,15 @@ class Settings(BaseSettings):
     #     validation_alias="GEMINI_PRIMARY_MODEL"
     # )
     gemini_secondary_model: str = Field(
-        default="gemini-2.5-flash", 
+        default="gemini-3.1-flash-lite-preview", 
         validation_alias="GEMINI_SECONDARY_MODEL"
     )
     gemini_tertiary_model: str = Field(
-        default="gemini-3.1-flash-lite-preview", 
+        default="gemma-4-26b-a4b-it", 
         validation_alias="GEMINI_TERTIARY_MODEL"
     )
     gemini_quaternary_model: str = Field(
-        default="gemini-2.5-flash-lite", 
+        default="gemma-4-26b-a4b-it", 
         validation_alias="GEMINI_QUATERNARY_MODEL"
     )
 

@@ -1,11 +1,13 @@
-from enum import StrEnum
 import time
-from typing import Literal, TypeAlias, cast
+from typing import List, Literal, TypeAlias, cast
 from loguru import logger
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.retrievers import BM25Retriever
+from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage
 from langgraph.types import Command
+from pydantic import BaseModel, Field
 
+from app.services.llm.llm_service import LLMService
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.routing.check_rag_fallback import check_rag_fallback
 from app.configs.settings.settings import get_settings
@@ -20,27 +22,64 @@ from app.core.graph.state.agent_state import AgentState, RAGResult
 
 RELEVANCE_SCORE = 0.90
 
-def make_rag_node(vector_store: QdrantVectorStore):
+class OptimizedRagQuery(BaseModel):
+    """Schema to force the LLM to output a clean semantic search string."""
+    search_query: str = Field(
+        description="A standalone, highly descriptive query optimized for semantic vector similarity search. Use rich biological keywords."
+    )
 
+def make_rag_node(
+    vector_store: QdrantVectorStore,
+    llm_service: LLMService
+):
     async def rag(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:
         settings = get_settings()
 
         logger.debug("[RAG] 🔎 Starting vector search")
-
         start_time = time.time()
-        query = state["query"]
-        logger.debug("Query: {query}", query=query)
+        
+        original_query = state["query"]
 
-        # 1. USE WITH_SCORE to get the actual similarity metric
-        raw_results = await vector_store.asimilarity_search_with_score(query, k=3)
+        # 1. Query Optimization (Semantic Focus)
+        system_prompt = f"""
+            You are a Semantic Search Optimizer for a Sugarcane Genomics vector database.
+            The user is asking a conversational question. Convert this into a standalone, highly descriptive query.
+            
+            CONVERSATION SUMMARY:
+            {state.get("summary", "No prior context.")}
+            
+            RULES:
+            - Vector databases match meaning, not just exact words. Provide rich, descriptive biological keywords.
+            - Resolve pronouns ("it", "this cultivar") using the conversation summary.
+            - Remove conversational filler ("Tell me about", "What is").
+            - Output ONLY the optimized search string.
+        """
+
+        messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
+        if state["messages"]:
+            messages.extend(state["messages"])        
+        messages.append(HumanMessage(content=f"Latest Query: {original_query}"))
+
+        try:
+            rewriter_llm = llm_service.get_quaternary_model().with_structured_output(OptimizedRagQuery)
+            rewritten_result = await rewriter_llm.ainvoke(messages)
+            optimized_query = OptimizedRagQuery.model_validate(rewritten_result).search_query
+            logger.info(f"[RAG] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+        except Exception as e:
+            logger.warning(f"[RAG] Query optimization failed: {e}. Falling back to original query.")
+            optimized_query = original_query
+
+        # 2. Dense Vector Search
+        logger.debug(f"Executing Qdrant search with query: {optimized_query}")
+
+        raw_results = await vector_store.asimilarity_search_with_score(optimized_query, k=3)
 
         logger.debug("Retrieved {count} raw documents", count=len(raw_results))
 
         new_rag_results = []
         new_sources = []
-        
 
         for idx, (doc, score) in enumerate(raw_results):
             source_name = doc.metadata.get("source", "unknown")
@@ -50,20 +89,12 @@ def make_rag_node(vector_store: QdrantVectorStore):
                 idx=idx, source_name=source_name, score=score
             )
 
-            # Filter out irrelevant docs
-            # if score < settings.rag_score_threshold:
-            #     logger.warning(
-            #         "[RAG] 🚫 Dropping Doc {idx} - Score {score} is below threshold {threshold}",
-            #         idx=idx, score=score, threshold=settings.rag_score_threshold
-            #     )
-            #     continue
-
             # Package into custom schema
             rag_item = RAGResult(
                 content=doc.page_content,
                 source_file=source_name,
                 page_number=doc.metadata.get("page"),
-                relevance_score=score, # Now we have the real score!
+                relevance_score=score,
             )
             new_rag_results.append(rag_item)
 
@@ -75,6 +106,7 @@ def make_rag_node(vector_store: QdrantVectorStore):
             }
             new_sources.append(source_item)
 
+        # 3. Sparse Keyword Search (BM25 - Uploaded files)
         ephemeral_chunks = state.get("uploaded_chunks", [])
 
         if ephemeral_chunks:
@@ -87,7 +119,7 @@ def make_rag_node(vector_store: QdrantVectorStore):
                 bm25_variant="plus",
             )
 
-            local_results = bm25_retriever.invoke(query)
+            local_results = bm25_retriever.invoke(optimized_query)
 
             for idx, doc in enumerate(local_results):
                 # We give local file matches a high synthetic score (0.90) 
