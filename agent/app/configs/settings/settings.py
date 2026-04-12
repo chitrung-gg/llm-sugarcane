@@ -46,10 +46,15 @@ class Settings(BaseSettings):
     # --- Qdrant ---
     qdrant_url: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
     qdrant_api_key: SecretStr | None = Field(default=None, validation_alias="QDRANT_API_KEY")
-    qdrant_collection_name: str = Field(
+    qdrant_solid_knowledge_collection_name: str = Field(
         default="sugarcane_docs",
-        validation_alias="QDRANT_COLLECTION_NAME"
+        validation_alias="QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME"
     )
+    qdrant_volatile_knowledge_collection_name: str = Field(
+        default="sugarcane_external_context",
+        validation_alias="QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME"
+    )
+
     qdrant_vector_size: int = 3072   # 768 to save storage
     qdrant_prefer_grpc: bool = True
     rag_score_threshold: float = 0.70

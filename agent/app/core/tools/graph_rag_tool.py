@@ -1,14 +1,16 @@
+import asyncio
 from typing import List, Dict, Any
 from langchain_core.tools import tool
 from langchain_neo4j import Neo4jGraph
 from langchain_qdrant import QdrantVectorStore
 from loguru import logger
 
-from app.configs.storage.databases import neo4j_driver
 
+MIN_SIMILARITY_SCORE = 0.70
 
 def make_graph_rag_tool(
-    vector_store: QdrantVectorStore,
+    vector_store_solid: QdrantVectorStore,
+    vector_store_volatile: QdrantVectorStore,
     knowledge_graph: Neo4jGraph
 ):
     @tool("search_knowledge_graph")
@@ -20,51 +22,89 @@ def make_graph_rag_tool(
         logger.info(f"Searching Knowledge Graph for: {query}")
         
         try:
-            # 1. Semantic Search on Qdrant
-            docs = await vector_store.asimilarity_search(query, k=top_k)
+            # 1. Concurrent Semantic Search on BOTH Qdrant collections
+            # We search both to ensure we find the entity, regardless of whether 
+            # it came from a curated paper or an agent's web search.
+            solid_task = vector_store_solid.asimilarity_search_with_score(query, k=top_k)
+            volatile_task = vector_store_volatile.asimilarity_search_with_score(query, k=top_k)
             
-            if not docs:
-                return "No relevant entities found in the knowledge graph."
-                
-            entity_ids = []
-            for doc in docs:
-                if "global_id" in doc.metadata:
-                    entity_ids.append(doc.metadata["global_id"])
+            solid_results, volatile_results = await asyncio.gather(solid_task, volatile_task)
+
+            # Extract unique global_ids, prioritizing the solid database
+            entity_ids = set()
+            fallback_docs = []
+
+            for doc, score in solid_results:
+                if score >= MIN_SIMILARITY_SCORE:
+                    if "global_id" in doc.metadata:
+                        entity_ids.add(doc.metadata["global_id"])
+                    fallback_docs.append(f"[SOLID | Score: {score:.2f}] {doc.page_content}")
+                else:
+                    logger.debug(f"Ignored solid doc due to low score: {score:.2f}")
+                    
+            for doc, score in volatile_results:
+                if score >= MIN_SIMILARITY_SCORE:
+                    if "global_id" in doc.metadata and doc.metadata["global_id"] not in entity_ids:
+                        entity_ids.add(doc.metadata["global_id"])
+                    fallback_docs.append(f"[VOLATILE | Score: {score:.2f}] {doc.page_content}")
+                else:
+                    logger.debug(f"Ignored volatile doc due to low score: {score:.2f}")
                     
             if not entity_ids:
-                return "Found documents but no valid graph entities."
+                return "Found no relevant starting entities in the vector stores."
 
-            # 2. Graph Retrieval from Neo4j
-            # OPTIMIZATION: We use type(r) to get clean string names for relationships
+            # 2. Graph Retrieval from Neo4j (With Trust Filtering)
+            # COALESCE(property, default_value) returns the property if it exists, otherwise the default.
+            # We assume legacy data (pre-update) was curated/safe, so we default confidence to 1.0.
+            # We filter out edges with < 0.4 confidence to protect the LLM from hallucinations
             cypher_query = """
                 MATCH (e)-[r1]-(n1)
-                WHERE e.id IN $entity_ids
+                WHERE e.global_id IN $entity_ids
+                  AND COALESCE(r1.confidence, 1.0) >= 0.4
+                  
                 OPTIONAL MATCH (n1)-[r2]-(n2)
-                RETURN e, type(r1) AS r1_type, n1, type(r2) AS r2_type, n2
+                WHERE COALESCE(r2.confidence, 1.0) >= 0.4
+                
+                RETURN e.name AS e_name, 
+                       type(r1) AS r1_type, 
+                       COALESCE(r1.confidence, 1.0) AS r1_conf, 
+                       COALESCE(r1.source_tier, 'curated') AS r1_tier,
+                       n1.name AS n1_name, 
+                       type(r2) AS r2_type, 
+                       COALESCE(r2.confidence, 1.0) AS r2_conf, 
+                       COALESCE(r2.source_tier, 'curated') AS r2_tier,
+                       n2.name AS n2_name
                 LIMIT 50
             """
 
-            # Use LangChain's built-in query execution
-            records = knowledge_graph.query(cypher_query, params={"entity_ids": entity_ids})
+            # Execute query using the collected UUIDs
+            records = knowledge_graph.query(cypher_query, params={"entity_ids": list(entity_ids)})
                 
             subgraph = []
             for record in records:
-                # LangChain automatically parses nodes into dicts
-                e_name = record.get("e", {}).get("name", "Unknown")
-                rel1_type = record.get("r1_type") or "RELATED_TO"
-                n1_name = record.get("n1", {}).get("name", "Unknown")
+                # Parse Node 1 to Node 2
+                e_name = record.get("e_name", "Unknown")
+                rel1_type = record.get("r1_type", "RELATED_TO")
+                n1_name = record.get("n1_name", "Unknown")
                 
-                subgraph.append(f"{e_name} -[{rel1_type}]-> {n1_name}")
+                # Format the edge with its provenance tags so the LLM knows how much to trust it!
+                r1_conf = record.get("r1_conf") or 1.0
+                r1_tier = record.get("r1_tier") or "curated"
+                subgraph.append(f"({e_name}) -[{rel1_type} | Conf:{r1_conf} | Tier:{r1_tier}]-> ({n1_name})")
                 
-                if record.get("r2_type") and record.get("n2"):
+                # Parse Node 2 to Node 3 (if it exists)
+                if record.get("r2_type") and record.get("n2_name"):
                     rel2_type = record.get("r2_type")
-                    n2_name = record.get("n2", {}).get("name", "Unknown")
-                    subgraph.append(f"{n1_name} -[{rel2_type}]-> {n2_name}")
+                    n2_name = record.get("n2_name", "Unknown")
+                    r2_conf = record.get("r2_conf") or 1.0
+                    r2_tier = record.get("r2_tier") or "curated"
+                    subgraph.append(f"({n1_name}) -[{rel2_type} | Conf:{r2_conf} | Tier:{r2_tier}]-> ({n2_name})")
 
             # 3. Format result
             if not subgraph:
-                # Fallback to vector search results if no graph edges
-                return "Found entities but no relationships: " + ", ".join([d.page_content for d in docs])
+                # If Neo4j has no edges, fall back to returning the raw Qdrant chunks
+                logger.debug("[GraphRAG Tool] Found entities but no edges. Falling back to vector chunks.")
+                return "Found entities but no graph relationships. Raw context:\n" + "\n---\n".join(fallback_docs[:top_k])
                 
             # Deduplicate
             unique_edges = list(set(subgraph))

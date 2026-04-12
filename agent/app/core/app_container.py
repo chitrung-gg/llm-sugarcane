@@ -36,7 +36,8 @@ class AppContainer:
         self._agent_service: AgentService | None = None
         self._graph_ingestion_service: GraphIngestionService | None = None
         self._embedding_model: GeminiEmbeddingModel | None = None
-        self._vector_store: QdrantVectorStore | None = None
+        self._vector_store_solid: QdrantVectorStore | None = None
+        self._vector_store_volatile: QdrantVectorStore | None = None
         self._document_processor: DocumentProcessor | None = None
         self._searx_wrapper: SearxSearchWrapper | None = None
         self._knowledge_graph: Neo4jGraph | None = None
@@ -87,7 +88,8 @@ class AppContainer:
         self._graph_ingestion_service = GraphIngestionService(
             llm_service=self.llm_service,
             knowledge_graph=self.knowledge_graph,
-            vector_store=self.vector_store
+            vector_store_solid=self.vector_store_solid,
+            vector_store_volatile=self.vector_store_volatile
         )
 
     async def _init_embedding_model(self):
@@ -98,17 +100,28 @@ class AppContainer:
         """Initialize Qdrant using your Custom VectorStore Wrapper."""
         settings = get_settings()
 
-        if settings.qdrant_collection_name is None:
+        if settings.qdrant_solid_knowledge_collection_name is None:
             raise ValueError("Qdrant Collection Name is not configured")
 
-        qdrant_config = VectorStore(
-            collection_name=settings.qdrant_collection_name,
+        if settings.qdrant_volatile_knowledge_collection_name is None:
+            raise ValueError("Qdrant Volatile Knowledge Collection Name is not configured")
+        
+        qdrant_config_solid = VectorStore(
+            collection_name=settings.qdrant_solid_knowledge_collection_name,
             vector_size=settings.qdrant_vector_size, # 768
             url=settings.qdrant_url,
             dense_embedding=self.embedding_model 
         )
 
-        self._vector_store = qdrant_config.get_vector_store()
+        qdrant_config_volatile = VectorStore(
+            collection_name=settings.qdrant_volatile_knowledge_collection_name,
+            vector_size=settings.qdrant_vector_size, # 768
+            url=settings.qdrant_url,
+            dense_embedding=self.embedding_model 
+        )
+
+        self._vector_store_solid = qdrant_config_solid.get_vector_store()
+        self._vector_store_volatile = qdrant_config_volatile.get_vector_store()
 
     async def _init_searx_wrapper(self):
         """Initialize SearXNG Wrapper."""
@@ -124,7 +137,7 @@ class AppContainer:
     async def _init_document_processor(self):
         """Initialize DocumentProcessor with the shared vector store."""
         self._document_processor = DocumentProcessor(
-            vector_store=self.vector_store,
+            vector_store_solid=self.vector_store_solid,
         )
 
     async def _init_knowledge_graph(self):
@@ -159,20 +172,25 @@ class AppContainer:
 
         Because each method return the name depends on the OpenAPI specs, and can be changed over time, so we should build the list dynamically
         """
-        self._graph_rag_tool = make_graph_rag_tool(self.vector_store, self.knowledge_graph)
+        self._graph_rag_tool = make_graph_rag_tool(
+            self.vector_store_solid,
+            self.vector_store_volatile,
+            self.knowledge_graph
+        )
 
         static_tools = [
             list_genome_files, get_genes_list, search_genes_full,
             get_gene_detail, run_blast, run_synteny_analysis, 
             run_crispor, design_polyploid_primer, search_literature_for_traits, get_gene_metadata_by_symbol, search_ncbi_genome, self._graph_rag_tool
         ]        # Combine static and dynamic tools into a dictionary
-        # all_tools = {tool.name: tool for tool in static_tools + self.ncbi_tools}
+
         all_tools = {tool.name: tool for tool in static_tools}
 
         self._agent_graph = await build_agent_graph(
             llm_service=self.llm_service,
             graph_ingestion_service=self.graph_ingestion_service,
-            vector_store=self.vector_store,
+            vector_store_solid=self.vector_store_solid,
+            vector_store_volatile=self.vector_store_volatile,
             searx_wrapper=self.searx_search,
             document_processor=self.document_processor, 
             available_tools=all_tools
@@ -217,9 +235,14 @@ class AppContainer:
         return self._embedding_model
 
     @property
-    def vector_store(self) -> QdrantVectorStore:
-        assert self._vector_store, "Container not initialized (QdrantVectorStore missing)"
-        return self._vector_store
+    def vector_store_solid(self) -> QdrantVectorStore:
+        assert self._vector_store_solid, "Container not initialized (QdrantVectorStoreSolid missing)"
+        return self._vector_store_solid
+    
+    @property
+    def vector_store_volatile(self) -> QdrantVectorStore:
+        assert self._vector_store_volatile, "Container not initialized (QdrantVectorStoreVolatile missing)"
+        return self._vector_store_volatile
 
     @property
     def document_processor(self) -> DocumentProcessor:

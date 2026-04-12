@@ -142,6 +142,7 @@ class AgentService:
             thread_id=thread_id,
             answer=final_state.get("final_answer", "No answer generated."),
             rag_sources=consolidated_sources, 
+            web_results=final_state.get("web_results", []),
             tool_executions=final_state.get("tool_results", []),
             execution_time=process_time
         )

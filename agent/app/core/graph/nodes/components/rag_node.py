@@ -21,6 +21,7 @@ from langchain_qdrant import QdrantVectorStore
 from app.core.graph.state.agent_state import AgentState, RAGResult
 
 RELEVANCE_SCORE = 0.90
+CASCADING_THRESHOLD = 0.85   # Score required to skip searching volatile context
 
 class OptimizedRagQuery(BaseModel):
     """Schema to force the LLM to output a clean semantic search string."""
@@ -29,7 +30,8 @@ class OptimizedRagQuery(BaseModel):
     )
 
 def make_rag_node(
-    vector_store: QdrantVectorStore,
+    vector_store_solid: QdrantVectorStore,
+    vector_store_volatile: QdrantVectorStore,
     llm_service: LLMService
 ):
     async def rag(state: AgentState) -> Command[
@@ -74,19 +76,43 @@ def make_rag_node(
         # 2. Dense Vector Search
         logger.debug(f"Executing Qdrant search with query: {optimized_query}")
 
-        raw_results = await vector_store.asimilarity_search_with_score(optimized_query, k=3)
+        combined_results = []
 
-        logger.debug("Retrieved {count} raw documents", count=len(raw_results))
+        # 2.A. Solid Vector Store
+        solid_results = await vector_store_solid.asimilarity_search_with_score(optimized_query, k=5)
+        highest_solid_score = max([score for doc, score in solid_results], default=0.0)
+
+        # Tag the solid documents
+        for doc, score in solid_results:
+            doc.page_content = f"[SOURCE TIER: CURATED (High Trust)] {doc.page_content}"
+            combined_results.append((doc, score))
+
+        # 2.B. Circuit Breaker when search Volatile Vector Store
+        if highest_solid_score >= CASCADING_THRESHOLD:
+            logger.info(f"[RAG] 🎯 Found high-confidence curated research (Score: {highest_solid_score:.2f}). Skipping volatile context.")
+        else:
+            logger.warning(f"[RAG] ⚠️ Curated research confidence low ({highest_solid_score:.2f}). Expanding search to Volatile Agent Context...")
+            
+            # Fetch fewer documents from volatile to prevent drowning out the research
+            volatile_results = await vector_store_volatile.asimilarity_search_with_score(optimized_query, k=3)
+            
+            for doc, score in volatile_results:
+                doc.page_content = f"[SOURCE TIER: INFERRED/PROVISIONAL (Agent Discovery)] {doc.page_content}"
+                combined_results.append((doc, score))
+
+        logger.debug("Retrieved {count} total semantic documents", count=len(combined_results))
 
         new_rag_results = []
         new_sources = []
 
-        for idx, (doc, score) in enumerate(raw_results):
+        # Process the combined results
+        for idx, (doc, score) in enumerate(combined_results):
             source_name = doc.metadata.get("source", "unknown")
+            source_tier = doc.metadata.get("source_tier", "unknown_tier")
 
             logger.debug(
-                "[RAG] Doc {idx} | source={source_name} | score={score}",
-                idx=idx, source_name=source_name, score=score
+                "[RAG] Doc {idx} | tier={tier} | source={source_name} | score={score}",
+                idx=idx, tier=source_tier, source_name=source_name, score=score
             )
 
             # Package into custom schema
@@ -103,6 +129,7 @@ def make_rag_node(
                 "source_file": source_name,
                 "chunk_index": idx,
                 "score": score,
+                "source_tier": source_tier
             }
             new_sources.append(source_item)
 
@@ -154,7 +181,7 @@ def make_rag_node(
         }
 
         # Cast to use the AgentState already defined
-        preview_state = cast(AgentState, {**state, **updates})
+        # preview_state = cast(AgentState, {**state, **updates})
         
         # Get the destination using your separated logic class!
         # Dont need this as `synthesizer` node can execute parallel `web_search`

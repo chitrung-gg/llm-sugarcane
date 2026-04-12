@@ -9,7 +9,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
-from app.core.tools.registry.registry_tool import TRUSTED_KNOWLEDGE_GRAPH_TOOLS
+from app.core.tools.registry.registry_tool import KNOWLEDGE_GRAPH_TOOL_REGISTRY
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.nodes.components.summarizer_node import make_summarizer_node
 from app.core.graph.nodes.components.input_analyzer_node import make_input_analyzer_node
@@ -30,7 +30,8 @@ from app.services.knowledge.graph_ingestion_service import GraphIngestionService
 
 async def build_agent_graph(
     llm_service: LLMService,
-    vector_store: QdrantVectorStore,
+    vector_store_solid: QdrantVectorStore,
+    vector_store_volatile: QdrantVectorStore,
     searx_wrapper: SearxSearchWrapper,
     document_processor: DocumentProcessor, 
     graph_ingestion_service: GraphIngestionService,
@@ -51,7 +52,7 @@ async def build_agent_graph(
     )
     workflow.add_node(
         AgentGraphNode.RAG,
-        make_rag_node(vector_store, llm_service)
+        make_rag_node(vector_store_solid, vector_store_volatile, llm_service)
     )
     workflow.add_node(
         AgentGraphNode.WEB_SEARCH,
@@ -63,7 +64,7 @@ async def build_agent_graph(
     )
     workflow.add_node(
         AgentGraphNode.ENRICHMENT,
-        make_enrichment_node(graph_ingestion_service, TRUSTED_KNOWLEDGE_GRAPH_TOOLS)
+        make_enrichment_node(graph_ingestion_service, KNOWLEDGE_GRAPH_TOOL_REGISTRY)
     )
     workflow.add_node(
         AgentGraphNode.SYNTHESIZER,

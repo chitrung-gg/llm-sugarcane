@@ -15,7 +15,7 @@ class DocumentProcessor(BaseModel):
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
-    vector_store: QdrantVectorStore
+    vector_store_solid: QdrantVectorStore
 
     def process_and_store(self, file_path: str) -> List[str]:
         print(f"Analyzing file: {file_path}")
@@ -32,7 +32,7 @@ class DocumentProcessor(BaseModel):
         print(f"-> Cutted into {len(chunks)} chunks. Saving into Qdrant...")
         
         # Add to Vector Database
-        inserted_ids = self.vector_store.add_documents(chunks)
+        inserted_ids = self.vector_store_solid.add_documents(chunks)
         print(f"Successfully saved {len(inserted_ids)} chunks!")
         
         return inserted_ids

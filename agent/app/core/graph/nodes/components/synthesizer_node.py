@@ -17,7 +17,7 @@ from langgraph.types import Command
 # Define how the LLM should output its answer
 class SynthesizerOutput(BaseModel):
     answer: str = Field(
-        description="The response to the user based on the provided contexts. Always politely explain if specific data could not be found."
+        description="The detailed response to the user based on the provided contexts. Always politely explain if specific data could not be found. If the user asks for more information or a deep dive, provide a thorough, multi-paragraph technical explanation extracting all possible details from the context."
     )
     is_complete: bool = Field(
         description="Set to True if you fully answered the query OR if you have exhausted the context and no further tools could possibly help. Set to False ONLY if you specifically need the Router to run a new tool you haven't tried yet."
@@ -79,28 +79,37 @@ def make_synthesizer_node(llm_service: LLMService):
         
             
         system_prompt = f"""
-            You are an expert Bioinformatics Assistant specializing in Sugarcane Genomics. 
+            You are an expert Bioinformatics Assistant. Use the provided context to answer the user's query.
             User Query: {query}
             
             Context:
             {context_string}
             
             INSTRUCTIONS:
-            1. PRIMARY KNOWLEDGE SOURCE: Synthesize the information from the available Context above.
-            2. EXPERT FALLBACK (CRITICAL): If the Context is empty (because no tools were needed) or if the user is asking a theoretical, strategic, or conceptual question, YOU MUST USE YOUR OWN INTERNAL EXPERT KNOWLEDGE to provide a comprehensive and highly technical answer. Do NOT apologize for a lack of context.
+            1. THOROUGHNESS RULE (CRITICAL): 
+                - Do not just provide a high-level summary. 
+                - Extract EVERY technical detail, gene symbol, methodology, and specific finding mentioned in the provided Context.
+                - If the user asks to "explain more" or "tell me more," you MUST expand significantly on each point, providing technical depth from the snippets.
+                - Use professional, academic-grade formatting (bullet points, clear headings).
+
+            2. SYMBOL & DATA EXTRACTION:
+                - If the context mentions specific numbers (e.g., genome size, chromosome count, dates), you MUST include them.
+                - If multiple snippets mention different aspects of the same topic, merge them into a single, detailed section.
             
-            EVALUATION RULES:
-            - If you can fully answer the query (using Context OR your internal knowledge), set 'is_complete' to True.
-            - If you cannot fully answer the query because you specifically need a tool to fetch external data (like a sequence or paper), answer what you can, set 'is_complete' to False, and state exactly what is missing in the 'missing_info' field.
+            3. MISSING DATA FALLBACK (CRITICAL):
+                - If the context (like a tool output) fails to find specific data (e.g., a genome, gene, or paper):
+                - Look at the Context above. If there are NO Web Search results yet, DO NOT use internal knowledge. You MUST set 'is_complete' to False and set 'missing_info' to: "I need to perform a web search to find recent publications or databases for this specific query."
+                - If you HAVE already performed a web search and still cannot find it, only then may you state that the data appears unavailable.
+                
+            4. CONCEPTUAL QUERIES (INTERNAL KNOWLEDGE):
+                - If the query is a general biological explanation or strategy (e.g., "explain polyploidy"), you may use your internal knowledge to answer fully and set 'is_complete' to True.
+                
+            5. Do NOT confidently state that a genome or gene does not exist just because one specific database tool failed. Always fallback to a web search first!
 
             {final_warning} 
-            
+
             ANTI-REPETITION RULE:
-            Compare the gathered Context against your previous messages. If there is no new information, do not repeat yourself.
-            
-            DEAD-END RULE (CRITICAL):
-            If you already asked the Router to find missing information in the previous turn, but the Context above contains NO NEW tool outputs or web results, you have hit a dead end. 
-            In this case, you MUST set 'is_complete' to True, and politely inform the user that you have exhausted all available databases and cannot find the specific missing details. Do NOT set it to False again.
+            Compare the gathered Context above against your previous messages in the Conversation History. If the tools or databases did not return any NEW information beyond what you have already told the user in previous turns, DO NOT repeat yourself.
         """
 
         llm = llm_service.get_secondary_model().with_structured_output(SynthesizerOutput)

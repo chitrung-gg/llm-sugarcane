@@ -1,3 +1,4 @@
+from enum import StrEnum
 import os
 from typing import Any
 
@@ -9,6 +10,9 @@ from qdrant_client.http.models import Distance, VectorParams, SparseVectorParams
 
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 
+class VectorStoreType(StrEnum):
+    SOLID = "solid"
+    VOLATILE = "volatile"
 
 class VectorStore(BaseModel):
     collection_name: str

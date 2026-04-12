@@ -5,7 +5,9 @@ from aiolimiter import AsyncLimiter
 from langchain_core.tools import tool
 from loguru import logger
 
-from app.core.tools.registry.registry_tool import ingest_to_knowledge_graph
+from app.core.tools.registry.ingestion_config_tool import IngestionConfidenceTier
+from app.core.vector_store.vector_store import VectorStoreType
+from app.core.tools.registry.registry_tool import ingestion_to_persistence_layer
 from app.configs.settings.settings import get_settings
 from app.schemas.tool.ncbi_eutils_tool_schema import BioProjectSearchArgs, BioSampleSearchArgs, GeneSearchArgs, GenomeSearchArgs, NucleotideSearchArgs, PubMedSearchArgs, TaxonomySearchArgs
 
@@ -17,7 +19,11 @@ DATASETS_BASE = "https://api.ncbi.nlm.nih.gov/datasets/v2"
 RATE_LIMIT = 10 if settings.ncbi_api_key else 3
 limiter = AsyncLimiter(RATE_LIMIT, 1)
 
-@ingest_to_knowledge_graph
+@ingestion_to_persistence_layer(
+    vector_store_type=VectorStoreType.SOLID,
+    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    skip_relevance_check=True
+)
 @tool(args_schema=PubMedSearchArgs)
 async def search_literature_for_traits(organism: str, primary_concept: str, secondary_concept: Optional[str] = None) -> str:
     """
@@ -72,7 +78,11 @@ async def search_literature_for_traits(organism: str, primary_concept: str, seco
             logger.error(f"[Literature Tool] Error: {str(e)}")
             raise e
 
-@ingest_to_knowledge_graph
+@ingestion_to_persistence_layer(
+    vector_store_type=VectorStoreType.SOLID,
+    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    skip_relevance_check=True
+)
 @tool(args_schema=GeneSearchArgs)
 async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
     """
@@ -165,7 +175,11 @@ async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
             logger.error(f"[Gene Tool] Error: {str(e)}")
             raise e
         
-@ingest_to_knowledge_graph
+@ingestion_to_persistence_layer(
+    vector_store_type=VectorStoreType.SOLID,
+    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    skip_relevance_check=True
+)
 @tool(args_schema=GenomeSearchArgs)
 async def search_ncbi_genome(organism_or_cultivar: str) -> str:
     """
@@ -218,6 +232,11 @@ async def search_ncbi_genome(organism_or_cultivar: str) -> str:
             logger.error(f"[Genome Tool] Error: {str(e)}")
             raise e
 
+@ingestion_to_persistence_layer(
+    vector_store_type=VectorStoreType.SOLID,
+    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    skip_relevance_check=True
+)
 @tool(args_schema=BioProjectSearchArgs)
 async def search_bioproject(query: str) -> str:
     """
@@ -277,7 +296,11 @@ async def search_bioproject(query: str) -> str:
             logger.error(f"[BioProject Tool] Error: {str(e)}")
             raise e
 
-
+@ingestion_to_persistence_layer(
+    vector_store_type=VectorStoreType.SOLID,
+    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    skip_relevance_check=True
+)
 @tool(args_schema=BioSampleSearchArgs)
 async def search_biosample(query: str) -> str:
     """
@@ -322,7 +345,11 @@ async def search_biosample(query: str) -> str:
             logger.error(f"[BioSample Tool] Error: {str(e)}")
             raise e
 
-
+@ingestion_to_persistence_layer(
+    vector_store_type=VectorStoreType.SOLID,
+    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    skip_relevance_check=True
+)
 @tool(args_schema=TaxonomySearchArgs)
 async def resolve_taxonomy(query: str) -> str:
     """
@@ -377,7 +404,7 @@ async def resolve_taxonomy(query: str) -> str:
             logger.error(f"[Taxonomy Tool] Error: {str(e)}")
             raise e
 
-
+# Not annotate this tool
 @tool(args_schema=NucleotideSearchArgs)
 async def fetch_nucleotide_sequence(accession: str, start_pos: int = 1, stop_pos: int = 5000) -> str:
     """

@@ -27,9 +27,3 @@ genome_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncCon
     },
     open=False
 )
-
-
-neo4j_driver = AsyncGraphDatabase.driver(
-    settings.neo4j_uri,
-    auth=(settings.neo4j_username, settings.neo4j_password)
-)

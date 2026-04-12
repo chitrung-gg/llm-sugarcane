@@ -1,3 +1,4 @@
+import asyncio
 from enum import StrEnum
 import time
 from typing import List, Literal, cast
@@ -54,8 +55,19 @@ def make_web_search_node(
         try:
             # Use your fastest/cheapest model here (e.g., secondary or tertiary)
             rewriter_llm = llm_service.get_quaternary_model().with_structured_output(OptimizedSearchQuery)
-            rewritten_result = await rewriter_llm.ainvoke(messages)
-            optimized_query = OptimizedSearchQuery.model_validate(rewritten_result).search_query
+            
+            # Wrap in a 15-second timeout! Query rewriting should be instant.
+            rewritten_result = await asyncio.wait_for(
+                rewriter_llm.ainvoke(messages), 
+                timeout=15.0
+            )
+            
+            # Note: with_structured_output already returns the Pydantic object (or a dict)
+            if isinstance(rewritten_result, OptimizedSearchQuery):
+                optimized_query = rewritten_result.search_query
+            else:
+                optimized_query = OptimizedSearchQuery.model_validate(rewritten_result).search_query
+                
             logger.info(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
         except Exception as e:
             logger.warning(f"[Web Search] Query optimization failed: {e}. Falling back to original query.")
@@ -65,7 +77,7 @@ def make_web_search_node(
         new_web_results = []
 
         try:
-            raw_results = searx_wrapper.results(optimized_query, num_results=5)
+            raw_results = searx_wrapper.results(optimized_query, num_results=10)
             
             for res in raw_results:
                 web_item = WebResult(

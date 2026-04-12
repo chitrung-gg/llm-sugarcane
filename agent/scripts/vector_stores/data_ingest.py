@@ -128,7 +128,7 @@ def ingest_folder(folder_path: str):
     qdrant_hybrid_store = qdrant_config.get_vector_store()
     
     # Initialize Service Processor
-    processor = DocumentProcessor(vector_store=qdrant_hybrid_store)
+    processor = DocumentProcessor(vector_store_solid=qdrant_hybrid_store)
 
     tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
     fallback_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
