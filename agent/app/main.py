@@ -4,7 +4,6 @@ from loguru import logger
 
 from app.configs.loggings.loggings import setup_logging
 from app.configs.storage.databases import genome_connection_pool, langgraph_connection_pool
-from app.configs.storage.object_storage import rustfs_client
 
 
 
@@ -15,7 +14,7 @@ from fastapi import FastAPI
 
 
 from app.core.app_container import get_container
-from app.api.v1 import chat_endpoint
+from app.api.v1 import chat_endpoint, ingestion_endpoint
 
 
 @asynccontextmanager
@@ -28,8 +27,8 @@ async def lifespan(app: FastAPI):
     logger.info("🔌 Opening LangGraph PostgreSQL connection pool...")
     await langgraph_connection_pool.open()
 
-    logger.info("🔌 Opening RustFS client ...")
-    await rustfs_client.__aenter__()
+    # logger.info("🔌 Opening RustFS client ...")
+    # await rustfs_client.__aenter__()
 
     logger.info("⚙️ Initializing app container and compiling graph...")
     await get_container().initialize()
@@ -44,8 +43,8 @@ async def lifespan(app: FastAPI):
     logger.info("🔌 Closing LangGraph PostgreSQL connection pool...")
     await langgraph_connection_pool.close()
 
-    logger.info("🔌 Closing RustFS client ...")
-    await rustfs_client.__aexit__(None, None, None)
+    # logger.info("🔌 Closing RustFS client ...")
+    # await rustfs_client.__aexit__(None, None, None)
 
 
 app = FastAPI(
@@ -53,6 +52,7 @@ app = FastAPI(
     lifespan=lifespan)
 
 app.include_router(chat_endpoint.router, prefix="/api/v1")
+app.include_router(ingestion_endpoint.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

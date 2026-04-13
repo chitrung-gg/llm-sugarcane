@@ -3,32 +3,33 @@ import os
 from pathlib import Path
 import shutil
 import time
-from typing import List, Optional
+from typing import List, Optional, AsyncContextManager, cast
 import uuid
-from botocore.client import BaseClient
 
+import aioboto3
 from fastapi import HTTPException, UploadFile
 from langgraph.graph.state import CompiledStateGraph, RunnableConfig
 from langchain_core.messages import HumanMessage
 from loguru import logger
+from types_aiobotocore_s3 import S3Client
 
+from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
 from app.utils.files.files_classifier import classify_upload_with_llm
 from app.utils.files.files_validator import extract_file_sample, validate_genomic_file, validate_knowledge_file
 from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem
-from app.core.tools.genome_tool import list_genome_files
-from app.schemas.agent.agent_request import AgentRequest
 
 class AgentService:
     def __init__(
         self,
         graph: CompiledStateGraph,
-        rustfs_client: BaseClient,
+        rustfs_session: aioboto3.Session,
         llm_service: LLMService
     ):
         self.graph = graph
-        self.rustfs_client = rustfs_client
+        self.rustfs_session = rustfs_session
         self.llm_service = llm_service
+        self.settings = get_settings()
 
     async def process_langgraph_chat(
         self,
@@ -67,7 +68,7 @@ class AgentService:
                         if not is_valid:
                             raise HTTPException(400, f"Validation Failed for {filename}: {error_msg}")
                         
-                        rustfs_uri, final_name = await self._compress_and_upload_to_s3(temp_path, filename, self.rustfs_client)
+                        rustfs_uri, final_name = await self._compress_and_upload_to_s3(temp_path, filename, self.rustfs_session)
                         
                         uploaded_files_meta.append({
                             "file_id": file_id,
@@ -201,7 +202,7 @@ class AgentService:
             "summary": state_values.get("summary", "") # Optional: grab the rolling summary too!
         }
 
-    async def _compress_and_upload_to_s3(self, temp_path: Path, original_filename: str, s3_client: BaseClient) -> tuple[str, str]:
+    async def _compress_and_upload_to_s3(self, temp_path: Path, original_filename: str, s3_context: aioboto3.Session) -> tuple[str, str]:
         """Compresses file if needed, uploads to RustFS via aioboto3, and returns the S3 URI and new filename."""
         bucket_name = "sugarcane-genomes"
         file_id = str(uuid.uuid4())
@@ -226,7 +227,20 @@ class AgentService:
         
         # Use aioboto3's native async upload_file (highly efficient for disk paths)
         logger.info(f"Uploading {safe_filename} to RustFS bucket: {bucket_name}")
-        await s3_client.upload_file(str(upload_path), bucket_name, safe_filename)
+
+        rustfs_client = cast(
+            AsyncContextManager[S3Client],
+            self.rustfs_session.client(
+                "s3",
+                endpoint_url=self.settings.rustfs_endpoint_url,
+                aws_access_key_id=self.settings.rustfs_access_key_id,
+                aws_secret_access_key=self.settings.rustfs_secret_access_key,
+                region_name=self.settings.rustfs_region_name
+            )
+        )
+
+        async with rustfs_client as s3_client:
+            await s3_client.upload_file(str(upload_path), bucket_name, safe_filename)
         
         # Clean up the compressed copy if we created one
         if not is_already_gz and upload_path.exists():

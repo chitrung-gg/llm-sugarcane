@@ -4,7 +4,8 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from app.core.tools.registry.ingestion_config_tool import IngestionConfig, IngestionConfidenceTier
+from app.schemas.knowledge.knowledge_ingestion_schema import IngestionConfidenceTier, IngestionSourceType
+from app.core.tools.registry.ingestion_config_tool import IngestionConfig
 from app.core.vector_store.vector_store import VectorStoreType
 
 
@@ -13,7 +14,7 @@ KNOWLEDGE_GRAPH_TOOL_REGISTRY: Dict[str, IngestionConfig] = {}
 def ingestion_to_persistence_layer(
     vector_store_type: VectorStoreType, 
     ingestion_confidence_tier: IngestionConfidenceTier,
-    source_type_label: Optional[str] = None,
+    source_type_label: IngestionSourceType,
     skip_relevance_check: bool = False
 ):
     """
@@ -30,12 +31,10 @@ def ingestion_to_persistence_layer(
     """
     
     def decorator(langchain_tool):
-        final_label = source_type_label if source_type_label else langchain_tool.name
-        
         KNOWLEDGE_GRAPH_TOOL_REGISTRY[langchain_tool.name] = IngestionConfig(
            vector_store_type=vector_store_type,
            ingestion_confidence_tier=ingestion_confidence_tier,
-           source_type_label=final_label,
+           source_type_label=source_type_label,
            skip_relevance_check=skip_relevance_check
         )
         return langchain_tool

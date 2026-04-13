@@ -78,19 +78,19 @@ class Settings(BaseSettings):
 
     # --- Genome Postgres ---
     genome_postgres_url: str = Field(
-        default="postgresql+asyncpg://genome:genome@localhost:5432/sugarcane",
+        default="postgresql://genome:genome@localhost:5432/sugarcane",
         validation_alias="GENOME_POSTGRES_URL"
     )
 
     # --- LangGraph's Postgres Checkpointer ---
     langgraph_postgres_url: str = Field(
-        default="postgresql+asyncpg://langgraph:langgraph@localhost:5432/sugarcane",
+        default="postgresql://langgraph:langgraph@localhost:5432/sugarcane",
         validation_alias="LANGGRAPH_POSTGRES_URL"
     )
 
     # --- KnowledgeGraph's Postgres ---
     knowledgegraph_postgres_url: str = Field(
-        default="postgresql+asyncpg://knowledge:knowledge@localhost:5432/sugarcane",
+        default="postgresql://knowledge:knowledge@localhost:5432/sugarcane",
         validation_alias="KNOWLEDGEGRAPH_POSTGRES_URL"
     )
 

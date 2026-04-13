@@ -1,14 +1,16 @@
 from functools import lru_cache
-from typing import List
+from typing import List, AsyncContextManager
 
+import aioboto3
 from langchain_neo4j import Neo4jGraph
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.tools import BaseTool
 from loguru import logger
-from botocore.client import BaseClient
+from types_aiobotocore_s3 import S3Client
 
+from app.services.knowledge.knowledge_service import KnowledgeService
 from app.services.agent.agent_service import AgentService
 from app.core.tools.ncbi_eutils_tool import get_gene_metadata_by_symbol, search_literature_for_traits, search_ncbi_genome
 from app.core.tools.openapi_tool import build_openapi_tools
@@ -20,7 +22,7 @@ from app.services.knowledge.graph_ingestion_service import GraphIngestionService
 
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 from app.core.vector_store.vector_store import VectorStore
-from app.configs.storage.object_storage import rustfs_client
+from app.configs.storage.object_storage import rustfs_session
 from app.core.tools.genome_tool import (
     design_polyploid_primer, get_gene_detail,
     get_genes_list, list_genome_files, run_blast, run_crispor,
@@ -34,6 +36,7 @@ class AppContainer:
     def __init__(self):
         self._llm_service: LLMService | None = None
         self._agent_service: AgentService | None = None
+        self._knowledge_service: KnowledgeService | None = None
         self._graph_ingestion_service: GraphIngestionService | None = None
         self._embedding_model: GeminiEmbeddingModel | None = None
         self._vector_store_solid: QdrantVectorStore | None = None
@@ -43,14 +46,14 @@ class AppContainer:
         self._knowledge_graph: Neo4jGraph | None = None
         self._agent_graph: CompiledStateGraph | None = None
         self._graph_rag_tool: BaseTool | None = None
-        self._rustfs_client: BaseClient | None = None
+        self._rustfs_session: aioboto3.Session | None = None
 
     async def initialize(self):
         logger.info(" Initializing app container...")
         
         # 1. Base Services & APIs
         await self._init_llm_service() 
-        await self._init_rustfs_client()
+        await self._init_rustfs_session()
         await self._init_searx_wrapper()
         await self._init_ncbi_tools()
         
@@ -67,6 +70,7 @@ class AppContainer:
         await self._init_agent_graph()
         
         # 5. The Top-Level Service (Depends on the Graph)
+        await self._init_knowledge_service() 
         await self._init_agent_service() 
         
         logger.info(" App container ready.")
@@ -75,11 +79,17 @@ class AppContainer:
         """Initialize LLM models with fallback chain."""
         self._llm_service = LLMService()
 
+    async def _init_knowledge_service(self):
+        """Initialize LLM models with fallback chain."""
+        self._knowledge_service = KnowledgeService(
+            rustfs_session=self.rustfs_session
+        )
+
     async def _init_agent_service(self):
         """Initialize LLM models with fallback chain."""
         self._agent_service = AgentService(
             graph=self.agent_graph,
-            rustfs_client=self.rustfs_client,
+            rustfs_session=self.rustfs_session,
             llm_service=self.llm_service
         )
 
@@ -196,9 +206,9 @@ class AppContainer:
             available_tools=all_tools
         )
 
-    async def _init_rustfs_client(self):
-        """Initialize RustFS client (S3 compatible)"""
-        self._rustfs_client = rustfs_client
+    async def _init_rustfs_session(self):
+        """Initialize RustFS session (S3 compatible)"""
+        self._rustfs_session = rustfs_session
 
     async def _init_ncbi_tools(self):
         """Initialize dynamic tools from NCBI OpenAPI spec."""
@@ -223,6 +233,11 @@ class AppContainer:
     def agent_service(self) -> AgentService:
         assert self._agent_service, "Container not initialized (AgentService missing)"
         return self._agent_service
+    
+    @property
+    def knowledge_service(self) -> KnowledgeService:
+        assert self._knowledge_service, "Container not initialized (KnowledgeService missing)"
+        return self._knowledge_service
     
     @property
     def graph_ingestion_service(self) -> GraphIngestionService:
@@ -265,9 +280,9 @@ class AppContainer:
         return self._agent_graph
 
     @property
-    def rustfs_client(self) -> BaseClient:
-        assert self._rustfs_client, "Container not initialized (RustFSClient missing)"
-        return self._rustfs_client
+    def rustfs_session(self) -> aioboto3.Session:
+        assert self._rustfs_session, "Container not initialized (RustFSClient missing)"
+        return self._rustfs_session
     
     @property
     def ncbi_tools(self) -> List[BaseTool]:

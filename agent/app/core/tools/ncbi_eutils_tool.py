@@ -5,6 +5,7 @@ from aiolimiter import AsyncLimiter
 from langchain_core.tools import tool
 from loguru import logger
 
+from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.core.tools.registry.ingestion_config_tool import IngestionConfidenceTier
 from app.core.vector_store.vector_store import VectorStoreType
 from app.core.tools.registry.registry_tool import ingestion_to_persistence_layer
@@ -22,6 +23,7 @@ limiter = AsyncLimiter(RATE_LIMIT, 1)
 @ingestion_to_persistence_layer(
     vector_store_type=VectorStoreType.SOLID,
     ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    source_type_label=IngestionSourceType.NCBI_LITERATURE,
     skip_relevance_check=True
 )
 @tool(args_schema=PubMedSearchArgs)
@@ -81,6 +83,7 @@ async def search_literature_for_traits(organism: str, primary_concept: str, seco
 @ingestion_to_persistence_layer(
     vector_store_type=VectorStoreType.SOLID,
     ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    source_type_label=IngestionSourceType.NCBI_GENE,
     skip_relevance_check=True
 )
 @tool(args_schema=GeneSearchArgs)
@@ -178,6 +181,7 @@ async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
 @ingestion_to_persistence_layer(
     vector_store_type=VectorStoreType.SOLID,
     ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    source_type_label=IngestionSourceType.NCBI_GENOME,
     skip_relevance_check=True
 )
 @tool(args_schema=GenomeSearchArgs)
@@ -235,6 +239,7 @@ async def search_ncbi_genome(organism_or_cultivar: str) -> str:
 @ingestion_to_persistence_layer(
     vector_store_type=VectorStoreType.SOLID,
     ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    source_type_label=IngestionSourceType.NCBI_BIOPROJECT,
     skip_relevance_check=True
 )
 @tool(args_schema=BioProjectSearchArgs)
@@ -299,6 +304,7 @@ async def search_bioproject(query: str) -> str:
 @ingestion_to_persistence_layer(
     vector_store_type=VectorStoreType.SOLID,
     ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    source_type_label=IngestionSourceType.NCBI_BIOSAMPLE,
     skip_relevance_check=True
 )
 @tool(args_schema=BioSampleSearchArgs)
@@ -348,6 +354,7 @@ async def search_biosample(query: str) -> str:
 @ingestion_to_persistence_layer(
     vector_store_type=VectorStoreType.SOLID,
     ingestion_confidence_tier=IngestionConfidenceTier.INFERRED,
+    source_type_label=IngestionSourceType.NCBI_TAXONOMY,
     skip_relevance_check=True
 )
 @tool(args_schema=TaxonomySearchArgs)

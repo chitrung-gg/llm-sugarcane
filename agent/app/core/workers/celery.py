@@ -23,6 +23,7 @@ celery.conf.task_queues = (
 # 2. Route the graph ingestion task exclusively to this new queue
 celery.conf.task_routes = {
     'tasks.ingest_knowledge': {'queue': 'ingest_knowledge_queue'},
+    'tasks.process_document_ingestion': {'queue': 'ingest_knowledge_queue'}
 }
 
 # Worker Settings
