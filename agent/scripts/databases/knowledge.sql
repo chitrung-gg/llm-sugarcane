@@ -30,3 +30,20 @@ ALTER TABLE public.genes
 
 CREATE INDEX idx_genome_metadata ON public.genomes USING GIN (genome_metadata);
 CREATE INDEX idx_gene_metadata ON public.genes USING GIN (gene_metadata);
+
+CREATE TABLE IF NOT EXISTS public.file_ingestion_status
+(
+    task_id text PRIMARY KEY,
+    filename text NOT NULL,
+    status text NOT NULL,           -- 'queued', 'processing', 'completed', 'failed'
+    source_type text,
+    vector_store text,
+    chunks_total integer DEFAULT 0,
+    chunks_processed integer DEFAULT 0,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_ingestion_filename ON public.file_ingestion_status(filename);
+CREATE INDEX IF NOT EXISTS idx_file_ingestion_created_at ON public.file_ingestion_status(created_at DESC);
