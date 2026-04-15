@@ -88,7 +88,7 @@ class KnowledgeService:
                 # 🌟 Trigger a dedicated Celery Task for this specific file
                 logger.info(f"Dispatching ingestion task for {target_uri}")
                 task = celery.send_task(
-                    "tasks.process_document_ingestion",
+                    "llm.tasks.process_document_ingestion",
                     args=[
                         target_uri,
                         {

@@ -11,19 +11,25 @@
             "module": "app.main",
             "cwd": "${workspaceFolder}/agent",
             "envFile": "${workspaceFolder}/agent/.env"
-        }
+        },
         // {
-        //     "name": "Python Debugger: Debug Genome FastAPI backend",
+        //     "name": "Debug Celery Worker",
         //     "type": "debugpy",
         //     "request": "launch",
-        //     "module": "uvicorn",
+        //     "module": "celery",
+        //     "console": "integratedTerminal",
         //     "args": [
-        //         "app.main:app",
-        //         "--reload"
+        //         "-A",
+        //         "app.core.pipelines.celery.celery_ingest_knowledge",
+        //         "worker",
+        //         "-Q",
+        //         "ingest_knowledge_queue",
+        //         "--loglevel=DEBUG",
+        //         "--concurrency=1",
+        //         "--pool=solo" 
         //     ],
-        //     "cwd": "${workspaceFolder}/backend",
-        //     "jinja": true,
-        //     "envFile": "${workspaceFolder}/.env",
+        //     "cwd": "${workspaceFolder}/agent",
+        //     "envFile": "${workspaceFolder}/agent/.env"
         // }
     ]
 }

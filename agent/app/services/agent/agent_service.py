@@ -68,15 +68,32 @@ class AgentService:
                         if not is_valid:
                             raise HTTPException(400, f"Validation Failed for {filename}: {error_msg}")
                         
-                        rustfs_uri, final_name = await self._compress_and_upload_to_s3(temp_path, filename, self.rustfs_session)
+                        # Check file size (e.g., threshold of 10 KB)
+                        file_size_bytes = temp_path.stat().st_size
                         
-                        uploaded_files_meta.append({
-                            "file_id": file_id,
-                            "file_name": final_name,
-                            "rustfs_uri": rustfs_uri,
-                            "file_type": "genomic_dataset",
-                            "description": "A heavy genomic dataset stored in RustFS. Pass its S3 URI to tools."
-                        })
+                        if file_size_bytes < 10 * 1024: # Less than 10KB
+                            logger.info(f"File {filename} is small ({file_size_bytes} bytes). Reading directly into context.")
+                            raw_sequence = temp_path.read_text(encoding="utf-8", errors="ignore").strip()
+                            
+                            uploaded_files_meta.append({
+                                "file_id": file_id,
+                                "file_name": filename,
+                                "file_type": "raw_sequence",
+                                "local_content": raw_sequence,
+                                "description": "A short sequence provided by the user. Pass the 'local_content' string directly into the tool arguments."
+                            })
+                        else:
+                            # Standard S3 Upload for Heavy Files
+                            logger.info(f"File {filename} is large ({file_size_bytes} bytes). Routing to RustFS.")
+                            rustfs_uri, final_name = await self._compress_and_upload_to_s3(temp_path, filename, self.rustfs_session)
+                            
+                            uploaded_files_meta.append({
+                                "file_id": file_id,
+                                "file_name": final_name,
+                                "rustfs_uri": rustfs_uri,
+                                "file_type": "genomic_dataset",
+                                "description": "A heavy genomic dataset stored in RustFS. Pass its S3 URI to tools."
+                            })
 
                     # --- PATH B: KNOWLEDGE DOCUMENT ---
                     elif classification == "knowledge":
@@ -89,9 +106,9 @@ class AgentService:
                         uploaded_files_meta.append({
                             "file_id": file_id,
                             "file_name": filename,
-                            "file_path": str(temp_path), 
                             "file_type": "context_document",
-                            "local_content": text_content[:100000] 
+                            "local_content": text_content[:100000],
+                            "description": "Read 'local_content' for the text. Do not attempt to read this as a local file."
                         })
 
                     # --- PATH C: EXPLANATION/SAMPLE ONLY ---

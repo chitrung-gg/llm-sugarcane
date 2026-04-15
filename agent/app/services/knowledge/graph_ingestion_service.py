@@ -6,6 +6,8 @@ from langchain_neo4j import Neo4jGraph
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.tools.registry.ingestion_config_tool import IngestionConfig
+from app.schemas.knowledge.knowledge_ingestion_schema import IngestionConfidenceTier, IngestionSourceType
 from app.core.tools.registry.registry_tool import KNOWLEDGE_GRAPH_TOOL_REGISTRY
 from app.core.vector_store.vector_store import VectorStoreType
 from app.schemas.graph.knowledge_graph_schema import KnowledgeGraphComponents
@@ -57,14 +59,21 @@ class GraphIngestionService:
             # 1. Fetch Tool Configuration
             tool_config = KNOWLEDGE_GRAPH_TOOL_REGISTRY.get(tool_name)
             if not tool_config:
-                logger.warning(f"Graph Ingestion Aborted: Tool '{tool_name}' is not registered.")
-                return
+                logger.info(f"Source '{tool_name}' not in registry. Defaulting to general text ingestion.")
+                # We dynamically construct a config for unstructured/unregistered text
+                # Make sure the Enum values match your IngestionSourceType/IngestionConfidenceTier schemas
+                tool_config = IngestionConfig(
+                    vector_store_type=VectorStoreType.SOLID, 
+                    source_type_label=IngestionSourceType.CURATED_DOCUMENT, # Or GENERAL_TEXT depending on your schema
+                    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED, # Baseline trust for unregistered sources
+                    skip_relevance_check=False # Forces the LLM to strictly evaluate relevance
+                )
 
             # Fast-fail: Do not ingest tool error messages or "not found" results.
             # This saves LLM tokens and prevents garbage data in your databases.
             text_lower = source_text.strip().lower()
-            if source_text.strip().startswith("❌") or "no results found" in text_lower or "no genome assembly found" in text_lower:
-                logger.warning(f"Graph Ingestion Aborted: Tool output indicates failure or no data found.")
+            if not self._is_ingestable_payload(source_text):
+                logger.debug(f"Graph Ingestion Aborted: Output from {tool_name} failed heuristic checks (likely a tool error or empty result).")
                 return
             
             # 2. Extract Data via LLM
@@ -216,4 +225,30 @@ class GraphIngestionService:
             logger.info(f"Graph ingestion complete: {len(components.nodes)} nodes, {len(components.relationships)} relationships.")
             
         except Exception as e:
-            logger.error(f"Graph ingestion failed: {str(e)}")
+            logger.error("Graph ingestion failed: {e}", e=e)
+            raise e
+        
+    def _is_ingestable_payload(self, text: str) -> bool:
+        """
+        Fast-fail heuristic to prevent sending tool error messages or empty strings to the LLM.
+        Saves tokens by filtering out obvious non-data before the LLM extraction step.
+        """
+        clean_text = text.strip()
+        
+        # 1. Minimum Length Check (Too short to contain valid biological relationships)
+        if len(clean_text) < 30:
+            return False
+            
+        # 2. Tool Failure Prefix Check
+        # We also catch standard Python/system error prefixes.
+        text_lower = clean_text.lower()
+        failure_prefixes = (
+            "error:", 
+            "exception:", 
+            "failed to",
+            "traceback"
+        )
+        if text_lower.startswith(failure_prefixes):
+            return False
+            
+        return True

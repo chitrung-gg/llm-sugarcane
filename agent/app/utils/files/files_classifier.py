@@ -52,17 +52,20 @@ async def classify_upload_with_llm(
     messages = [
         SystemMessage(content=f"""
             You are an intelligent file routing system for a Bioinformatics platform.
-            Look at the uploaded file name and the user's message, and determine how to handle it.
+            Look at the specific uploaded file name and the user's message, and determine how to handle it.
 
             ROUTING RULES:
-            1. 'sample_only': Choose this if the user wants you to EXPLAIN, INTERPRET, UNDERSTAND, or SUMMARIZE the format/columns/meaning of a data file. The system will read the first 50 lines so you can explain it.
-            2. 'genomic': Choose this if the user wants to run a COMPUTATIONAL TOOL (like BLAST, synteny, primer design, or alignment) on this file. (Common extensions: {genomic_exts_str})
-            3. 'knowledge': Choose this if the user uploaded a human-readable document (research paper, notes) and wants to ask general questions about its text. (Common extensions: {knowledge_exts_str})
-            4. 'reject': The file looks like malware (.exe, .sh) or the intent is completely malicious/unrelated to biology.
+            1. 'sample_only': Choose this if the user wants to EXPLAIN, INTERPRET, UNDERSTAND, or SUMMARIZE the format, headers, or columns of a data file.
+            2. 'genomic': Choose this if the user explicitly wants to run a HEAVY COMPUTATIONAL BACKEND TOOL (like BLAST, synteny, mapping, Airflow pipelines) on this file. (Common: {genomic_exts_str})
+            3. 'knowledge': Choose this for human-readable documents (papers, notes) OR if the user wants you (the LLM) to directly read, translate, or analyze a small text/sequence file. (Common: {knowledge_exts_str})
+            4. 'reject': The file looks like malware (.exe, .sh) or the intent is completely unrelated to biology/system tasks.
 
-            CRITICAL TIEBREAKER: Intent overrides extension. If they upload a '.txt' but ask to 'run BLAST', route to 'genomic'. If they upload a massive '.gff3' but just ask 'what do these columns mean?', route to 'sample_only'.
+            CRITICAL EDGE CASES:
+            - EMPTY/VAGUE QUERIES: If the user message is empty or generic ("here", "process this"), rely heavily on the file extension. Route documents to 'knowledge' and genomic datasets to 'genomic'.
+            - MULTI-FILE CONTEXT: The user may have uploaded multiple files. If the user says "Run BLAST with the parameters in the PDF", evaluate THIS specific file. The PDF goes to 'knowledge' (to read parameters), and the FASTA goes to 'genomic'.
+            - INTENT OVER EXTENSION: If they upload a '.txt' but ask to 'run BLAST', route to 'genomic'. If they upload a massive '.gff3' but just ask 'what do these columns mean?', route to 'sample_only'.
         """),
-        HumanMessage(content=f"File uploaded: {filename}\nUser Message: {user_query}")
+        HumanMessage(content=f"File being evaluated: {filename}\nUser Message: {user_query or '[NO MESSAGE PROVIDED]'}")
     ]
 
     try:

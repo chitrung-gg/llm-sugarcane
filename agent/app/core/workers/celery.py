@@ -22,8 +22,8 @@ celery.conf.task_queues = (
 
 # 2. Route the graph ingestion task exclusively to this new queue
 celery.conf.task_routes = {
-    'tasks.ingest_knowledge': {'queue': 'ingest_knowledge_queue'},
-    'tasks.process_document_ingestion': {'queue': 'ingest_knowledge_queue'}
+    'llm.tasks.ingest_knowledge': {'queue': 'ingest_knowledge_queue'},
+    'llm.tasks.process_document_ingestion': {'queue': 'ingest_knowledge_queue'}
 }
 
 # Worker Settings
@@ -34,5 +34,7 @@ celery.conf.update(
     timezone="Asia/Ho_Chi_Minh",
     enable_utc=True,
     task_acks_late=True,
-    worker_prefetch_multiplier=1 
+    worker_prefetch_multiplier=1,
+    task_track_started=True,
+    worker_send_task_events=True
 )
