@@ -128,13 +128,13 @@ async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
 #     return await call_genome_backend("GET", "/api/genome/sequence", params=params)
 
 @tool(args_schema=BlastInput)
-async def run_blast(file_id: int, sequence: str, evalue: float = 1e-5) -> Dict[str, Any]:
+async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict[str, Any]:
     """
     Run a BLAST alignment of a query sequence against a selected genome database.
 
     Use this tool when the user provides a DNA/protein sequence and wants to find similar regions.
     Requires:
-    - file_id: target genome database (must be obtained from `list_genome_files`)
+    - genome_id: target genome database (must be obtained from `list_genome_files`)
     - sequence: query sequence (DNA or protein)
 
     Optional:
@@ -142,7 +142,7 @@ async def run_blast(file_id: int, sequence: str, evalue: float = 1e-5) -> Dict[s
 
     Returns BLAST results including hits, alignments, scores, e-values, and matched regions.
     """
-    payload = {"file_id": file_id, "sequence": sequence, "evalue": evalue}
+    payload = {"genome_id": genome_id, "sequence": sequence, "evalue": evalue}
     return await call_genome_backend("POST", "/api/blast/run", json_data=payload)
 
 # @tool(args_schema=SyntenyInput)
@@ -228,7 +228,7 @@ async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: O
 
 @tool(args_schema=PrimerDesignInput)
 async def design_polyploid_primer(
-    file_id: int, query: str, primer_num_return: int = 20,
+    genome_id: int, query: str, primer_num_return: int = 20,
     primer_product_size_range: str = "100-400", primer_opt_size: int = 20,
     primer_min_size: int = 18, primer_max_size: int = 24,
     primer_opt_tm: float = 60, primer_min_tm: float = 52, primer_max_tm: float = 68,
@@ -241,7 +241,7 @@ async def design_polyploid_primer(
     especially in complex genomes with multiple homologs (e.g., polyploid species).
 
     Requires:
-    - file_id: genome reference (must be obtained from `list_genome_files`)
+    - genome_id: genome reference (must be obtained from `list_genome_files`)
     - query: target DNA sequence or region
 
     Optional parameters control primer design constraints (size, Tm, GC content, product size).
@@ -254,7 +254,7 @@ async def design_polyploid_primer(
         and specificity mode (e.g., single-band)
     """
     payload = {
-        "file_id": file_id, "query": query, "primer_num_return": primer_num_return,
+        "genome_id": genome_id, "query": query, "primer_num_return": primer_num_return,
         "primer_product_size_range": primer_product_size_range, "primer_opt_size": primer_opt_size,
         "primer_min_size": primer_min_size, "primer_max_size": primer_max_size,
         "primer_opt_tm": primer_opt_tm, "primer_min_tm": primer_min_tm, "primer_max_tm": primer_max_tm,

@@ -18,8 +18,9 @@ class GeneSearchInput(BaseModel):
     limit: int = Field(10, ge=1, le=50)
 
 class BlastInput(BaseModel):
-    file_id: int
+    genome_id: int
     sequence: str
+    # program: str = "blastn" # blastn, blastp...
     evalue: float = 1e-5
 
 # class SyntenyInput(BaseModel):
@@ -38,7 +39,7 @@ class SyntenyHaplotypeInput(BaseModel):
     homologous_group: Optional[int] = None
 
 class PrimerDesignInput(BaseModel):
-    file_id: int
+    genome_id: int
     query: str
     primer_num_return: int = 20
     primer_product_size_range: str = "100-400"
