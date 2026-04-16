@@ -1,6 +1,8 @@
+import ast
 import asyncio
 import gc
 import os
+import re
 import uuid
 from typing import Any, Dict, Optional, cast, AsyncContextManager
 
@@ -23,14 +25,12 @@ from app.schemas.knowledge.knowledge_ingestion_schema import IngestionConfidence
 if "manual_document_upload" not in KNOWLEDGE_GRAPH_TOOL_REGISTRY:
     KNOWLEDGE_GRAPH_TOOL_REGISTRY["manual_document_upload"] = IngestionConfig(
         vector_store_type=VectorStoreType.SOLID,
-        source_type_label=IngestionSourceType.CURATED_DOCUMENT, # Đảm bảo Enum này khớp với schema của bạn
+        source_type_label=IngestionSourceType.CURATED_DOCUMENT, 
         ingestion_confidence_tier=IngestionConfidenceTier.CURATED, 
         skip_relevance_check=False
     )
 
-# B. Đăng ký Pipeline 2 (NCBI Tools): Import file chứa các tool để decorator tự chạy
 try:
-    # LƯU Ý: Hãy thay đổi đường dẫn import này cho đúng với file chứa các NCBI tool của bạn
     import app.core.tools.ncbi_eutils_tool
     logger.info("Successfully registered NCBI tools into Celery Registry.")
     
@@ -142,22 +142,26 @@ def process_document_ingestion(self, target_uri: str, metadata: dict):
             chunks = container.document_processor.process_and_get_chunks(local_file_path)
             total_chunks = len(chunks)
             
-            BATCH_SIZE = 20     # Number of chunks processed at the same time (adjust based on your Gemini API tier)
-            DELAY_BETWEEN_BATCHES = 5 # Delay between batches to avoid rate limiting
+            BATCH_SIZE = 8     # Number of chunks processed at the same time (adjust based on your Gemini API tier)
+            DELAY_BETWEEN_BATCHES = 30 # Delay between batches to avoid rate limiting
 
-            for i in range(0, total_chunks, BATCH_SIZE):
-                batch = chunks[i : i + BATCH_SIZE]
+            pending_chunks = [(i, chunk) for i, chunk in enumerate(chunks)]
+
+            while pending_chunks:
+                current_batch = pending_chunks[:BATCH_SIZE]
+
+                pending_chunks = pending_chunks[BATCH_SIZE:]
                 
-                self.update_state(state='PROGRESS', meta={
-                    'message': f'Ingesting batch {i//BATCH_SIZE + 1} (Chunks {i+1} to min({i+BATCH_SIZE}, total_chunks))',
-                    'current': min(i + BATCH_SIZE, total_chunks),
-                    'total': total_chunks
-                })
+                logger.info(
+                    "ingesting_batch",
+                    state="PROGRESS",
+                    remaining=len(pending_chunks) + len(current_batch),
+                    current=total_chunks - len(pending_chunks),
+                    total=total_chunks
+                )
 
-                # Create a list of tasks to run in parallel
                 tasks = []
-                for j, chunk in enumerate(batch):
-                    chunk_index = i + j
+                for chunk_index, chunk in current_batch:
                     task = container.graph_ingestion_service.ingest_knowledge(
                         source_text=chunk.page_content,
                         source_metadata={
@@ -168,17 +172,40 @@ def process_document_ingestion(self, target_uri: str, metadata: dict):
                     )
                     tasks.append(task)
 
-                # Run all tasks in the batch concurrently
-                # return_exceptions=True prevents crashes: if one chunk fails, others can still succeed
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                # Log any errors that occurred in the batch
-                for j, result in enumerate(results):
-                    if isinstance(result, Exception):
-                        logger.error(f"[Task {self.request.id}] Failed to ingest chunk {i + j}: {str(result)}")
+                rate_limit_hit = False
 
-                # Pause between batches to avoid being rate-limited by the LLM provider
-                if i + BATCH_SIZE < total_chunks:
+                for (chunk_index, chunk), result in zip(current_batch, results):
+                    if isinstance(result, Exception):
+                        error_type = type(result).__name__
+                        error_str = str(result)
+                        is_rate_limit = False
+                        
+                        status_code = getattr(result, 'code', None) or getattr(result, 'status_code', None)
+                        if status_code == 429 or error_type in ["ResourceExhausted", "RateLimitError"]:
+                            is_rate_limit = True
+                        elif "{" in error_str:
+                            dict_str = error_str[error_str.find("{"):]
+                            try:
+                                error_data = ast.literal_eval(dict_str)
+                                err_payload = error_data.get("error", {})
+                                if err_payload.get("code") == 429 or err_payload.get("status") == "RESOURCE_EXHAUSTED":
+                                    is_rate_limit = True
+                            except (ValueError, SyntaxError):
+                                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                                    is_rate_limit = True
+
+                        if is_rate_limit:
+                            pending_chunks.insert(0, (chunk_index, chunk))
+                            rate_limit_hit = True
+                        else:
+                            logger.error(f"[Task {self.request.id}] Failed chunk {chunk_index}: {error_type} - {error_str}")
+
+                if rate_limit_hit:
+                    logger.warning("Hit API Rate Limit. Pausing for 60s before retrying failed chunks in place...")
+                    await asyncio.sleep(60)
+                elif pending_chunks:
                     await asyncio.sleep(DELAY_BETWEEN_BATCHES)
 
             return {

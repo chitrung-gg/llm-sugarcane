@@ -10,7 +10,8 @@ from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
+from langchain_core.tools import BaseTool, render_text_description_and_args
 from langgraph.types import Command
 
 
@@ -26,7 +27,7 @@ class SynthesizerOutput(BaseModel):
         description="If is_complete is False, explicitly state what specific information is missing so the Router can search for it next. If complete, leave empty."
     )
     
-def make_synthesizer_node(llm_service: LLMService):
+def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
 
     async def synthesizer(state: AgentState) -> Command[
         Literal[AgentGraphNode.SUMMARIZER, AgentGraphNode.ROUTER]
@@ -67,6 +68,15 @@ def make_synthesizer_node(llm_service: LLMService):
             {tool_context if tool_context else "No tool data found."}
         """
 
+        # Fetch Router Guidance
+        router_guidance = state.get("router_guidance", "")
+        guidance_text = ""
+        if router_guidance:
+            guidance_text = f"\nROUTER INSTRUCTIONS FOR THIS RESPONSE: {router_guidance}\n"
+
+        # Render Tool Descriptions
+        tool_list_str = render_text_description_and_args(list(available_tools.values()))
+        
         # Dynamically add instructions if the agent is about to give up
         final_warning = ""
         if is_final_attempt:
@@ -81,6 +91,13 @@ def make_synthesizer_node(llm_service: LLMService):
         system_prompt = f"""
             You are an expert Bioinformatics Assistant. Use the provided context to answer the user's query.
             User Query: {query}
+            
+            {guidance_text}
+
+            FOR YOUR AWARENESS, YOU HAVE ACCESS TO THESE TOOLS (Even if you aren't executing them right now):
+            {tool_list_str}
+
+            If the user asks what tools you have, or how a specific tool works, use the list above to explain it accurately. Do NOT claim you lack a tool if it is in this list.
             
             Context:
             {context_string}

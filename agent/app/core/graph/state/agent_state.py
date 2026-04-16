@@ -59,6 +59,7 @@ class AgentState(TypedDict):
     iteration_count: int
     max_iterations: int         # Circuit breaker
     last_intent: str
+    router_guidance: str
 
     # Source tracking - will be populated by each node
     sources_used: List[RecordSource]

@@ -68,7 +68,7 @@ async def build_agent_graph(
     )
     workflow.add_node(
         AgentGraphNode.SYNTHESIZER,
-        make_synthesizer_node(llm_service)
+        make_synthesizer_node(llm_service, available_tools)
     )
     workflow.add_node(
         AgentGraphNode.SUMMARIZER,

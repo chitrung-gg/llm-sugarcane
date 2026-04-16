@@ -5,9 +5,6 @@ from langchain_neo4j import Neo4jGraph
 from langchain_qdrant import QdrantVectorStore
 from loguru import logger
 
-
-MIN_SIMILARITY_SCORE = 0.70
-
 def make_graph_rag_tool(
     vector_store_solid: QdrantVectorStore,
     vector_store_volatile: QdrantVectorStore,
@@ -23,35 +20,34 @@ def make_graph_rag_tool(
         
         try:
             # 1. Concurrent Semantic Search on BOTH Qdrant collections
-            # We search both to ensure we find the entity, regardless of whether 
-            # it came from a curated paper or an agent's web search.
             solid_task = vector_store_solid.asimilarity_search_with_score(query, k=top_k)
             volatile_task = vector_store_volatile.asimilarity_search_with_score(query, k=top_k)
             
             solid_results, volatile_results = await asyncio.gather(solid_task, volatile_task)
 
+            # Combine, tag, and sort by Hybrid score (No hardcoded thresholds!)
+            combined_results = []
+            for doc, score in solid_results:
+                combined_results.append((doc, score, "SOLID"))
+            for doc, score in volatile_results:
+                combined_results.append((doc, score, "VOLATILE"))
+                
+            # Sort descending by score and slice the top_k absolute best matches
+            combined_results.sort(key=lambda x: x[1], reverse=True)
+            top_results = combined_results[:top_k]
+
             # Extract unique global_ids, prioritizing the solid database
             entity_ids = set()
             fallback_docs = []
 
-            for doc, score in solid_results:
-                if score >= MIN_SIMILARITY_SCORE:
-                    if "global_id" in doc.metadata:
-                        entity_ids.add(doc.metadata["global_id"])
-                    fallback_docs.append(f"[SOLID | Score: {score:.2f}] {doc.page_content}")
-                else:
-                    logger.debug(f"Ignored solid doc due to low score: {score:.2f}")
-                    
-            for doc, score in volatile_results:
-                if score >= MIN_SIMILARITY_SCORE:
-                    if "global_id" in doc.metadata and doc.metadata["global_id"] not in entity_ids:
-                        entity_ids.add(doc.metadata["global_id"])
-                    fallback_docs.append(f"[VOLATILE | Score: {score:.2f}] {doc.page_content}")
-                else:
-                    logger.debug(f"Ignored volatile doc due to low score: {score:.2f}")
-                    
+            for doc, score, tier in top_results:
+                if "global_id" in doc.metadata:
+                    entity_ids.add(doc.metadata["global_id"])
+                fallback_docs.append(f"[{tier} | Score: {score:.2f}] {doc.page_content}")
+                logger.debug(f"[GraphRAG] Kept entity from {tier} with score {score:.2f}")
+
             if not entity_ids:
-                return "Found no relevant starting entities in the vector stores."
+                return "Found no relevant starting entities in the vector stores to query the Knowledge Graph."
 
             # 2. Graph Retrieval from Neo4j (With Trust Filtering)
             # COALESCE(property, default_value) returns the property if it exists, otherwise the default.

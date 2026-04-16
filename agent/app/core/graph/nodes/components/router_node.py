@@ -81,27 +81,30 @@ def make_router_node(
                         failed_tools.append(res['tool_name'])
 
                     tool_args = res.get('args', {})
-                    execution_history += f"  {status_emoji} {res['tool_name']}({tool_args}): {res['output'][:300]}...\n"
+                    execution_history += f"  {status_emoji} {res['tool_name']}({tool_args}): {res['output'][:3000]}...\n"
 
         failover_instruction = ""
         if failed_tools:
             failed_str = ", ".join(set(failed_tools))
-            failover_instruction = f"\nFAIL-OVER ALERT: The following tools FAILED or TIMED OUT in the previous step: [{failed_str}]. DO NOT USE THEM AGAIN!\n"
+            failover_instruction = (
+                f"\nFAIL-OVER ALERT: The tools [{failed_str}] failed in the last step. "
+                f"Read the error messages in the Tool History carefully. You may retry a failed tool "
+                f"ONLY IF you provide corrected arguments. DO NOT repeat the exact same failed call!\n"
+            )
 
         # --- DYNAMIC INTENTS BUILDER ---
-        # Only provide options to the LLM that are actually valid for this iteration.
         available_intents_list = [
             "- 'direct_answer': Use ONLY when the answer is complete OR no further improvement is possible.",
-            "- 'all': For general biological queries (First turn only).",
-            "- 'tool_only': For specialized bioinformatics analysis."
+            "- 'all': Use this to run local document RAG *AND* Bioinformatics/Knowledge Graph tools simultaneously. Best for comprehensive research.",
+            "- 'tool_only': For specialized bioinformatics analysis OR searching the Knowledge Graph."
         ]
         
         if not web_results:
             available_intents_list.append("- 'web_search': For latest or external information.")
             
         if not rag_results:
-            available_intents_list.append("- 'rag_only': For local document queries.")
-            
+            available_intents_list.append("- 'rag_only': For simple local document keyword lookups.")
+        
         intents_str = "\n            ".join(available_intents_list)
 
         # 1. Base System Instructions (Static knowledge)
@@ -133,18 +136,17 @@ def make_router_node(
 
             CRITICAL ROUTING RULES & ANTI-LOOP MECHANISM:
 
-            1. EVALUATE TOOL RESULTS (MULTI-STEP AWARE):
+            1. EVALUATE TOOL RESULTS & RECOVERY:
             - If information is FULLY sufficient → choose 'direct_answer'
-            - If information is PARTIALLY sufficient → DO NOT stop. Use OTHER available tools.
-            - If you have exhausted available tools or the tools return irrelevant data → fallback to 'direct_answer' and explain what information is missing. Do not use tools that are mathematically or logically unrelated to the query just to try them.
+            - If a tool fails (e.g., missing a required ID or field), read the error output. You are ENCOURAGED to call the tool again WITH the corrected or missing arguments.
 
-            2. SMART TOOL CHAINING:
-            - If one tool returns partial results, analyze what is missing and select the MOST APPROPRIATE next tool.
-            - Combine results from multiple tools when necessary.
+            2. LAZY BACKEND EXECUTION:
+            - Only invoke heavy computational backend tools (e.g., run_blast, synteny) if the user explicitly asks for them.
+            - Do not blindly guess IDs for backend tools. If a tool requires a `genome_id` or `file_id` that you don't know, use `search_knowledge_graph` or other lookup tools FIRST to find the correct ID before running the heavy computation.
 
             3. STRICT ANTI-LOOP RULE:
-            - If you see "ALREADY EXECUTED" in the history, you are STRICTLY FORBIDDEN from trying to execute that action again.
-            - Move to 'direct_answer' if you have no other tools left to try.
+            - If you see "ALREADY EXECUTED" in the history for RAG or Web Search, do not run them again.
+            - If you repeat a failed tool call without changing the arguments to fix the error, the system will crash. Move to 'direct_answer' if you cannot figure out the correct arguments.
 
             4. MANDATORY TOOL CALLING RULES (CRITICAL):
             - If you choose 'tool_only' or 'all', you MUST extract the necessary tools and populate the `required_tools` list with the correct tool name and arguments. 
@@ -196,7 +198,7 @@ def make_router_node(
         elapsed = int((time.time() - start_time) * 1000)
 
         logger.debug(
-            f"[Router] ✅ Decision: {decision.intent} | Tools: {decision.required_tools} | Reasoning: {decision.reasoning[:500]} | Latency: {elapsed}ms"
+            f"[Router] ✅ Decision: {decision.intent} | Tools: {decision.required_tools} | Reasoning: {decision.reasoning[:1000]} | Latency: {elapsed}ms"
         )
 
         return Command(
@@ -204,7 +206,8 @@ def make_router_node(
             update={
                 "required_tools": decision.required_tools,
                 "iteration_count": current_iteration + 1,
-                "last_intent": decision.intent
+                "last_intent": decision.intent,
+                "router_guidance": decision.reasoning
             }
         )
 

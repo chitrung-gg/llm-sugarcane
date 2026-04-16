@@ -20,13 +20,10 @@ from langchain_qdrant import QdrantVectorStore
 
 from app.core.graph.state.agent_state import AgentState, RAGResult
 
-RELEVANCE_SCORE = 0.90
-CASCADING_THRESHOLD = 0.85   # Score required to skip searching volatile context
-
 class OptimizedRagQuery(BaseModel):
     """Schema to force the LLM to output a clean semantic search string."""
     search_query: str = Field(
-        description="A standalone, highly descriptive query optimized for semantic vector similarity search. Use rich biological keywords."
+        description="A concise, standalone query optimized for semantic search. Maximum 15 words. DO NOT repeat words."
     )
 
 def make_rag_node(
@@ -44,19 +41,20 @@ def make_rag_node(
         
         original_query = state["query"]
 
-        # 1. Query Optimization (Semantic Focus)
+        # 1. Query Optimization
         system_prompt = f"""
             You are a Semantic Search Optimizer for a Sugarcane Genomics vector database.
-            The user is asking a conversational question. Convert this into a standalone, highly descriptive query.
+            The user is asking a conversational question. Convert this into a concise, standalone query.
             
             CONVERSATION SUMMARY:
             {state.get("summary", "No prior context.")}
             
-            RULES:
-            - Vector databases match meaning, not just exact words. Provide rich, descriptive biological keywords.
-            - Resolve pronouns ("it", "this cultivar") using the conversation summary.
-            - Remove conversational filler ("Tell me about", "What is").
-            - Output ONLY the optimized search string.
+            CRITICAL RULES:
+            1. Keep it CONCISE. Use a maximum of 10 to 15 highly relevant words.
+            2. DO NOT REPEAT WORDS. Repeating keywords destroys search quality.
+            3. Resolve pronouns ("it", "this cultivar") using the conversation summary.
+            4. Remove conversational filler ("Tell me about", "What is").
+            5. Output ONLY the optimized search string.
         """
 
         messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
@@ -68,7 +66,13 @@ def make_rag_node(
             rewriter_llm = llm_service.get_quaternary_model().with_structured_output(OptimizedRagQuery)
             rewritten_result = await rewriter_llm.ainvoke(messages)
             optimized_query = OptimizedRagQuery.model_validate(rewritten_result).search_query
-            logger.info(f"[RAG] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+
+            # Circuit breaker to prevent runaway repetition
+            if len(optimized_query) > 200:
+                logger.warning(f"[RAG] ⚠️ LLM hallucinated a repeating query. Triggering fallback.")
+                optimized_query = original_query
+            else:
+                logger.info(f"[RAG] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
         except Exception as e:
             logger.warning(f"[RAG] Query optimization failed: {e}. Falling back to original query.")
             optimized_query = original_query
@@ -78,27 +82,21 @@ def make_rag_node(
 
         combined_results = []
 
-        # 2.A. Solid Vector Store
+        # Fetch from both stores
         solid_results = await vector_store_solid.asimilarity_search_with_score(optimized_query, k=5)
-        highest_solid_score = max([score for doc, score in solid_results], default=0.0)
-
-        # Tag the solid documents
         for doc, score in solid_results:
             doc.page_content = f"[SOURCE TIER: CURATED (High Trust)] {doc.page_content}"
-            combined_results.append((doc, score))
+            doc.metadata["source_tier"] = "CURATED"
 
-        # 2.B. Circuit Breaker when search Volatile Vector Store
-        if highest_solid_score >= CASCADING_THRESHOLD:
-            logger.info(f"[RAG] 🎯 Found high-confidence curated research (Score: {highest_solid_score:.2f}). Skipping volatile context.")
-        else:
-            logger.warning(f"[RAG] ⚠️ Curated research confidence low ({highest_solid_score:.2f}). Expanding search to Volatile Agent Context...")
-            
-            # Fetch fewer documents from volatile to prevent drowning out the research
-            volatile_results = await vector_store_volatile.asimilarity_search_with_score(optimized_query, k=3)
-            
-            for doc, score in volatile_results:
-                doc.page_content = f"[SOURCE TIER: INFERRED/PROVISIONAL (Agent Discovery)] {doc.page_content}"
-                combined_results.append((doc, score))
+        volatile_results = await vector_store_volatile.asimilarity_search_with_score(optimized_query, k=3)
+        for doc, score in volatile_results:
+            doc.page_content = f"[SOURCE TIER: INFERRED/PROVISIONAL (Agent Discovery)] {doc.page_content}"
+            doc.metadata["source_tier"] = "INFERRED"
+
+        # Combine, sort by hybrid score descending, and take the absolute Top 5 overall
+        combined_results = solid_results + volatile_results
+        combined_results.sort(key=lambda x: x[1], reverse=True)
+        top_semantic_results = combined_results[:5]
 
         logger.debug("Retrieved {count} total semantic documents", count=len(combined_results))
 
@@ -149,20 +147,22 @@ def make_rag_node(
             local_results = bm25_retriever.invoke(optimized_query)
 
             for idx, doc in enumerate(local_results):
-                # We give local file matches a high synthetic score (0.90) 
-                # because if it matched the keyword in the user's file, it is highly that user want to read from his/her uploaded files
+                # Dynamic Pseudo-Scoring: 1.0 for the best match, decaying by 0.05 for each subsequent match.
+                # This guarantees ordinal ranking without a hardcoded threshold.
+                dynamic_score = round(max(0.5, 1.0 - (idx * 0.05)), 2)
+
                 rag_item = RAGResult(
                     content=doc.page_content,
                     source_file=doc.metadata.get("source", "uploaded_file"),
                     page_number=doc.metadata.get("alignment_info", None),
-                    relevance_score=RELEVANCE_SCORE, 
+                    relevance_score=dynamic_score, 
                 )
                 new_rag_results.append(rag_item)
                 
                 new_sources.append({
                     "document_id": f"ephemeral_chunk_{idx}",
                     "source_file": doc.metadata.get("source", "uploaded_file"),
-                    "score": RELEVANCE_SCORE,
+                    "score": dynamic_score,
                     "chunk_index": idx
                 })
                 
