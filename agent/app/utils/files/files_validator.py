@@ -2,7 +2,7 @@ import gzip, re, os
 from pathlib import Path
 
 # --- Magic bytes for each container type ---
-MAGIC = {
+MAGIC_BYTES = {
     "gz":  b"\x1f\x8b",          # gzip
     "pdf": b"%PDF",
 }
@@ -31,7 +31,7 @@ def validate_genomic_file(path: Path, filename: str) -> tuple[bool, str]:
     with open(path, "rb") as f:
         header = f.read(2)
     
-    is_gz = (header == MAGIC["gz"])
+    is_gz = (header == MAGIC_BYTES["gz"])
 
     # 2. Extract a 64KB sample safely
     try:
@@ -120,7 +120,7 @@ def validate_knowledge_file(path: Path, filename: str) -> tuple[bool, str]:
     with open(path, "rb") as f:
         magic = f.read(4)
 
-    if name.endswith(".pdf") and not magic.startswith(MAGIC["pdf"]):
+    if name.endswith(".pdf") and not magic.startswith(MAGIC_BYTES["pdf"]):
         return False, "File claims to be PDF but magic bytes don't match"
 
     if any(name.endswith(e) for e in (".txt", ".csv", ".tsv", ".md")):
@@ -140,7 +140,7 @@ def extract_file_sample(path: Path, max_lines: int = 50) -> str:
     sample_text = ""
     try:
         with open(path, "rb") as f:
-            is_gz = (f.read(2) == MAGIC["gz"])
+            is_gz = (f.read(2) == MAGIC_BYTES["gz"])
 
         if is_gz:
             with gzip.open(path, "rt", encoding="utf-8", errors="replace") as gz:

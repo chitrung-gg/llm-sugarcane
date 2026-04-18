@@ -59,8 +59,15 @@ class AgentService:
                     shutil.copyfileobj(file.file, buffer)
 
                 try:
+                    try:
+                        # Grab just the first 5 lines so we don't overload the routing LLM
+                        snippet = extract_file_sample(temp_path, max_lines=5) 
+                    except Exception as e:
+                        logger.warning(f"Failed to read snippet from {filename}: {e}")
+                        snippet = ""
+
                     # AI Classification
-                    classification = await classify_upload_with_llm(filename, query, self.llm_service)
+                    classification = await classify_upload_with_llm(filename, query, snippet, self.llm_service)
 
                     # --- PATH A: GENOMIC PIPELINE ---
                     if classification == "genomic":

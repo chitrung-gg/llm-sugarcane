@@ -21,7 +21,7 @@ GENOMIC_EXTENSIONS = {
 KNOWLEDGE_EXTENSIONS = {
     ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", 
     ".html", ".epub", ".msg", ".eml", ".rtf", ".odt", ".md", 
-    ".tex", ".csv", ".png", ".jpeg"
+    ".tex", ".csv", ".png", ".jpeg", ".txt"
 }
 
 
@@ -35,7 +35,8 @@ class FileClassification(BaseModel):
 
 async def classify_upload_with_llm(
     filename: str, 
-    user_query: str, 
+    user_query: str,
+    file_snippet: str,
     llm_service: LLMService
 ) -> Literal["genomic", "knowledge", "sample_only", "reject"]:
     """
@@ -65,7 +66,14 @@ async def classify_upload_with_llm(
             - MULTI-FILE CONTEXT: The user may have uploaded multiple files. If the user says "Run BLAST with the parameters in the PDF", evaluate THIS specific file. The PDF goes to 'knowledge' (to read parameters), and the FASTA goes to 'genomic'.
             - INTENT OVER EXTENSION: If they upload a '.txt' but ask to 'run BLAST', route to 'genomic'. If they upload a massive '.gff3' but just ask 'what do these columns mean?', route to 'sample_only'.
         """),
-        HumanMessage(content=f"File being evaluated: {filename}\nUser Message: {user_query or '[NO MESSAGE PROVIDED]'}")
+        HumanMessage(content=f"""
+            File being evaluated: {filename}
+            User Message: {user_query or '[NO MESSAGE PROVIDED]'}
+            
+            --- Start of File Preview (First few lines) ---
+            {file_snippet if file_snippet else '[NO PREVIEW AVAILABLE]'}
+            --- End of File Preview ---
+        """)
     ]
 
     try:
