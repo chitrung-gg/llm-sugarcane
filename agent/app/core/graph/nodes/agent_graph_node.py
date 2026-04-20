@@ -7,7 +7,9 @@ class AgentGraphNode(StrEnum):
     START_NODE = START
 
     INPUT_ANALYZER = "input_analyzer"
-    ROUTER = "router"
+    PLANNER = "planner" 
+    REPLANNER = "replanner"
+    ROUTER = "router"             # (Now acts as a Step Dispatcher)
     RAG = "rag"
     WEB_SEARCH = "web_search"
     TOOL = "tool"

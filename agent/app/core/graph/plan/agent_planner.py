@@ -2,15 +2,24 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 from pydantic import BaseModel, Field
 import operator
 
-class PlanStep(BaseModel):
+from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Literal, Optional
+
+class AgentStepPlan(BaseModel):
     """Represents a single deterministic step in the research plan."""
     step_id: int = Field(description="Sequential ID of the step (e.g., 1, 2, 3)")
     description: str = Field(description="What needs to be done.")
-    expected_tool: Optional[str] = Field(description="The specific tool required for this step, if known.")
+    expected_tool: Optional[str] = Field(description="The specific tool required for this step.")
+    
+    # --- Replanning ---
     status: Literal["pending", "running", "completed", "failed"] = Field(default="pending")
-    dependencies: List[int] = Field(default_factory=list, description="Step IDs that must complete first.")
+    error_message: Optional[str] = Field(
+        default=None, 
+        description="If the step fails, the Executor will write the exact tool error/traceback here."
+    )
+    retry_count: int = Field(default=0, description="Tracks how many times this step has been retried.")
 
-class ResearchObservation(BaseModel):
+class AgentStepObservation(BaseModel):
     """Stores structured data extracted during a step, making it easy to pass to the next step."""
     step_id: int
     summary: str = Field(description="Human-readable summary of what was found.")
