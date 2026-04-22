@@ -3,7 +3,12 @@ from langchain.tools import tool
 from pydantic import BaseModel, Field
 
 from app.services.tools.call_genome_backend import call_genome_backend
-from app.schemas.tool.genome_tool_schema import BlastInput, GeneListInput, GeneSearchInput, PrimerDesignInput, SyntenyHaplotypeInput
+from app.schemas.tool.genome_tool_schema import (
+    BlastInput, GeneListInput, GeneSearchInput, PrimerDesignInput, SyntenyHaplotypeInput,
+    CompareGenomesInput, GenomeAnalysisInput, ChromosomeDetailInput, CrossVarietySearchInput,
+    CompareNeighborhoodsInput, GeneAllelesInput, GeneStructureInput, GenePromoterInput,
+    BatchSequencesInput, InvestigateRegionInput, RegionSequenceInput, PaginationInput
+)
 
 @tool
 async def list_genome_files() -> Dict[str, Any]:
@@ -40,6 +45,103 @@ async def list_genome_files() -> Dict[str, Any]:
 #     """
 #     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
 #     return await call_genome_backend("GET", "/api/genome/region/annotation", params=params)
+
+@tool(args_schema=CompareGenomesInput)
+async def compare_genomes(ids: str) -> Dict[str, Any]:
+    """
+    Expert Tool: Compare multiple genomes side-by-side.
+    Requires a comma-separated list of Genome IDs.
+    """
+    params = {"ids": ids}
+    return await call_genome_backend("GET", "/api/genome/compare", params=params)
+
+@tool(args_schema=GenomeAnalysisInput)
+async def get_genome_analysis(id: int, force_refresh: bool = False) -> Dict[str, Any]:
+    """
+    High-level analysis landscape of a genome (assembly stats, feature counts, protein/cds stats).
+    """
+    params = {"force_refresh": force_refresh}
+    return await call_genome_backend("GET", f"/api/genome/{id}/analysis", params=params)
+
+@tool(args_schema=ChromosomeDetailInput)
+async def get_chromosome_detail(id: int, name: str) -> Dict[str, Any]:
+    """
+    Granular details about a specific chromosome in a genome.
+    """
+    return await call_genome_backend("GET", f"/api/genome/{id}/chromosomes/{name}")
+
+@tool
+async def get_subgenome_bias(id: int) -> Dict[str, Any]:
+    """
+    Expert Tool: Analyze gene distribution across A, B, C, D, E, F sub-genomes.
+    """
+    return await call_genome_backend("GET", f"/api/genome/{id}/subgenome-bias")
+
+@tool
+async def get_functional_distribution(id: int) -> Dict[str, Any]:
+    """
+    Expert Tool: Aggregate genes into high-level biological categories.
+    """
+    return await call_genome_backend("GET", f"/api/genome/{id}/functional-distribution")
+
+@tool(args_schema=CrossVarietySearchInput)
+async def cross_variety_search(ids: str, keyword: str, limit: int = 50) -> Dict[str, Any]:
+    """
+    Priority 1: Search for genes/traits across multiple varieties.
+    ids: Comma-separated Genome IDs.
+    keyword: Search keyword (e.g., 'sucrose').
+    """
+    params = {"ids": ids, "keyword": keyword, "limit": limit}
+    return await call_genome_backend("GET", "/api/genome/cross-search", params=params)
+
+@tool(args_schema=CompareNeighborhoodsInput)
+async def compare_neighborhoods(gid_a: int, region_a: str, gid_b: int, region_b: str) -> Dict[str, Any]:
+    """
+    Priority 2: Compare genomic feature order in two locations side-by-side.
+    region_a/b: Genomic range (e.g., 'Chr1:100-200').
+    """
+    params = {"gid_a": gid_a, "region_a": region_a, "gid_b": gid_b, "region_b": region_b}
+    return await call_genome_backend("GET", "/api/genome/compare-neighborhoods", params=params)
+
+@tool(args_schema=GeneAllelesInput)
+async def get_gene_alleles(id: int, gene_id: str) -> Dict[str, Any]:
+    """
+    Expert Tool: Find versions of this gene across other sub-genomes (alleles).
+    """
+    return await call_genome_backend("GET", f"/api/genome/{id}/alleles/{gene_id}")
+
+@tool(args_schema=GeneStructureInput)
+async def get_gene_structure(id: int, gene_id: str) -> Dict[str, Any]:
+    """
+    Expert Tool: Deep analysis of gene architecture (exons/introns).
+    """
+    return await call_genome_backend("GET", f"/api/genome/{id}/gene-structure/{gene_id}")
+
+@tool(args_schema=GenePromoterInput)
+async def get_gene_promoter(id: int, gene_id: str, kb: int = 2) -> Dict[str, Any]:
+    """
+    Expert Tool: Fetch the promoter (upstream) sequence for a specific gene.
+    kb: Number of kilobases upstream to fetch.
+    """
+    params = {"kb": kb}
+    return await call_genome_backend("GET", f"/api/genome/{id}/promoter/{gene_id}", params=params)
+
+@tool(args_schema=BatchSequencesInput)
+async def get_batch_sequences(id: int, gene_ids: List[str], type: str = "genomic") -> Dict[str, Any]:
+    """
+    Expert Tool: Fetch sequences for multiple genes in one call.
+    type: "genomic", "cds", or "protein".
+    """
+    params = {"type": type}
+    return await call_genome_backend("POST", f"/api/genome/{id}/batch-sequences", params=params, json_data=gene_ids)
+
+@tool(args_schema=InvestigateRegionInput)
+async def investigate_region(genome_id: int, chrom: str, start: int, end: int, limit: int = 50) -> Dict[str, Any]:
+    """
+    Expert Tool: Return all features in a specific genomic range.
+    """
+    params = {"genome_id": genome_id, "chrom": chrom, "start": start, "end": end, "limit": limit}
+    return await call_genome_backend("GET", "/api/genome/region/investigate", params=params)
 
 @tool(args_schema=GeneListInput)
 async def get_genes_list(genome_id: int, page: int = 1, limit: int = 20) -> Dict[str, Any]:
@@ -99,6 +201,15 @@ async def search_genes_full(
         }.items() if v is not None
     }
     return await call_genome_backend("POST", "/api/genome/search", json_data=payload)
+
+@tool(args_schema=RegionSequenceInput)
+async def get_region_sequence(genome_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
+    """
+    Retrieve the raw genomic sequence for a specific chromosomal region.
+    Note: 'file_id' from OpenAPI is mapped to 'genome_id'.
+    """
+    params = {"file_id": genome_id, "chrom": chrom, "start": start, "end": end}
+    return await call_genome_backend("GET", "/api/genome/region/sequence", params=params)
 
 @tool
 async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
@@ -165,16 +276,31 @@ async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict
 #     }
 #     return await call_genome_backend("POST", "/api/synteny/analyze", json_data=payload)
 
+@tool(args_schema=PaginationInput)
+async def list_synteny_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
+    """
+    List all synteny analysis tasks.
+    """
+    params = {"page": page, "size": size}
+    return await call_genome_backend("GET", "/api/synteny", params=params)
+
+@tool
+async def run_synteny_analysis(genome_a_id: int, genome_b_id: int, check_quality: bool = True) -> Dict[str, Any]:
+    """
+    Run synteny analysis between two genomes.
+    """
+    payload = {"genome_a_id": genome_a_id, "genome_b_id": genome_b_id, "check_quality": check_quality}
+    return await call_genome_backend("POST", "/api/synteny/analyze", json_data=payload)
+
 @tool(args_schema=SyntenyHaplotypeInput)
-async def run_synteny_analysis(
+async def run_haplotype_analysis(
     genome_id: int,
     haplotype_set_query: str,
     haplotype_set_subject: str,
     homologous_group: Optional[int] = None
 ) -> Dict[str, Any]:
     """
-    Run synteny analysis between two haplotype sets within a genome.
-
+    Run synteny/haplotype analysis between two haplotype sets within a genome.
     Use this tool when the user wants to compare genomic regions, detect collinearity,
     or analyze conserved gene order between haplotypes.
 
@@ -193,15 +319,27 @@ async def run_synteny_analysis(
     - homologous_group (if provided)
     """
     payload = {
-        k: v for k, v in {
-            "genome_id": genome_id, 
-            "haplotype_set_query": haplotype_set_query,
-            "haplotype_set_subject": haplotype_set_subject,
-            "homologous_group": homologous_group
-        }.items() if v is not None
+        "genome_id": genome_id, 
+        "haplotype_set_query": haplotype_set_query,
+        "haplotype_set_subject": haplotype_set_subject,
+        "homologous_group": homologous_group
     }
     return await call_genome_backend("POST", "/api/synteny/analyze_haplotype", json_data=payload)
 
+@tool
+async def get_synteny_status(task_id: int) -> Dict[str, Any]:
+    """
+    Get status of a synteny analysis task.
+    """
+    return await call_genome_backend("GET", f"/api/synteny/{task_id}")
+
+@tool(args_schema=PaginationInput)
+async def list_crispor_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
+    """
+    List all CRISPOR design tasks.
+    """
+    params = {"page": page, "size": size}
+    return await call_genome_backend("GET", "/api/crispor", params=params)
 
 @tool
 async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: Optional[str] = None) -> Dict[str, Any]:
@@ -225,6 +363,21 @@ async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: O
     # Note: OpenAPI spec says POST, but parameters are 'query' (in)
     params = {k: v for k, v in {"genome_id": genome_id, "gene_id": gene_id, "sequence": sequence}.items() if v is not None}
     return await call_genome_backend("POST", "/api/crispor", params=params)
+
+@tool(args_schema=PaginationInput)
+async def list_primer_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
+    """
+    List all primer design tasks.
+    """
+    params = {"page": page, "size": size}
+    return await call_genome_backend("GET", "/api/primer", params=params)
+
+@tool
+async def get_primer_task(task_id: int) -> Dict[str, Any]:
+    """
+    Get details and results of a primer design task.
+    """
+    return await call_genome_backend("GET", f"/api/primer/{task_id}")
 
 @tool(args_schema=PrimerDesignInput)
 async def design_polyploid_primer(
