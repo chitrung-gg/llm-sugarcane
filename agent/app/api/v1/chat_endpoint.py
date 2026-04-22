@@ -13,7 +13,7 @@ from app.schemas.agent.agent_response import AgentResponse
 
 router = APIRouter()
 
-@router.post("/agent_langgraph/chat", response_model=AgentResponse)
+@router.post("", response_model=AgentResponse)
 async def chat_with_langgraph_agent(
     thread_id: Optional[uuid.UUID] = Form(None, description="Conversation Thread ID"),
     query: str = Form(..., description="Query"),
@@ -30,7 +30,7 @@ async def chat_with_langgraph_agent(
         logger.error("Graph Execution Error: {e}", e=e)
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
     
-@router.get("/agent_langgraph/chat/{thread_id}/history")
+@router.get("/{thread_id}/history")
 async def get_chat_history(
     thread_id: uuid.UUID,
     agent_service: AgentService = Depends(get_agent_service)

@@ -149,15 +149,21 @@ def process_document_ingestion(self, target_uri: str, metadata: dict):
 
             while pending_chunks:
                 current_batch = pending_chunks[:BATCH_SIZE]
-
                 pending_chunks = pending_chunks[BATCH_SIZE:]
                 
-                logger.info(
-                    "ingesting_batch",
-                    state="PROGRESS",
-                    remaining=len(pending_chunks) + len(current_batch),
-                    current=total_chunks - len(pending_chunks),
-                    total=total_chunks
+                current_count = total_chunks - len(pending_chunks)
+                percent = round((current_count / total_chunks) * 100, 2)
+                
+                logger.info(f"[Task {self.request.id}] Ingesting batch: {current_count}/{total_chunks} chunks processed ({percent}%)")
+                
+                self.update_state(
+                    state='PROGRESS', 
+                    meta={
+                        'current': current_count, 
+                        'total': total_chunks,
+                        'percent': percent,
+                        'message': f'Ingesting batch: {current_count}/{total_chunks}'
+                    }
                 )
 
                 tasks = []

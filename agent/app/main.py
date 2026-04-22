@@ -51,8 +51,8 @@ app = FastAPI(
     title="Sugarcane Genome Agent",
     lifespan=lifespan)
 
-app.include_router(chat_endpoint.router, prefix="/api/v1")
-app.include_router(ingestion_endpoint.router, prefix="/api/v1")
+app.include_router(chat_endpoint.router, prefix="/api/v1/agent")
+app.include_router(ingestion_endpoint.router, prefix="/api/v1/ingest")
 
 @app.get("/")
 async def root():
