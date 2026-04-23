@@ -4,6 +4,12 @@ from types import FrameType
 from typing import cast
 
 from loguru import logger
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.trace import set_tracer_provider
+from opentelemetry.semconv.attributes import service_attributes
+
 from app.configs.settings.settings import get_settings
 
 class InterceptHandler(logging.Handler):
@@ -16,12 +22,11 @@ class InterceptHandler(logging.Handler):
         try:
             level = logger.level(record.levelname).name
         except ValueError:
-            level = "DEBUG"
-            # level = str(record.levelno)
+            level = record.levelno
 
         # Find caller from where the logged message originated
         # This ensures Loguru prints the actual file/line number, not this interceptor file!
-        frame, depth = logging.currentframe(), 2
+        frame, depth = logging.currentframe(), 0
         while frame.f_code.co_filename == logging.__file__:
             if frame.f_back:
                 frame = cast(FrameType, frame.f_back)
@@ -31,6 +36,29 @@ class InterceptHandler(logging.Handler):
             level, record.getMessage()
         )
 
+def init_otel():
+    """Initializes the OpenTelemetry SDK Tracer Provider."""
+    resource = Resource(attributes={
+        service_attributes.SERVICE_NAME: "sugarcane-agent"
+    })
+    provider = TracerProvider(resource=resource)
+    # Note: In production, you'd add a BatchSpanProcessor and an Exporter here 
+    # (like OTLP or Jaeger). For local logs, the provider itself is enough to generate IDs.
+    set_tracer_provider(provider)
+
+def opentelemetry_patcher(record):
+    """
+    Injects OpenTelemetry trace_id and span_id into the log record.
+    """
+    span = trace.get_current_span()
+    if span and span.get_span_context().is_valid:
+        ctx = span.get_span_context()
+        record["extra"]["trace_id"] = format(ctx.trace_id, "032x")
+        record["extra"]["span_id"] = format(ctx.span_id, "016x")
+    else:
+        record["extra"]["trace_id"] = "0" * 32
+        record["extra"]["span_id"] = "0" * 16
+
 def setup_logging():
     """Configures Loguru and intercepts all standard logging."""
     settings = get_settings()
@@ -39,15 +67,24 @@ def setup_logging():
     # Remove the default Loguru handler
     logger.remove()
 
+    # Define a format that includes trace_id and span_id
+    log_format = (
+        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+        "<magenta>{extra[trace_id]}</magenta>:<magenta>{extra[span_id]}</magenta> | "
+        "<level>{level: <8}</level> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+        "<level>{message}</level>"
+    )
+
+    # Add handler with the patcher
+    logger.configure(patcher=opentelemetry_patcher)
+
     # 1. Add our custom Loguru handler targeting standard output (Console)
     logger.add(
         sys.stdout,
         level=log_level,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-               "<level>{level: <8}</level> | "
-               "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-               "<level>{message}</level>",
-        enqueue=True,  # Thread-safe for FastAPI async operations
+        format=log_format,
+        enqueue=True, # Thread-safe for FastAPI async operations
         colorize=True
     )
 
@@ -55,7 +92,7 @@ def setup_logging():
     # logger.add(
     #     "logs/app_{time:YYYY-MM-DD}.log",  # Creates a 'logs' folder and names file by date
     #     level=log_level,
-    #     format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+    #     format=log_format,
     #     rotation="10 MB",     # Create a new log file when the current one reaches 10 MB
     #     retention="30 days",  # Keep log files for 30 days, then delete them
     #     compression="zip",    # Compress older log files to save disk space
