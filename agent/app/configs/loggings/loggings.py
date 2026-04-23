@@ -36,7 +36,7 @@ class InterceptHandler(logging.Handler):
             level, record.getMessage()
         )
 
-def init_otel():
+def init_opentelemetry():
     """Initializes the OpenTelemetry SDK Tracer Provider."""
     resource = Resource(attributes={
         service_attributes.SERVICE_NAME: "sugarcane-agent"
@@ -46,7 +46,7 @@ def init_otel():
     # (like OTLP or Jaeger). For local logs, the provider itself is enough to generate IDs.
     set_tracer_provider(provider)
 
-def opentelemetry_patcher(record):
+def patch_opentelemetry(record):
     """
     Injects OpenTelemetry trace_id and span_id into the log record.
     """
@@ -77,14 +77,14 @@ def setup_logging():
     )
 
     # Add handler with the patcher
-    logger.configure(patcher=opentelemetry_patcher)
+    logger.configure(patcher=patch_opentelemetry)
 
     # 1. Add our custom Loguru handler targeting standard output (Console)
     logger.add(
         sys.stdout,
         level=log_level,
         format=log_format,
-        enqueue=True, # Thread-safe for FastAPI async operations
+        enqueue=False,  # Set to False to prevent pickling errors with complex objects
         colorize=True
     )
 

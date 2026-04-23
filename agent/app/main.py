@@ -2,14 +2,14 @@ from contextlib import asynccontextmanager
 
 from loguru import logger
 
-from app.configs.loggings.loggings import init_otel, setup_logging
+from app.configs.loggings.loggings import init_opentelemetry, setup_logging
 from app.configs.storage.databases import genome_connection_pool, langgraph_connection_pool
 
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # Start up early to intercept FastAPI logging
 setup_logging()
-init_otel()
+init_opentelemetry()
 
 from fastapi import FastAPI
 
