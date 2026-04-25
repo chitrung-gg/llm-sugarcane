@@ -3,6 +3,7 @@ from enum import StrEnum
 from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
+from langchain_core.tools import BaseTool
 
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionConfidenceTier, IngestionSourceType
 from app.core.tools.registry.ingestion_config_tool import IngestionConfig
@@ -10,6 +11,7 @@ from app.core.vector_store.vector_store import VectorStoreType
 
 
 KNOWLEDGE_GRAPH_TOOL_REGISTRY: Dict[str, IngestionConfig] = {}
+_AGENT_TOOLS: Dict[str, BaseTool] = {}
 
 def ingestion_to_persistence_layer(
     vector_store_type: VectorStoreType, 
@@ -39,3 +41,12 @@ def ingestion_to_persistence_layer(
         )
         return langchain_tool
     return decorator
+
+def register_agent_tool(tool_instance: BaseTool):
+    """Registers a tool instance into the global agent registry."""
+    _AGENT_TOOLS[tool_instance.name] = tool_instance
+    return tool_instance
+
+def get_agent_tools() -> Dict[str, BaseTool]:
+    """Retrieves all registered tools for the agent."""
+    return _AGENT_TOOLS

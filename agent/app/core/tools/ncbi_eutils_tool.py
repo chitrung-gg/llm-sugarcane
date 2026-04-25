@@ -8,7 +8,7 @@ from loguru import logger
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.core.tools.registry.ingestion_config_tool import IngestionConfidenceTier
 from app.core.vector_store.vector_store import VectorStoreType
-from app.core.tools.registry.registry_tool import ingestion_to_persistence_layer
+from app.core.tools.registry.registry_tool import ingestion_to_persistence_layer, register_agent_tool
 from app.configs.settings.settings import get_settings
 from app.schemas.tool.ncbi_eutils_tool_schema import BioProjectSearchArgs, BioSampleSearchArgs, GeneSearchArgs, GenomeSearchArgs, NucleotideSearchArgs, PubMedSearchArgs, TaxonomySearchArgs
 
@@ -26,6 +26,7 @@ limiter = AsyncLimiter(RATE_LIMIT, 1)
     source_type_label=IngestionSourceType.NCBI_LITERATURE,
     skip_relevance_check=True
 )
+@register_agent_tool
 @tool(args_schema=PubMedSearchArgs)
 async def search_literature_for_traits(organism: str, primary_concept: str, secondary_concept: Optional[str] = None) -> str:
     """
@@ -86,6 +87,7 @@ async def search_literature_for_traits(organism: str, primary_concept: str, seco
     source_type_label=IngestionSourceType.NCBI_GENE,
     skip_relevance_check=True
 )
+@register_agent_tool
 @tool(args_schema=GeneSearchArgs)
 async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
     """
@@ -184,6 +186,7 @@ async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
     source_type_label=IngestionSourceType.NCBI_GENOME,
     skip_relevance_check=True
 )
+@register_agent_tool
 @tool(args_schema=GenomeSearchArgs)
 async def search_ncbi_genome(organism_or_cultivar: str) -> str:
     """
@@ -242,6 +245,7 @@ async def search_ncbi_genome(organism_or_cultivar: str) -> str:
     source_type_label=IngestionSourceType.NCBI_BIOPROJECT,
     skip_relevance_check=True
 )
+@register_agent_tool
 @tool(args_schema=BioProjectSearchArgs)
 async def search_bioproject(query: str) -> str:
     """
@@ -307,6 +311,7 @@ async def search_bioproject(query: str) -> str:
     source_type_label=IngestionSourceType.NCBI_BIOSAMPLE,
     skip_relevance_check=True
 )
+@register_agent_tool
 @tool(args_schema=BioSampleSearchArgs)
 async def search_biosample(query: str) -> str:
     """
@@ -357,6 +362,7 @@ async def search_biosample(query: str) -> str:
     source_type_label=IngestionSourceType.NCBI_TAXONOMY,
     skip_relevance_check=True
 )
+@register_agent_tool
 @tool(args_schema=TaxonomySearchArgs)
 async def resolve_taxonomy(query: str) -> str:
     """
@@ -412,6 +418,7 @@ async def resolve_taxonomy(query: str) -> str:
             raise e
 
 # Not annotate this tool
+@register_agent_tool
 @tool(args_schema=NucleotideSearchArgs)
 async def fetch_nucleotide_sequence(accession: str, start_pos: int = 1, stop_pos: int = 5000) -> str:
     """

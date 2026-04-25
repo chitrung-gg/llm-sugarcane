@@ -5,11 +5,14 @@ from langchain_neo4j import Neo4jGraph
 from langchain_qdrant import QdrantVectorStore
 from loguru import logger
 
+from app.core.tools.registry.registry_tool import register_agent_tool
+
 def make_graph_rag_tool(
     vector_store_solid: QdrantVectorStore,
     vector_store_volatile: QdrantVectorStore,
     knowledge_graph: Neo4jGraph
 ):
+    @register_agent_tool
     @tool("search_knowledge_graph")
     async def search_knowledge_graph(query: str, top_k: int = 5) -> str:
         """

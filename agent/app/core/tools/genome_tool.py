@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Any
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
+from app.core.tools.registry.registry_tool import register_agent_tool
 from app.services.tools.call_genome_backend import call_genome_backend
 from app.schemas.tool.genome_tool_schema import (
     BlastInput, GeneListInput, GeneSearchInput, PrimerDesignInput, SyntenyHaplotypeInput,
@@ -10,6 +11,7 @@ from app.schemas.tool.genome_tool_schema import (
     BatchSequencesInput, InvestigateRegionInput, RegionSequenceInput, PaginationInput
 )
 
+@register_agent_tool
 @tool
 async def list_genome_files() -> Dict[str, Any]:
     """
@@ -28,6 +30,7 @@ async def list_genome_files() -> Dict[str, Any]:
     """
     return await call_genome_backend("GET", "/api/genome/files")
 
+# @register_agent_tool 
 # @tool
 # async def get_region_sequence(file_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
 #     """
@@ -37,6 +40,7 @@ async def list_genome_files() -> Dict[str, Any]:
 #     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
 #     return await call_genome_backend("GET", "/api/genome/region/sequence", params=params)
 
+# @register_agent_tool 
 # @tool
 # async def get_region_annotation(file_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
 #     """
@@ -46,6 +50,7 @@ async def list_genome_files() -> Dict[str, Any]:
 #     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
 #     return await call_genome_backend("GET", "/api/genome/region/annotation", params=params)
 
+@register_agent_tool
 @tool(args_schema=CompareGenomesInput)
 async def compare_genomes(ids: str) -> Dict[str, Any]:
     """
@@ -55,6 +60,7 @@ async def compare_genomes(ids: str) -> Dict[str, Any]:
     params = {"ids": ids}
     return await call_genome_backend("GET", "/api/genome/compare", params=params)
 
+@register_agent_tool
 @tool(args_schema=GenomeAnalysisInput)
 async def get_genome_analysis(id: int, force_refresh: bool = False) -> Dict[str, Any]:
     """
@@ -63,6 +69,7 @@ async def get_genome_analysis(id: int, force_refresh: bool = False) -> Dict[str,
     params = {"force_refresh": force_refresh}
     return await call_genome_backend("GET", f"/api/genome/{id}/analysis", params=params)
 
+@register_agent_tool
 @tool(args_schema=ChromosomeDetailInput)
 async def get_chromosome_detail(id: int, name: str) -> Dict[str, Any]:
     """
@@ -70,6 +77,7 @@ async def get_chromosome_detail(id: int, name: str) -> Dict[str, Any]:
     """
     return await call_genome_backend("GET", f"/api/genome/{id}/chromosomes/{name}")
 
+@register_agent_tool
 @tool
 async def get_subgenome_bias(id: int) -> Dict[str, Any]:
     """
@@ -77,6 +85,7 @@ async def get_subgenome_bias(id: int) -> Dict[str, Any]:
     """
     return await call_genome_backend("GET", f"/api/genome/{id}/subgenome-bias")
 
+@register_agent_tool
 @tool
 async def get_functional_distribution(id: int) -> Dict[str, Any]:
     """
@@ -84,6 +93,7 @@ async def get_functional_distribution(id: int) -> Dict[str, Any]:
     """
     return await call_genome_backend("GET", f"/api/genome/{id}/functional-distribution")
 
+@register_agent_tool
 @tool(args_schema=CrossVarietySearchInput)
 async def cross_variety_search(ids: str, keyword: str, limit: int = 50) -> Dict[str, Any]:
     """
@@ -94,6 +104,7 @@ async def cross_variety_search(ids: str, keyword: str, limit: int = 50) -> Dict[
     params = {"ids": ids, "keyword": keyword, "limit": limit}
     return await call_genome_backend("GET", "/api/genome/cross-search", params=params)
 
+@register_agent_tool
 @tool(args_schema=CompareNeighborhoodsInput)
 async def compare_neighborhoods(gid_a: int, region_a: str, gid_b: int, region_b: str) -> Dict[str, Any]:
     """
@@ -103,6 +114,7 @@ async def compare_neighborhoods(gid_a: int, region_a: str, gid_b: int, region_b:
     params = {"gid_a": gid_a, "region_a": region_a, "gid_b": gid_b, "region_b": region_b}
     return await call_genome_backend("GET", "/api/genome/compare-neighborhoods", params=params)
 
+@register_agent_tool
 @tool(args_schema=GeneAllelesInput)
 async def get_gene_alleles(id: int, gene_id: str) -> Dict[str, Any]:
     """
@@ -110,6 +122,7 @@ async def get_gene_alleles(id: int, gene_id: str) -> Dict[str, Any]:
     """
     return await call_genome_backend("GET", f"/api/genome/{id}/alleles/{gene_id}")
 
+@register_agent_tool
 @tool(args_schema=GeneStructureInput)
 async def get_gene_structure(id: int, gene_id: str) -> Dict[str, Any]:
     """
@@ -117,6 +130,7 @@ async def get_gene_structure(id: int, gene_id: str) -> Dict[str, Any]:
     """
     return await call_genome_backend("GET", f"/api/genome/{id}/gene-structure/{gene_id}")
 
+@register_agent_tool
 @tool(args_schema=GenePromoterInput)
 async def get_gene_promoter(id: int, gene_id: str, kb: int = 2) -> Dict[str, Any]:
     """
@@ -126,6 +140,7 @@ async def get_gene_promoter(id: int, gene_id: str, kb: int = 2) -> Dict[str, Any
     params = {"kb": kb}
     return await call_genome_backend("GET", f"/api/genome/{id}/promoter/{gene_id}", params=params)
 
+@register_agent_tool
 @tool(args_schema=BatchSequencesInput)
 async def get_batch_sequences(id: int, gene_ids: List[str], type: str = "genomic") -> Dict[str, Any]:
     """
@@ -135,6 +150,7 @@ async def get_batch_sequences(id: int, gene_ids: List[str], type: str = "genomic
     params = {"type": type}
     return await call_genome_backend("POST", f"/api/genome/{id}/batch-sequences", params=params, json_data=gene_ids)
 
+@register_agent_tool
 @tool(args_schema=InvestigateRegionInput)
 async def investigate_region(genome_id: int, chrom: str, start: int, end: int, limit: int = 50) -> Dict[str, Any]:
     """
@@ -143,6 +159,7 @@ async def investigate_region(genome_id: int, chrom: str, start: int, end: int, l
     params = {"genome_id": genome_id, "chrom": chrom, "start": start, "end": end, "limit": limit}
     return await call_genome_backend("GET", "/api/genome/region/investigate", params=params)
 
+@register_agent_tool
 @tool(args_schema=GeneListInput)
 async def get_genes_list(genome_id: int, page: int = 1, limit: int = 20) -> Dict[str, Any]:
     """
@@ -163,6 +180,7 @@ async def get_genes_list(genome_id: int, page: int = 1, limit: int = 20) -> Dict
     payload = {"genome_id": genome_id, "page": page, "limit": limit}
     return await call_genome_backend("POST", "/api/genome/get-genes", json_data=payload)
 
+@register_agent_tool
 @tool(args_schema=GeneSearchInput)
 async def search_genes_full(
     genome_id: Optional[int] = None,
@@ -202,6 +220,7 @@ async def search_genes_full(
     }
     return await call_genome_backend("POST", "/api/genome/search", json_data=payload)
 
+@register_agent_tool
 @tool(args_schema=RegionSequenceInput)
 async def get_region_sequence(genome_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
     """
@@ -211,6 +230,7 @@ async def get_region_sequence(genome_id: int, chrom: str, start: int, end: int) 
     params = {"file_id": genome_id, "chrom": chrom, "start": start, "end": end}
     return await call_genome_backend("GET", "/api/genome/region/sequence", params=params)
 
+@register_agent_tool
 @tool
 async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
     """
@@ -238,6 +258,7 @@ async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
 #     params = {"genome_id": genome_id, "gene_id": gene_id, "type": type}
 #     return await call_genome_backend("GET", "/api/genome/sequence", params=params)
 
+@register_agent_tool
 @tool(args_schema=BlastInput)
 async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict[str, Any]:
     """
@@ -276,6 +297,7 @@ async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict
 #     }
 #     return await call_genome_backend("POST", "/api/synteny/analyze", json_data=payload)
 
+@register_agent_tool
 @tool(args_schema=PaginationInput)
 async def list_synteny_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
     """
@@ -284,6 +306,7 @@ async def list_synteny_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
     params = {"page": page, "size": size}
     return await call_genome_backend("GET", "/api/synteny", params=params)
 
+@register_agent_tool
 @tool
 async def run_synteny_analysis(genome_a_id: int, genome_b_id: int, check_quality: bool = True) -> Dict[str, Any]:
     """
@@ -292,6 +315,7 @@ async def run_synteny_analysis(genome_a_id: int, genome_b_id: int, check_quality
     payload = {"genome_a_id": genome_a_id, "genome_b_id": genome_b_id, "check_quality": check_quality}
     return await call_genome_backend("POST", "/api/synteny/analyze", json_data=payload)
 
+@register_agent_tool
 @tool(args_schema=SyntenyHaplotypeInput)
 async def run_haplotype_analysis(
     genome_id: int,
@@ -326,6 +350,7 @@ async def run_haplotype_analysis(
     }
     return await call_genome_backend("POST", "/api/synteny/analyze_haplotype", json_data=payload)
 
+@register_agent_tool
 @tool
 async def get_synteny_status(task_id: int) -> Dict[str, Any]:
     """
@@ -333,6 +358,7 @@ async def get_synteny_status(task_id: int) -> Dict[str, Any]:
     """
     return await call_genome_backend("GET", f"/api/synteny/{task_id}")
 
+@register_agent_tool
 @tool(args_schema=PaginationInput)
 async def list_crispor_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
     """
@@ -341,6 +367,7 @@ async def list_crispor_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
     params = {"page": page, "size": size}
     return await call_genome_backend("GET", "/api/crispor", params=params)
 
+@register_agent_tool
 @tool
 async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -364,6 +391,7 @@ async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: O
     params = {k: v for k, v in {"genome_id": genome_id, "gene_id": gene_id, "sequence": sequence}.items() if v is not None}
     return await call_genome_backend("POST", "/api/crispor", params=params)
 
+@register_agent_tool
 @tool(args_schema=PaginationInput)
 async def list_primer_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
     """
@@ -372,6 +400,7 @@ async def list_primer_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
     params = {"page": page, "size": size}
     return await call_genome_backend("GET", "/api/primer", params=params)
 
+@register_agent_tool
 @tool
 async def get_primer_task(task_id: int) -> Dict[str, Any]:
     """
@@ -379,6 +408,7 @@ async def get_primer_task(task_id: int) -> Dict[str, Any]:
     """
     return await call_genome_backend("GET", f"/api/primer/{task_id}")
 
+@register_agent_tool
 @tool(args_schema=PrimerDesignInput)
 async def design_polyploid_primer(
     genome_id: int, query: str, primer_num_return: int = 20,
