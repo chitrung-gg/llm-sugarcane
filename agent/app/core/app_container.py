@@ -5,11 +5,13 @@ import aioboto3
 from langchain_neo4j import Neo4jGraph
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
+from langfuse import Langfuse
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.tools import BaseTool
 from loguru import logger
 from types_aiobotocore_s3 import S3Client
 
+from app.core.tools.registry.registry_tool import get_agent_tools, register_agent_tool
 from app.services.knowledge.knowledge_service import KnowledgeService
 from app.services.agent.agent_service import AgentService
 from app.core.tools.ncbi_eutils_tool import get_gene_metadata_by_symbol, search_literature_for_traits, search_ncbi_genome
@@ -34,6 +36,7 @@ class AppContainer:
     """Central dependency container."""
 
     def __init__(self):
+        self._langfuse_client: Langfuse | None = None
         self._llm_service: LLMService | None = None
         self._agent_service: AgentService | None = None
         self._knowledge_service: KnowledgeService | None = None
@@ -52,6 +55,7 @@ class AppContainer:
         logger.info(" Initializing app container...")
         
         # 1. Base Services & APIs
+        await self._init_langfuse_client()
         await self._init_llm_service() 
         await self._init_rustfs_session()
         await self._init_searx_wrapper()
@@ -75,6 +79,21 @@ class AppContainer:
         
         logger.info(" App container ready.")
 
+    async def _init_langfuse_client(self):
+        """Initialize the Langfuse singleton client with explicit Pydantic settings."""
+        settings = get_settings()
+        
+        if settings.langfuse_public_key and settings.langfuse_secret_key:
+            self._langfuse_client = Langfuse(
+                public_key=settings.langfuse_public_key.get_secret_value(),
+                secret_key=settings.langfuse_secret_key.get_secret_value(),
+                host=settings.langfuse_base_url
+            )
+            logger.info("✅ Langfuse client initialized.")
+        else:
+            self._langfuse_client = None
+            logger.warning("⚠️ Langfuse credentials missing. Tracing disabled.")
+
     async def _init_llm_service(self):
         """Initialize LLM models with fallback chain."""
         self._llm_service = LLMService()
@@ -90,7 +109,8 @@ class AppContainer:
         self._agent_service = AgentService(
             graph=self.agent_graph,
             rustfs_session=self.rustfs_session,
-            llm_service=self.llm_service
+            llm_service=self.llm_service,
+            langfuse_client=self.langfuse_client
         )
 
     async def _init_graph_ingestion_service(self):
@@ -177,24 +197,18 @@ class AppContainer:
             raise e
 
     async def _init_agent_graph(self):
-        """
-        Builds the LangGraph once during startup.
-
-        Because each method return the name depends on the OpenAPI specs, and can be changed over time, so we should build the list dynamically
-        """
+        # Register instance-specific tools that have dependencies
         self._graph_rag_tool = make_graph_rag_tool(
             self.vector_store_solid,
             self.vector_store_volatile,
             self.knowledge_graph
         )
 
-        static_tools = [
-            list_genome_files, get_genes_list, search_genes_full,
-            get_gene_detail, run_blast, run_synteny_analysis, 
-            run_crispor, design_polyploid_primer, search_literature_for_traits, get_gene_metadata_by_symbol, search_ncbi_genome, self._graph_rag_tool
-        ]        # Combine static and dynamic tools into a dictionary
-
-        all_tools = {tool.name: tool for tool in static_tools}
+        register_agent_tool(self._graph_rag_tool)
+        
+        # Register dynamic tools (like NCBI)
+        for t in self.ncbi_tools:
+            register_agent_tool(t)
 
         self._agent_graph = await build_agent_graph(
             llm_service=self.llm_service,
@@ -203,7 +217,7 @@ class AppContainer:
             vector_store_volatile=self.vector_store_volatile,
             searx_wrapper=self.searx_search,
             document_processor=self.document_processor, 
-            available_tools=all_tools
+            available_tools=get_agent_tools()
         )
 
     async def _init_rustfs_session(self):
@@ -223,7 +237,11 @@ class AppContainer:
     
 
     # --- Public accessors ---
-
+    @property
+    def langfuse_client(self) -> Langfuse:
+        assert self._langfuse_client is not None, "Container not initialized (Langfuse Client missing)"
+        return self._langfuse_client
+    
     @property
     def llm_service(self) -> LLMService:
         assert self._llm_service, "Container not initialized (LLMService missing)"

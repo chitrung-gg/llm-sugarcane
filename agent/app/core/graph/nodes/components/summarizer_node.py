@@ -3,16 +3,26 @@ from typing import Literal
 from loguru import logger
 from langchain_core.messages import HumanMessage, SystemMessage, RemoveMessage
 from langgraph.types import Command
+from pydantic import BaseModel, Field
+from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 
+class SummaryOutput(BaseModel):
+    """
+    Schema for the LLM to output a structured conversation summary.
+    """
+    new_summary: str = Field(
+        description="The comprehensive summary of the conversation to date, gracefully incorporating the new messages."
+    )
 
 def make_summarizer_node(llm_service: LLMService):
     """
     Creates a node that summarizes the conversation history to keep the context window lean.
     This follows the 'Summarize-and-Delete' pattern from LangGraph.
     """
+    @tracing
     async def summarize_conversation(state: AgentState) -> Command[
         Literal[AgentGraphNode.END_NODE]
     ]:
@@ -39,7 +49,7 @@ def make_summarizer_node(llm_service: LLMService):
         messages_to_summarize = messages[:-2]
         
         # Prepare the prompt for the summarizer
-        llm = llm_service.get_tertiary_model()
+        llm = llm_service.get_structured_tertiary_model(SummaryOutput)
         
         response = await llm.ainvoke(
             [
@@ -48,7 +58,7 @@ def make_summarizer_node(llm_service: LLMService):
             ]
         )
 
-        new_summary = response.content
+        new_summary = response.new_summary
 
         # Create RemoveMessage instructions to delete the messages we just summarized
         # LangGraph uses these to prune the 'messages' list in the state.

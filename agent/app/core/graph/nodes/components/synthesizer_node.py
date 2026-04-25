@@ -6,6 +6,7 @@ from langgraph.graph import END
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
@@ -28,7 +29,7 @@ class SynthesizerOutput(BaseModel):
     )
     
 def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
-
+    @tracing
     async def synthesizer(state: AgentState) -> Command[
         Literal[AgentGraphNode.SUMMARIZER, AgentGraphNode.ROUTER]
     ]:
@@ -129,7 +130,7 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             Compare the gathered Context above against your previous messages in the Conversation History. If the tools or databases did not return any NEW information beyond what you have already told the user in previous turns, DO NOT repeat yourself.
         """
 
-        llm = llm_service.get_secondary_model().with_structured_output(SynthesizerOutput)
+        llm = llm_service.get_structured_secondary_model(SynthesizerOutput)
 
         messages_to_send: List[BaseMessage] = [
             SystemMessage(content=system_prompt)

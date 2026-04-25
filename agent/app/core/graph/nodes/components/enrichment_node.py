@@ -3,6 +3,7 @@ from typing import Dict, Literal
 from loguru import logger
 from langgraph.types import Command
 
+from app.utils.observability.tracing import tracing
 from app.core.tools.registry.ingestion_config_tool import IngestionConfig
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
@@ -12,6 +13,7 @@ def make_enrichment_node(
     graph_ingestion_service: GraphIngestionService,
     tool_registry: Dict[str, IngestionConfig]
 ):
+    @tracing
     async def enrichment(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:

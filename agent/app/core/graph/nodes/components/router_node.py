@@ -4,6 +4,7 @@ from typing import List, Literal, Union, cast
 from loguru import logger
 
 
+from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.routing.route_action import RouteDecision, get_routing_destinations
 from app.core.graph.state.agent_state import AgentState
@@ -17,6 +18,7 @@ def make_router_node(
     llm_service: LLMService,
     available_tools: dict[str, BaseTool]
 ):
+    @tracing
     async def router(state: AgentState) -> Command[
         Literal[
             AgentGraphNode.RAG,
@@ -41,8 +43,7 @@ def make_router_node(
         query = state["query"]
         logger.debug(f"[Router] Query: {query}")
 
-        llm = llm_service.get_primary_model()
-        router_llm = llm.with_structured_output(RouteDecision)
+        router_llm = llm_service.get_structured_primary_model(RouteDecision)
 
         tool_list_str = render_text_description_and_args(list(available_tools.values()))
 
@@ -107,15 +108,18 @@ def make_router_node(
         
         intents_str = "\n            ".join(available_intents_list)
 
-        # 1. Base System Instructions (Static knowledge)
+        # 1. Base System Instructions (Includes File Context)
         system_instructions = f"""
             You are an expert routing assistant for a Sugarcane Genomics system.
             Your job is to analyze the user's query and route it to the correct execution path.
 
+            UPLOADED FILE CONTEXT:
+            {state.get('file_context', 'No files uploaded.')}
+
             AVAILABLE BIOINFORMATICS TOOLS:
             {tool_list_str}
 
-            CONVERSATION SUMMARY
+            CONVERSATION SUMMARY:
             {state.get('summary', 'No summary available yet.')}
         """
 

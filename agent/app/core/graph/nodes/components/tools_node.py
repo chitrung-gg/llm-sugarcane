@@ -6,11 +6,13 @@ from loguru import logger
 from langgraph.types import Command
 from langchain_core.tools import BaseTool
 
+from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.graph.state.agent_state import AgentState, ToolResult
 
 def make_tools_node(available_tools: dict[str, BaseTool]):
+    @tracing
     async def tools(state: AgentState) -> Command[
         Literal[AgentGraphNode.ENRICHMENT]
     ]:

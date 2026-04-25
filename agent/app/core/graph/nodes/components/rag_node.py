@@ -7,6 +7,7 @@ from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
+from app.utils.observability.tracing import tracing
 from app.services.llm.llm_service import LLMService
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.routing.check_rag_fallback import check_rag_fallback
@@ -31,6 +32,7 @@ def make_rag_node(
     vector_store_volatile: QdrantVectorStore,
     llm_service: LLMService
 ):
+    @tracing
     async def rag(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:
@@ -63,7 +65,7 @@ def make_rag_node(
         messages.append(HumanMessage(content=f"Latest Query: {original_query}"))
 
         try:
-            rewriter_llm = llm_service.get_quaternary_model().with_structured_output(OptimizedRagQuery)
+            rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedRagQuery)
             rewritten_result = await rewriter_llm.ainvoke(messages)
             optimized_query = OptimizedRagQuery.model_validate(rewritten_result).search_query
 

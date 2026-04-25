@@ -9,6 +9,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
 from pydantic import BaseModel, Field
 
+from app.utils.observability.tracing import tracing
 from app.services.llm.llm_service import LLMService
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState, WebResult
@@ -24,7 +25,7 @@ def make_web_search_node(
     llm_service: LLMService
 ):
     """Factory to create the web search node with injected dependency."""
-
+    @tracing
     async def web_search(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:
@@ -54,7 +55,7 @@ def make_web_search_node(
 
         try:
             # Use your fastest/cheapest model here (e.g., secondary or tertiary)
-            rewriter_llm = llm_service.get_quaternary_model().with_structured_output(OptimizedSearchQuery)
+            rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedSearchQuery)
             
             # Wrap in a 15-second timeout! Query rewriting should be instant.
             rewritten_result = await asyncio.wait_for(

@@ -2,6 +2,7 @@ import time
 from loguru import logger
 from typing import Dict, Any, Literal
 
+from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.configs.settings.settings import get_settings
 from app.utils.document_processor import DocumentProcessor
@@ -13,6 +14,7 @@ from langgraph.types import Command
 
 # Wrap in factory method
 def make_input_analyzer_node(document_processor: DocumentProcessor):
+    @tracing
     async def input_analyzer(state: AgentState) -> Command[
         Literal[AgentGraphNode.ROUTER]
     ]:
@@ -80,16 +82,9 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
                     logger.warning(f"File {file_name} missing required fields (local_content, file_path, or rustfs_uri).")
             if file_context:
                 file_context = f"The user has uploaded the following files for context. Use this information to answer their query:\n\n{file_context}"
-                logger.debug("Successfully extracted file content and constructed SystemMessage.")
+                logger.debug("Successfully extracted file content.")
         else:
             logger.debug("No uploaded files provided")
-
-        msg = SystemMessage(content=file_context) if file_context else None
-
-        if msg:
-            logger.debug("Injecting SystemMessage into state.messages")
-        else:
-            logger.debug("No SystemMessage injected")
 
         current_iter = state.get("iteration_count", 0)
         max_iter = state.get("max_iterations")
@@ -103,7 +98,7 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
         return Command(
             goto=AgentGraphNode.ROUTER,
             update={
-                "messages": [msg] if msg else [],
+                "file_context": file_context, # Store in separate field
                 "uploaded_chunks": ephemeral_chunks,
                 "tool_results": [],
                 "web_results": [],

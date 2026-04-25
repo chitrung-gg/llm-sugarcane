@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     ) 
     gemini_max_input_token: int = 200000
 
+    # --- Langfuse ---
+    langfuse_secret_key: SecretStr | None = Field(default=None, validation_alias="LANGFUSE_SECRET_KEY")
+    langfuse_public_key: SecretStr | None = Field(default=None, validation_alias="LANGFUSE_PUBLIC_KEY")
+    langfuse_base_url: str = Field(default="https://cloud.langfuse.com", validation_alias="LANGFUSE_BASE_URL")
+    
     # --- Qdrant ---
     qdrant_url: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
     qdrant_api_key: SecretStr | None = Field(default=None, validation_alias="QDRANT_API_KEY")
@@ -105,6 +110,7 @@ class Settings(BaseSettings):
 
     # --- LLM Service ---
     llm_max_retries: int = 3
+    llm_timeout: int = 30
 
     # --- Log ---
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
