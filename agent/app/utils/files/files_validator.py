@@ -76,7 +76,9 @@ def _validate_fasta_sample(sample: bytes) -> tuple[bool, str]:
     seq_chars = set("ACGTNacgtnRYSWKMBDHVryswkmbdhv \t\n\r-")
     for line in lines[1:30]:
         if line.startswith(">"):
-            if FASTA_HEADER_BANNED.search(line):
+            # Check for dangerous characters in the REST of the header
+            header_content = line[1:] 
+            if FASTA_HEADER_BANNED.search(header_content):
                 return False, f"Dangerous characters in FASTA header: {line[:80]}"
             continue
         if line and not all(c in seq_chars for c in line):

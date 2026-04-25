@@ -11,9 +11,11 @@ class UploadedFile(TypedDict):
     """Stores users' uploaded files metadata."""
     file_id: str
     file_name: str
-    file_path: str
+    file_path: Optional[str]
     file_type: Literal["pdf", "md", "fasta", "json", "unknown"]
-    description: Optional[str] 
+    description: Optional[str]
+    local_content: Optional[str] # Direct text/sequence content for small files
+    rustfs_uri: Optional[str]    # S3/RustFS URI for large genomic files
 
 class RAGResult(TypedDict):
     """Stores the extracted result from Vector Database."""
@@ -44,8 +46,9 @@ class AgentState(TypedDict):
     query: str
     messages: Annotated[List[BaseMessage], add_messages]
     summary: str # Stores the rolling summary of the conversation
-    uploaded_files: List[UploadedFile]
+    uploaded_files: Annotated[List[UploadedFile], operator.add]
     uploaded_chunks: Annotated[List[Document], operator.add]
+    file_context: str # Extracted content from uploaded files
 
     # Routing
     intent: Literal["rag_only", "tool_only", "web_search", "all", "unclear", "direct_answer"]

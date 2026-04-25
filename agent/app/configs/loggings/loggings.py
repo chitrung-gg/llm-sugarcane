@@ -26,10 +26,9 @@ class InterceptHandler(logging.Handler):
 
         # Find caller from where the logged message originated
         # This ensures Loguru prints the actual file/line number, not this interceptor file!
-        frame, depth = logging.currentframe(), 0
-        while frame.f_code.co_filename == logging.__file__:
-            if frame.f_back:
-                frame = cast(FrameType, frame.f_back)
+        frame, depth = sys._getframe(6), 6
+        while frame and frame.f_code.co_filename == logging.__file__:
+            frame = frame.f_back
             depth += 1
 
         logger.opt(depth=depth, exception=record.exc_info).log(
@@ -72,7 +71,12 @@ def setup_logging():
         "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
         "<magenta>{extra[trace_id]}</magenta>:<magenta>{extra[span_id]}</magenta> | "
         "<level>{level: <8}</level> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+
+        # Use on production
+        # "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " 
+
+        # Use on development
+        "<cyan>{file.path}:{line}</cyan> in <cyan>{function}</cyan> - "   
         "<level>{message}</level>"
     )
 
@@ -84,7 +88,7 @@ def setup_logging():
         sys.stdout,
         level=log_level,
         format=log_format,
-        enqueue=False,  # Set to False to prevent pickling errors with complex objects
+        enqueue=True,  # Set to False to prevent pickling errors with complex objects
         colorize=True
     )
 
