@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, List, Literal
 
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -37,13 +37,13 @@ async def classify_upload_with_llm(
     filename: str, 
     user_query: str,
     file_snippet: str,
-    llm_service: LLMService
+    llm_service: LLMService,
+    callbacks: List[Any] | None = None
 ) -> Literal["genomic", "knowledge", "sample_only", "reject"]:
     """
     Uses a fast LLM to dynamically determine file routing based on user intent.
     """
-    llm = llm_service.get_secondary_model()
-    structured_llm = llm.with_structured_output(FileClassification)
+    structured_llm = llm_service.get_structured_secondary_model(FileClassification)
 
     # 1. Pre-format your variables
     genomic_exts_str = ", ".join(GENOMIC_EXTENSIONS)
@@ -78,7 +78,10 @@ async def classify_upload_with_llm(
 
     try:
         # 3. Pass the message list directly to the structured LLM
-        raw_result = await structured_llm.ainvoke(messages)
+        raw_result = await structured_llm.ainvoke(
+            messages,
+            config={"callbacks": callbacks} if callbacks else None
+        )
         result = FileClassification.model_validate(raw_result)
         
         logger.info(f"[File Classifier] Routed '{filename}' to {result.category}. Reason: {result.reason}")

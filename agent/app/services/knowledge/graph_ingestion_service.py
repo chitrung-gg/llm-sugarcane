@@ -47,7 +47,7 @@ class GraphIngestionService:
             Text to analyze:
             {text}
         """
-        model = self.llm_service.get_secondary_model().with_structured_output(KnowledgeGraphComponents)
+        model = self.llm_service.get_structured_secondary_model(KnowledgeGraphComponents)
         result = await model.ainvoke(prompt)
         return cast(KnowledgeGraphComponents, result)
 
