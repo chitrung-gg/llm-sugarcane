@@ -39,7 +39,12 @@ class GraphIngestionService:
         result = await model.ainvoke(prompt)
         return cast(KnowledgeGraphComponents, result)
 
-    async def ingest_knowledge(self, source_text: str, source_metadata: Optional[Dict[str, Any]] = None):
+    async def ingest_knowledge(
+        self,
+        source_text: str, 
+        source_metadata: Optional[Dict[str, Any]] = None,
+        project_name: Optional[str] = None
+    ):
         try:
             source_meta = source_metadata or {}
             tool_name = source_meta.get("tool", "unknown")
@@ -201,6 +206,7 @@ class GraphIngestionService:
                         "global_id": str(node_info['id']), # Matches Postgres and Neo4j perfectly
                         "entity_type": node_info['label'], 
                         "name": node.name,
+                        "project_name": project_name,
                         "source_tier": tool_config.ingestion_confidence_tier.value,
                         "tool_used": tool_name,
                         "llm_confidence": components.overall_confidence # Track it in Qdrant!
