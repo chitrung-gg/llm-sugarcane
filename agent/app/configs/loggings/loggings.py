@@ -132,5 +132,8 @@ def setup_logging():
         
         # We let Loguru handle the filtering, so we set standard loggers to lowest level
         hijacked_logger.setLevel(logging.DEBUG)
+    
+    for logger_name in ["neo4j", "boto3", "botocore", "s3transfer", "urllib3", "aioboto3"]:
+        logging.getLogger(logger_name).setLevel(logging.INFO)
 
     logger.success(f"Loguru successfully hijacked standard logging. Level: {log_level}")

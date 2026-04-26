@@ -6,7 +6,7 @@ from langgraph.graph.state import CompiledStateGraph
 from types_aiobotocore_s3 import S3Client
 
 from app.services.knowledge.knowledge_service import KnowledgeService
-from app.services.knowledge.graph_ingestion_service import GraphIngestionService
+from app.services.ingestion.graph_ingestion_service import GraphIngestionService
 from app.services.agent.agent_service import AgentService
 from app.core.app_container import AppContainer, get_container
 from app.services.llm.llm_service import LLMService

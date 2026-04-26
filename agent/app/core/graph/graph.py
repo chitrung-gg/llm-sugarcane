@@ -14,7 +14,6 @@ from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.nodes.components.summarizer_node import make_summarizer_node
 from app.core.graph.nodes.components.input_analyzer_node import make_input_analyzer_node
 from app.utils.document_processor import DocumentProcessor
-from app.core.graph.routing.check_rag_fallback import check_rag_fallback
 from app.core.graph.nodes.components.web_search_node import make_web_search_node
 from app.services.llm.llm_service import LLMService
 from app.core.graph.nodes.components.rag_node import make_rag_node
@@ -26,7 +25,7 @@ from app.core.graph.nodes.components.enrichment_node import make_enrichment_node
 from app.core.graph.state.agent_state import AgentState
 from app.configs.storage.databases import langgraph_connection_pool
 
-from app.services.knowledge.graph_ingestion_service import GraphIngestionService
+from app.services.ingestion.graph_ingestion_service import GraphIngestionService
 
 async def build_agent_graph(
     llm_service: LLMService,

@@ -2,8 +2,7 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 from pydantic import BaseModel, Field
 import operator
 
-from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Literal, Optional
+from app.common.constants import PlanStatus
 
 class AgentStepPlan(BaseModel):
     """Represents a single deterministic step in the research plan."""
@@ -12,7 +11,7 @@ class AgentStepPlan(BaseModel):
     expected_tool: Optional[str] = Field(description="The specific tool required for this step.")
     
     # --- Replanning ---
-    status: Literal["pending", "running", "completed", "failed"] = Field(default="pending")
+    status: PlanStatus = Field(default=PlanStatus.PENDING)
     error_message: Optional[str] = Field(
         default=None, 
         description="If the step fails, the Executor will write the exact tool error/traceback here."
