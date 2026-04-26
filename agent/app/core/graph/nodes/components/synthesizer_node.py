@@ -2,14 +2,18 @@ import asyncio
 from enum import StrEnum
 import time
 from typing import List, Literal, cast
+from langfuse import observe
 from langgraph.graph import END
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.common.constants import ObservationType
+from app.configs.settings.settings import get_settings
 from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
+from app.core.prompts.synthesizer_prompts import SYNTHESIZER_SYSTEM_PROMPT, SYNTHESIZER_FINAL_WARNING
 
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langchain_core.tools import BaseTool, render_text_description_and_args
@@ -29,12 +33,15 @@ class SynthesizerOutput(BaseModel):
     )
     
 def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
-    @tracing
+    # @tracing(observation_type=ObservationType.CHAIN)
     async def synthesizer(state: AgentState) -> Command[
         Literal[AgentGraphNode.SUMMARIZER, AgentGraphNode.ROUTER]
     ]:
         logger.debug("[Synthesizer] ✍️ Generating final response")
         
+        settings = get_settings()
+        synthesizer_timeout = getattr(settings, 'synthesizer_timeout_sec', 45.0) 
+
         current_iteration = state.get("iteration_count", 0)
         max_iterations = state.get("max_iterations", 3)
         query = state["query"]
@@ -81,54 +88,16 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         # Dynamically add instructions if the agent is about to give up
         final_warning = ""
         if is_final_attempt:
-            final_warning = """
-            ⚠️ CRITICAL INSTRUCTION: This is your final attempt to answer. If you still do not have the complete information, you MUST:
-            1. Provide whatever partial answer you can in the 'answer' field.
-            2. At the end of the 'answer' field, add a clear note stating exactly what information you could not find.
-            3. Suggest alternative search queries, specific tools, or ask the user to upload a relevant document (like a specific research paper) to help you answer it.
-        """
+            final_warning = SYNTHESIZER_FINAL_WARNING
         
             
-        system_prompt = f"""
-            You are an expert Bioinformatics Assistant. Use the provided context to answer the user's query.
-            User Query: {query}
-            
-            {guidance_text}
-
-            FOR YOUR AWARENESS, YOU HAVE ACCESS TO THESE TOOLS (Even if you aren't executing them right now):
-            {tool_list_str}
-
-            If the user asks what tools you have, or how a specific tool works, use the list above to explain it accurately. Do NOT claim you lack a tool if it is in this list.
-            
-            Context:
-            {context_string}
-            
-            INSTRUCTIONS:
-            1. THOROUGHNESS RULE (CRITICAL): 
-                - Do not just provide a high-level summary. 
-                - Extract EVERY technical detail, gene symbol, methodology, and specific finding mentioned in the provided Context.
-                - If the user asks to "explain more" or "tell me more," you MUST expand significantly on each point, providing technical depth from the snippets.
-                - Use professional, academic-grade formatting (bullet points, clear headings).
-
-            2. SYMBOL & DATA EXTRACTION:
-                - If the context mentions specific numbers (e.g., genome size, chromosome count, dates), you MUST include them.
-                - If multiple snippets mention different aspects of the same topic, merge them into a single, detailed section.
-            
-            3. MISSING DATA FALLBACK (CRITICAL):
-                - If the context (like a tool output) fails to find specific data (e.g., a genome, gene, or paper):
-                - Look at the Context above. If there are NO Web Search results yet, DO NOT use internal knowledge. You MUST set 'is_complete' to False and set 'missing_info' to: "I need to perform a web search to find recent publications or databases for this specific query."
-                - If you HAVE already performed a web search and still cannot find it, only then may you state that the data appears unavailable.
-                
-            4. CONCEPTUAL QUERIES (INTERNAL KNOWLEDGE):
-                - If the query is a general biological explanation or strategy (e.g., "explain polyploidy"), you may use your internal knowledge to answer fully and set 'is_complete' to True.
-                
-            5. Do NOT confidently state that a genome or gene does not exist just because one specific database tool failed. Always fallback to a web search first!
-
-            {final_warning} 
-
-            ANTI-REPETITION RULE:
-            Compare the gathered Context above against your previous messages in the Conversation History. If the tools or databases did not return any NEW information beyond what you have already told the user in previous turns, DO NOT repeat yourself.
-        """
+        system_prompt = SYNTHESIZER_SYSTEM_PROMPT.format(
+            query=query,
+            guidance_text=guidance_text,
+            tool_list_str=tool_list_str,
+            context_string=context_string,
+            final_warning=final_warning
+        )
 
         llm = llm_service.get_structured_secondary_model(SynthesizerOutput)
 
@@ -140,17 +109,26 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             messages_to_send.extend(messages)
 
         try:
-            raw_result = await llm.ainvoke(messages_to_send)
-            result = SynthesizerOutput.model_validate(raw_result)
-        except Exception as e:
-            logger.error("[Synthesizer] LLM Generation failed: {e}", e=e)
-            # Force END on fatal errors to avoid loops
+            result = await asyncio.wait_for(
+                llm.ainvoke(messages_to_send),
+                timeout=synthesizer_timeout
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"[Synthesizer] ❌ LLM generation timed out after {synthesizer_timeout} seconds.")
             return Command(
                 goto=AgentGraphNode.SUMMARIZER,
                 update={
-                    "final_answer": "I apologize, but I encountered an error while synthesizing the information.",
-                    "is_complete": True, 
-                    "iteration_count": current_iteration + 1
+                    "final_answer": "I apologize, but synthesizing this massive amount of data took too long and timed out. Could you please narrow down your question?",
+                    "is_complete": True
+                }
+            )
+        except Exception as e:
+            logger.error(f"[Synthesizer] ❌ LLM Generation failed: {e}")
+            return Command(
+                goto=AgentGraphNode.SUMMARIZER,
+                update={
+                    "final_answer": "I apologize, but I encountered an error while formatting the synthesized information.",
+                    "is_complete": True
                 }
             )
 
@@ -166,7 +144,6 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             # "iteration_count": current_iteration + 1 # Increment loop counter!
         }
         
-
         last_intent = state.get("last_intent", "")
         router_gave_up = (last_intent == "direct_answer")
 

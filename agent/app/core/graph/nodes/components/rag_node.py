@@ -1,5 +1,7 @@
+import asyncio
 import time
 from typing import List, Literal, TypeAlias, cast
+from langfuse import observe
 from loguru import logger
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.retrievers import BM25Retriever
@@ -7,12 +9,13 @@ from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
+from app.common.constants import ObservationType
 from app.utils.observability.tracing import tracing
 from app.services.llm.llm_service import LLMService
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
-from app.core.graph.routing.check_rag_fallback import check_rag_fallback
 from app.configs.settings.settings import get_settings
 from app.core.graph.state.agent_state import AgentState, RAGResult
+from app.core.prompts.rag_prompts import RAG_QUERY_OPTIMIZATION_PROMPT
 
 
 import time
@@ -32,7 +35,7 @@ def make_rag_node(
     vector_store_volatile: QdrantVectorStore,
     llm_service: LLMService
 ):
-    @tracing
+    # @tracing(observation_type=ObservationType.RETRIEVER)
     async def rag(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:
@@ -43,21 +46,15 @@ def make_rag_node(
         
         original_query = state["query"]
 
+        solid_k = getattr(settings, 'qdrant_solid_top_k', 5)
+        volatile_k = getattr(settings, 'qdrant_volatile_top_k', 3)
+        final_top_k = getattr(settings, 'rag_final_top_k', 5)
+        max_query_length = getattr(settings, 'rag_max_query_length', 200)
+                                   
         # 1. Query Optimization
-        system_prompt = f"""
-            You are a Semantic Search Optimizer for a Sugarcane Genomics vector database.
-            The user is asking a conversational question. Convert this into a concise, standalone query.
-            
-            CONVERSATION SUMMARY:
-            {state.get("summary", "No prior context.")}
-            
-            CRITICAL RULES:
-            1. Keep it CONCISE. Use a maximum of 10 to 15 highly relevant words.
-            2. DO NOT REPEAT WORDS. Repeating keywords destroys search quality.
-            3. Resolve pronouns ("it", "this cultivar") using the conversation summary.
-            4. Remove conversational filler ("Tell me about", "What is").
-            5. Output ONLY the optimized search string.
-        """
+        system_prompt = RAG_QUERY_OPTIMIZATION_PROMPT.format(
+            conversation_summary=state.get("summary", "No prior context.")
+        )
 
         messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
         if state["messages"]:
@@ -66,11 +63,11 @@ def make_rag_node(
 
         try:
             rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedRagQuery)
-            rewritten_result = await rewriter_llm.ainvoke(messages)
-            optimized_query = OptimizedRagQuery.model_validate(rewritten_result).search_query
+            rewritten_result: OptimizedRagQuery = await rewriter_llm.ainvoke(messages)
+            optimized_query = rewritten_result.search_query
 
             # Circuit breaker to prevent runaway repetition
-            if len(optimized_query) > 200:
+            if len(optimized_query) > max_query_length:
                 logger.warning(f"[RAG] ⚠️ LLM hallucinated a repeating query. Triggering fallback.")
                 optimized_query = original_query
             else:
@@ -85,12 +82,12 @@ def make_rag_node(
         combined_results = []
 
         # Fetch from both stores
-        solid_results = await vector_store_solid.asimilarity_search_with_score(optimized_query, k=5)
+        solid_results = await vector_store_solid.asimilarity_search_with_score(optimized_query, k=solid_k)
         for doc, score in solid_results:
             doc.page_content = f"[SOURCE TIER: CURATED (High Trust)] {doc.page_content}"
             doc.metadata["source_tier"] = "CURATED"
 
-        volatile_results = await vector_store_volatile.asimilarity_search_with_score(optimized_query, k=3)
+        volatile_results = await vector_store_volatile.asimilarity_search_with_score(optimized_query, k=volatile_k)
         for doc, score in volatile_results:
             doc.page_content = f"[SOURCE TIER: INFERRED/PROVISIONAL (Agent Discovery)] {doc.page_content}"
             doc.metadata["source_tier"] = "INFERRED"
@@ -98,7 +95,7 @@ def make_rag_node(
         # Combine, sort by hybrid score descending, and take the absolute Top 5 overall
         combined_results = solid_results + volatile_results
         combined_results.sort(key=lambda x: x[1], reverse=True)
-        top_semantic_results = combined_results[:5]
+        top_semantic_results = combined_results[:final_top_k]
 
         logger.debug("Retrieved {count} total semantic documents", count=len(combined_results))
 
@@ -106,7 +103,7 @@ def make_rag_node(
         new_sources = []
 
         # Process the combined results
-        for idx, (doc, score) in enumerate(combined_results):
+        for idx, (doc, score) in enumerate(top_semantic_results):
             source_name = doc.metadata.get("source", "unknown")
             source_tier = doc.metadata.get("source_tier", "unknown_tier")
 
@@ -139,14 +136,17 @@ def make_rag_node(
         if ephemeral_chunks:
             logger.debug("[RAG] 🧬 Running BM25 Keyword Search on {count} uploaded chunks...", count=len(ephemeral_chunks))
 
-            # Using BM25 plus variant
-            bm25_retriever = BM25Retriever.from_documents(
-                ephemeral_chunks,
-                k=settings.inmemory_retriever_top_k,
-                bm25_variant="plus",
-            )
+            # Build BM25 matrix in a background thread to prevent async loop blocking
+            def _build_bm25():
+                return BM25Retriever.from_documents(
+                    ephemeral_chunks,
+                    k=getattr(settings, 'inmemory_retriever_top_k', 3),
+                    bm25_variant="plus",
+                )
+            
+            bm25_retriever = await asyncio.to_thread(_build_bm25)
 
-            local_results = bm25_retriever.invoke(optimized_query)
+            local_results = await bm25_retriever.ainvoke(optimized_query)
 
             for idx, doc in enumerate(local_results):
                 # Dynamic Pseudo-Scoring: 1.0 for the best match, decaying by 0.05 for each subsequent match.

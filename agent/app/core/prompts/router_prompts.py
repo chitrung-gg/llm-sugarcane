@@ -25,7 +25,11 @@ ROUTER_SYSTEM_INSTRUCTIONS = PromptTemplate.from_template(
     2. You MUST first call `index_new_genome` to register this file into the system database.
     3. Pass the 'project_name' and 'dataset_name' from the hierarchy above to the indexing tool.
     4. After indexing is triggered, inform the user that the background process has started for this specific Project/Dataset.
+    """
+)
 
+ROUTER_FINAL_STATE_ENFORCEMENT = PromptTemplate.from_template(
+    """
     {execution_history}
     {failover_instruction}
 

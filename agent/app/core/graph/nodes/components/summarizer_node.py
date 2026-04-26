@@ -1,13 +1,19 @@
+import asyncio
 from enum import StrEnum
+import time
 from typing import Literal
+from langfuse import observe
 from loguru import logger
 from langchain_core.messages import HumanMessage, SystemMessage, RemoveMessage
 from langgraph.types import Command
 from pydantic import BaseModel, Field
+from app.common.constants import ObservationType
+from app.configs.settings.settings import get_settings
 from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
+from app.core.prompts.summarizer_prompts import SUMMARIZER_SYSTEM_PROMPT
 
 class SummaryOutput(BaseModel):
     """
@@ -22,56 +28,69 @@ def make_summarizer_node(llm_service: LLMService):
     Creates a node that summarizes the conversation history to keep the context window lean.
     This follows the 'Summarize-and-Delete' pattern from LangGraph.
     """
-    @tracing
+    # @tracing(observation_type=ObservationType.CHAIN)
     async def summarize_conversation(state: AgentState) -> Command[
         Literal[AgentGraphNode.END_NODE]
     ]:
+        settings = get_settings()
+        
         summary = state.get("summary", "")
         messages = state.get("messages", [])
 
+        max_messages = getattr(settings, 'summary_trigger_threshold', 6)
+        keep_messages = getattr(settings, 'summary_keep_last_n', 2)
+        timeout_sec = getattr(settings, 'summary_timeout_sec', 20.0)
+
         # Only summarize if we have a significant number of messages (e.g., > 6)
         # to avoid summarizing every single turn which is expensive.
-        if len(messages) <= 6:
+        if len(messages) <= max_messages:
             logger.debug("[Summarizer] Not enough messages to summarize. Skipping.")
             return Command(
                 goto=AgentGraphNode.END_NODE
             )
 
-        logger.debug(f"[Summarizer] 📝 Summarizing {len(messages)} messages...")
-
+        logger.info(f"[Summarizer] 📝 Summarizing {len(messages)} messages...")
+        start_time = time.time()
+        
         if summary:
-            # If a summary already exists, we append the new messages to it
-            summary_message = f"This is a summary of the conversation to date: {summary}\n\nExtend the summary by taking into account the following new messages:"
+            summary_message = f"This is the existing conversation summary:\n{summary}\n\nExtend this summary by incorporating the new messages."
         else:
-            summary_message = "Create a summary of the conversation below:"
+            summary_message = "Create a summary of the conversation below."
 
-        # We keep the last 2 messages out of the summary so the LLM has immediate context
-        messages_to_summarize = messages[:-2]
-        
-        # Prepare the prompt for the summarizer
-        llm = llm_service.get_structured_tertiary_model(SummaryOutput)
-        
-        response = await llm.ainvoke(
-            [
-                SystemMessage(content=summary_message),
-                *messages_to_summarize
-            ]
+        system_prompt = SUMMARIZER_SYSTEM_PROMPT.format(
+            summary_message=summary_message
         )
 
-        new_summary = response.new_summary
+        # Keep the last N messages out of the summary for immediate context
+        messages_to_summarize = messages[:-keep_messages]
+        
+        try:
+            # Prepare the prompt for the summarizer
+            llm = llm_service.get_structured_tertiary_model(SummaryOutput)
+            
+            response = await asyncio.wait_for(
+                llm.ainvoke([SystemMessage(content=system_prompt)] + messages_to_summarize),
+                timeout=timeout_sec
+            )
 
-        # Create RemoveMessage instructions to delete the messages we just summarized
-        # LangGraph uses these to prune the 'messages' list in the state.
-        delete_messages = [RemoveMessage(id=m.id) for m in messages_to_summarize if hasattr(m, 'id') and m.id]
+            new_summary = response.new_summary
 
-        logger.debug("[Summarizer] ✅ Summary updated and old messages marked for removal.")
+            # Create RemoveMessage instructions to delete the messages we just summarized
+            # LangGraph uses these to prune the 'messages' list in the state.
+            delete_messages = [RemoveMessage(id=m.id) for m in messages_to_summarize if hasattr(m, 'id') and m.id]
 
-        return Command(
-            goto=AgentGraphNode.END_NODE,
-            update={
-                "summary": new_summary,
-                "messages": delete_messages
-            }
-        )
+            elapsed = int((time.time() - start_time) * 1000)
+            logger.debug(f"[Summarizer] ✅ Summary updated in {elapsed}ms. Marked {len(delete_messages)} messages for removal.")
+
+            return Command(
+                goto=AgentGraphNode.END_NODE,
+                update={
+                    "summary": new_summary,
+                    "messages": delete_messages
+                }
+            )
+        except Exception as e:
+            logger.error(f"[Summarizer] ❌ Summarization failed ({e}). Skipping message deletion to preserve context.")
+            return Command(goto=AgentGraphNode.END_NODE)
 
     return summarize_conversation

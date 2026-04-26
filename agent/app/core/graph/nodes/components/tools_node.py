@@ -1,21 +1,26 @@
+import asyncio
 from enum import StrEnum
 import json
 import time
 from typing import Literal
+from langfuse import observe
 from loguru import logger
 from langgraph.types import Command
 from langchain_core.tools import BaseTool
 
+from app.configs.settings.settings import get_settings
+from app.common.constants import ObservationType, ToolExecutionStatus
 from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.graph.state.agent_state import AgentState, ToolResult
 
 def make_tools_node(available_tools: dict[str, BaseTool]):
-    @tracing
+    # @tracing(observation_type=ObservationType.TOOL)
     async def tools(state: AgentState) -> Command[
         Literal[AgentGraphNode.ENRICHMENT]
     ]:
+        settings = get_settings()
         tools_to_run = state.get("required_tools", [])
 
         logger.debug(
@@ -31,20 +36,21 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
             )
 
         overall_start = time.time()
-        new_tool_results = []
 
-        for tool_call in tools_to_run:
-            # Parse the tool call
+        max_output_length = getattr(settings, 'max_tool_output_length', 20000)
+
+        async def _execute_single_tool(tool_call) -> ToolResult:
+            """Helper function to execute a single tool concurrently."""
+            tool_start = time.time()
+            
+            # 1. Parse the tool call
             if isinstance(tool_call, ToolCallRequest):
-                # It's a Pydantic object (ToolCallRequest)
                 tool_name = str(tool_call.name)
                 tool_args = getattr(tool_call, "args", {})
             elif isinstance(tool_call, dict):
-                # It's a dictionary
                 tool_name = str(tool_call.get("name", "unknown_tool"))
                 tool_args = tool_call.get("args", {})
             else:
-                # Fallback if it's just a raw string
                 tool_name = str(tool_call)
                 tool_args = {}
             
@@ -52,54 +58,61 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
                 tool_args = {}
 
             logger.debug("[Tools] Executing tool: {tool_name}", tool_name=tool_name)
-            tool_start = time.time()
 
+            # 2. Check if tool exists
             if tool_name not in available_tools:
                 error_msg = f"Tool '{tool_name}' is not recognized."
                 logger.error(error_msg)
-                new_tool_results.append(ToolResult(
+                return ToolResult(
                     tool_name=tool_name,
-                    args = tool_args,
-                    status="error",
+                    args=tool_args,
+                    status=ToolExecutionStatus.ERROR,
                     output=error_msg,
-                    execution_time_ms=0
-                ))
-                continue
+                    execution_time_ms=int((time.time() - tool_start) * 1000)
+                )
 
+            # 3. Execute Tool
             try:
-                # Execute the actual LangChain tool
                 tool_instance = available_tools[tool_name]
-                raw_output = await tool_instance.ainvoke(tool_args)     # async
+                raw_output = await tool_instance.ainvoke(tool_args)
 
-                # Format output safely to string
+                # Format safely
                 output_text = json.dumps(raw_output) if isinstance(raw_output, (dict, list)) else str(raw_output)
-                status = "success"
+                status = ToolExecutionStatus.SUCCESS
 
-                elapsed = int((time.time() - tool_start) * 1000)  
+                # TRUNCATION: Protect the LLM Context Window
+                if len(output_text) > max_output_length:
+                    logger.warning(f"[Tools] Truncating output for {tool_name} from {len(output_text)} to {max_output_length} chars.")
+                    output_text = output_text[:max_output_length] + f"\n\n[TRUNCATED: Result exceeded {max_output_length} characters]"
+
+                elapsed = int((time.time() - tool_start) * 1000)
                 logger.debug(
-                    "[Tools] ✅ Tool completed | name={tool_name} | status={status} | latency={elapsed}ms | output_text={output_text}",
-                    tool_name=tool_name, status=status, elapsed=elapsed, output_text=output_text[:500]
+                    "[Tools] ✅ Tool completed | name={tool_name} | status={status} | latency={elapsed}ms",
+                    tool_name=tool_name, status=status, elapsed=elapsed
                 )
 
             except Exception as e:
                 elapsed = int((time.time() - tool_start) * 1000)
                 output_text = f"Tool execution failed: {str(e)}"
-                status = "error"
+                status = ToolExecutionStatus.ERROR
 
                 logger.error(
-                    "[Tools] ❌ Tool failed | name={tool_name} | error={error} | latency={elapsed}ms | ouptut_text={output_text}",
-                    tool_name=tool_name, error=str(e), elapsed=elapsed, output_text=output_text[:500]
+                    "[Tools] ❌ Tool failed | name={tool_name} | error={error} | latency={elapsed}ms",
+                    tool_name=tool_name, error=str(e), elapsed=elapsed
                 )
 
-            tool_item = ToolResult(
+            return ToolResult(
                 tool_name=tool_name,
                 args=tool_args,
                 status=status, 
                 output=output_text,
                 execution_time_ms=elapsed
             )
-            new_tool_results.append(tool_item)
-
+        
+        # Run all tools in parallel
+        tasks = [_execute_single_tool(tool_call) for tool_call in tools_to_run]
+        new_tool_results = await asyncio.gather(*tasks)
+        
         total_elapsed = int((time.time() - overall_start) * 1000)
 
         logger.debug(
