@@ -11,6 +11,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 from types_aiobotocore_s3 import S3Client
 
+from app.services.ingestion.file_ingestion_service import FileIngestionService
 from app.core.tools.registry.registry_tool import get_agent_tools, register_agent_tool
 from app.services.knowledge.knowledge_service import KnowledgeService
 from app.services.agent.agent_service import AgentService
@@ -20,7 +21,7 @@ from app.core.graph.graph import build_agent_graph
 from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
 from app.utils.document_processor import DocumentProcessor
-from app.services.knowledge.graph_ingestion_service import GraphIngestionService
+from app.services.ingestion.graph_ingestion_service import GraphIngestionService
 
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 from app.core.vector_store.vector_store import VectorStore
@@ -40,6 +41,7 @@ class AppContainer:
         self._llm_service: LLMService | None = None
         self._agent_service: AgentService | None = None
         self._knowledge_service: KnowledgeService | None = None
+        self._file_ingestion_service: FileIngestionService | None = None
         self._graph_ingestion_service: GraphIngestionService | None = None
         self._embedding_model: GeminiEmbeddingModel | None = None
         self._vector_store_solid: QdrantVectorStore | None = None
@@ -69,6 +71,8 @@ class AppContainer:
         # 3. Middlewares & Processors (Depends on Storage)
         await self._init_document_processor()
         await self._init_graph_ingestion_service()
+        await self._init_file_ingestion_service()
+
         
         # 4. The Graph (Depends on ALL of the above)
         await self._init_agent_graph()
@@ -104,11 +108,16 @@ class AppContainer:
             rustfs_session=self.rustfs_session
         )
 
+    async def _init_file_ingestion_service(self):
+        self._file_ingestion_service = FileIngestionService(
+            rustfs_session=self.rustfs_session
+        )
+
     async def _init_agent_service(self):
         """Initialize LLM models with fallback chain."""
         self._agent_service = AgentService(
             graph=self.agent_graph,
-            rustfs_session=self.rustfs_session,
+            file_ingestion_service=self.file_ingestion_service,
             llm_service=self.llm_service,
             langfuse_client=self.langfuse_client
         )
@@ -256,6 +265,11 @@ class AppContainer:
     def knowledge_service(self) -> KnowledgeService:
         assert self._knowledge_service, "Container not initialized (KnowledgeService missing)"
         return self._knowledge_service
+    
+    @property
+    def file_ingestion_service(self) -> FileIngestionService:
+        assert self._file_ingestion_service, "Container not initialized (FileIngestionService missing)"
+        return self._file_ingestion_service
     
     @property
     def graph_ingestion_service(self) -> GraphIngestionService:

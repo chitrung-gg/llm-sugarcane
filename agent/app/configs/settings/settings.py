@@ -138,6 +138,11 @@ class Settings(BaseSettings):
         default="ap-southeast-1",
         validation_alias="RUSTFS_REGION_NAME"
     )
+    rustfs_users_bucket: str = Field(
+        default="users-bucket",
+        validation_alias="RUSTFS_USERS_BUCKET"
+    )
+    
 
     # --- Genome Tool ---
     genome_backend_api_url: str = Field(

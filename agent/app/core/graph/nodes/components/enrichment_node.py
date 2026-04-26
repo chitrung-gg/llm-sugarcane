@@ -3,17 +3,20 @@ from typing import Dict, Literal
 from loguru import logger
 from langgraph.types import Command
 
+from app.common.constants import ObservationType
 from app.utils.observability.tracing import tracing
 from app.core.tools.registry.ingestion_config_tool import IngestionConfig
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
-from app.services.knowledge.graph_ingestion_service import GraphIngestionService
+from app.services.ingestion.graph_ingestion_service import GraphIngestionService
+
+_background_tasks = set()
 
 def make_enrichment_node(
     graph_ingestion_service: GraphIngestionService,
     tool_registry: Dict[str, IngestionConfig]
 ):
-    @tracing
+    @tracing(observation_type=ObservationType.CHAIN)
     async def enrichment(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:
@@ -32,9 +35,14 @@ def make_enrichment_node(
         new_results = tool_results[-num_new:] if num_new > 0 else []
 
         for result in new_results:
-            tool_name = result.get("tool_name", "") if isinstance(result, dict) else getattr(result, "tool_name", "")
-            status = result.get("status", "") if isinstance(result, dict) else getattr(result, "status", "")
-            output = result.get("output", "") if isinstance(result, dict) else getattr(result, "output", "")
+            if isinstance(result, dict):
+                tool_name = result.get("tool_name", "")
+                status = result.get("status", "")
+                output = str(result.get("output", ""))
+            else:
+                tool_name = getattr(result, "tool_name", "")
+                status = getattr(result, "status", "")
+                output = str(getattr(result, "output", ""))
             
             # Check if the tool_name exists as a key in our tool_registry
             if status == "success" and len(str(output)) > 50 and tool_name in tool_registry:
@@ -45,15 +53,19 @@ def make_enrichment_node(
                     f"(Target: {config.vector_store_type.value.upper()})"
                 )
                 
-                # We use asyncio.create_task to run it in the background without blocking the LangGraph workflow
-                # In a production environment, this should ideally be a Celery task.
-                # For now, we fire and forget in the current event loop.
-                asyncio.create_task(
+                # Create the task
+                task = asyncio.create_task(
                     graph_ingestion_service.ingest_knowledge(
-                        source_text=str(output),
+                        source_text=output,
                         source_metadata={"tool": tool_name}
                     )
                 )
+                
+                # Protect it from Python's Garbage Collector
+                _background_tasks.add(task)
+                
+                # Discard it from the set automatically when it finishes
+                task.add_done_callback(_background_tasks.discard)
                 
         # Note: we do not await the tasks here because we want them to run asynchronously
         # If we await, it will block the graph. However, depending on the event loop, 

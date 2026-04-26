@@ -1,6 +1,8 @@
 import gzip, re, os
 from pathlib import Path
 
+from app.utils.files.files_classifier import extract_full_extension
+
 # --- Magic bytes for each container type ---
 MAGIC_BYTES = {
     "gz":  b"\x1f\x8b",          # gzip
@@ -25,7 +27,7 @@ def validate_genomic_file(path: Path, filename: str) -> tuple[bool, str]:
     if size == 0:
         return False, "File is empty"
     if size > MAX_SIZES["genomic"]:
-        return False, f"File exceeds {MAX_SIZES["genomic"] / (1024**3)} GB limit ({size / 1024**3:.1f} GB)"
+        return False, f"File exceeds {MAX_SIZES['genomic'] / (1024**3)} GB limit ({size / 1024**3:.1f} GB)"
 
     # 1. Check if the file is gzipped via magic bytes
     with open(path, "rb") as f:
@@ -51,15 +53,15 @@ def validate_genomic_file(path: Path, filename: str) -> tuple[bool, str]:
     name = filename.lower()
     
     # Strip .gz for easier matching
-    base_name = name[:-3] if name.endswith(".gz") else name
+    ext = extract_full_extension(filename)
 
-    if any(base_name.endswith(ext) for ext in (".fasta", ".fa", ".fna")):
+    if ext in {".fasta", ".fa", ".fna", ".fasta.gz", ".fa.gz", ".fna.gz"}:
         return _validate_fasta_sample(sample)
 
-    if any(base_name.endswith(ext) for ext in (".gff3", ".gff", ".gtf")):
+    if ext in {".gff3", ".gff", ".gtf", ".gff3.gz", ".gff.gz", ".gtf.gz"}:
         return _validate_gff_sample(sample)
 
-    if base_name.endswith(".vcf"):
+    if ext in {".vcf", ".vcf.gz"}:
         return _validate_vcf_sample(sample)
 
     # If it's a collinearity or custom data file, just accept if it made it this far
@@ -70,7 +72,10 @@ def _validate_fasta_sample(sample: bytes) -> tuple[bool, str]:
     text = sample.decode("utf-8", errors="replace")
     lines = text.splitlines()
 
-    if not lines or not lines[0].startswith(">"):
+    if not lines or not lines[0].strip():
+        return False, "FASTA file is empty or malformed"
+    
+    if not lines[0].startswith(">"):
         return False, "FASTA file must start with a '>' header line"
 
     seq_chars = set("ACGTNacgtnRYSWKMBDHVryswkmbdhv \t\n\r-")
