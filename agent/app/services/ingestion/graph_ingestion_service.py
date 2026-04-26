@@ -6,6 +6,7 @@ from langchain_neo4j import Neo4jGraph
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.prompts.graph_ingestion_prompts import EXTRACTION_PROMPT
 from app.core.tools.registry.ingestion_config_tool import IngestionConfig
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionConfidenceTier, IngestionSourceType
 from app.core.tools.registry.registry_tool import KNOWLEDGE_GRAPH_TOOL_REGISTRY
@@ -33,20 +34,7 @@ class GraphIngestionService:
         self.allowed_labels = {"Gene", "Cultivar", "Paper", "Trait", "Disease", "Tissue", "Stress"}
 
     async def extract_components(self, text: str) -> KnowledgeGraphComponents:
-        prompt = f"""
-            You are a strict Biological Data Curator for a Sugarcane Knowledge Graph.
-            Your job is to evaluate text and extract precise biological relationships.
-            
-            CRITICAL RULES:
-            1. RELEVANCE CHECK: If the text is NOT about plant biology, sugarcane (Saccharum), or genomics, set 'is_domain_relevant' to False.
-            2. Node labels MUST be one of these exact types: Gene, Cultivar, Paper, Trait, Disease, Tissue, Stress.
-            3. Relationship types MUST be uppercase strings (e.g., UPREGULATES, CAUSES, RESISTS).
-            4. CONFIDENCE SCORING: You MUST provide an 'overall_confidence' for the text...
-            5. NO DATA RULE: If the text indicates that a database search failed, data was not found, or contains an error message (e.g., "❌ No genome assembly found"), you MUST set 'is_domain_relevant' to False and extract NO nodes.
-            
-            Text to analyze:
-            {text}
-        """
+        prompt = EXTRACTION_PROMPT.format(text=text)
         model = self.llm_service.get_structured_secondary_model(KnowledgeGraphComponents)
         result = await model.ainvoke(prompt)
         return cast(KnowledgeGraphComponents, result)

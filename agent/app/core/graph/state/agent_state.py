@@ -5,6 +5,11 @@ from langgraph.graph import add_messages
 from langchain_core.messages import BaseMessage
 from langchain_core.documents import Document
 
+from app.common.constants import (
+    AgentIntent,
+    ToolExecutionStatus,
+    UploadedFileType,
+)
 from app.core.graph.state.record_source import RecordSource
 
 class UploadedFile(TypedDict):
@@ -12,7 +17,7 @@ class UploadedFile(TypedDict):
     file_id: str
     file_name: str
     file_path: Optional[str]
-    file_type: Literal["pdf", "md", "fasta", "json", "unknown"]
+    file_type: UploadedFileType
     description: Optional[str]
     local_content: Optional[str] # Direct text/sequence content for small files
     rustfs_uri: Optional[str]    # S3/RustFS URI for large genomic files
@@ -37,9 +42,18 @@ class ToolResult(TypedDict):
     """Stores tool executions' results."""
     tool_name: str
     args: Dict[str, Any]
-    status: Literal["success", "error"]
+    status: ToolExecutionStatus
     output: str 
     execution_time_ms: Optional[int] 
+
+class DatasetContext(TypedDict):
+    """Stores pre-registered backend genomic datasets (Cultivars)."""
+    dataset_id: str
+    is_user_uploaded: bool     # Tells the tool which DB table to check
+    dataset_name: str          # e.g., "R570" or "ZZ1"
+    fasta_uri: Optional[str]   # s3://.../r570.fasta.gz
+    gff3_uri: Optional[str]    # s3://.../r570.gff3.gz
+    protein_uri: Optional[str] # s3://.../r570.pep.gz
 
 class AgentState(TypedDict):
     # Core
@@ -50,8 +64,12 @@ class AgentState(TypedDict):
     uploaded_chunks: Annotated[List[Document], operator.add]
     file_context: str # Extracted content from uploaded files
 
+    # --- Hierarchy & Organization ---
+    active_project_name: Optional[str] 
+    active_datasets: List[DatasetContext]
+
     # Routing
-    intent: Literal["rag_only", "tool_only", "web_search", "all", "unclear", "direct_answer"]
+    intent: AgentIntent
     required_tools: List[str]
 
     # Execution tracking

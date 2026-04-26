@@ -4,26 +4,27 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from langgraph.types import Command
+from app.common.constants import AgentIntent
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.schemas.tool.tool_call_request import ToolCallRequest
 
 
 def get_routing_destinations(intent: str) -> Union[AgentGraphNode, List[AgentGraphNode]]:
     """Helper function to map LLM intent to graph node destinations."""
-    if intent == "rag_only":
+    if intent == AgentIntent.RAG_ONLY:
         return AgentGraphNode.RAG
-    elif intent == "tool_only":  
+    elif intent == AgentIntent.TOOL_ONLY:  
         return AgentGraphNode.TOOL
-    elif intent == "web_search": 
+    elif intent == AgentIntent.WEB_SEARCH: 
         return AgentGraphNode.WEB_SEARCH
-    elif intent == "all":
+    elif intent == AgentIntent.ALL:
         # Return list of nodes so LangGraph runs them in parallel
         return [
             AgentGraphNode.RAG, 
             AgentGraphNode.TOOL, 
             AgentGraphNode.WEB_SEARCH
         ] 
-    elif intent == "direct_answer": 
+    elif intent == AgentIntent.DIRECT_ANSWER: 
         return AgentGraphNode.SYNTHESIZER
     else:
         # Fallback for "unclear" or any unexpected intent
@@ -31,7 +32,7 @@ def get_routing_destinations(intent: str) -> Union[AgentGraphNode, List[AgentGra
     
 class RouteDecision(BaseModel):
     reasoning: str = Field(description="Brief explanation of why this route/tool was chosen based on history.")
-    intent: Literal["rag_only", "tool_only", "all", "unclear", "web_search", "direct_answer"] = Field(
+    intent: AgentIntent = Field(
         description="Determine the routing intent based on the user query. "
                     "Use 'web_search' for fetching the latest news, external databases, or information not found in vector stores."
     )
