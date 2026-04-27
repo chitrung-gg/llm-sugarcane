@@ -1,15 +1,11 @@
 import asyncio
-import gzip
 import os
-from pathlib import Path
-import shutil
 import time
 from typing import Dict, List, Optional, AsyncContextManager, cast
 import uuid
 
 import aioboto3
-import aiofiles
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 from langfuse import Langfuse, propagate_attributes
 from langfuse.types import TraceContext
 from langgraph.graph.state import CompiledStateGraph, RunnableConfig
@@ -17,11 +13,9 @@ from langchain_core.messages import HumanMessage
 from langfuse.langchain import CallbackHandler
 from loguru import logger
 from opentelemetry import trace
-from types_aiobotocore_s3 import S3Client
 
-from app.services.ingestion.file_ingestion_service import FileIngestionService
-from app.utils.files.files_classifier import is_genomic_file, is_knowledge_file
-from app.common.constants import GENOMIC_EXTENSIONS, LANGFUSE_GRAPH_OBSERVATION_NAME, LANGGRAPH_STATE_MAX_ITERATIONS, UploadedFileType
+from app.services.workspace.workspace_service import WorkspaceService
+from app.common.constants import LANGFUSE_GRAPH_OBSERVATION_NAME, LANGGRAPH_STATE_MAX_ITERATIONS
 from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
 from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem
@@ -31,12 +25,12 @@ class AgentService:
     def __init__(
         self,
         graph: CompiledStateGraph,
-        file_ingestion_service: FileIngestionService,
+        workspace_service: WorkspaceService,
         llm_service: LLMService,
         langfuse_client: Langfuse
     ):
         self.graph = graph
-        self.file_ingestion_service = file_ingestion_service
+        self.workspace_service = workspace_service
         self.llm_service = llm_service
         self.langfuse_client = langfuse_client
         self.settings = get_settings()
@@ -45,11 +39,10 @@ class AgentService:
         self,
         thread_id: uuid.UUID,
         query: str,
-        files: Optional[List[UploadFile]] = None,
-        project_name: Optional[str] = None,
-        dataset_name: Optional[str] = None
+        project_id: Optional[uuid.UUID] = None,
+        dataset_ids: Optional[List[uuid.UUID]] = None
     ) -> AgentResponse:
-        """Handles file saving, graph execution, and source consolidation."""
+        """Executes reasoning strictly using pre-ingested datasets."""
         start_time = time.time()
         callbacks = []
 
@@ -72,44 +65,63 @@ class AgentService:
                     session_id=str(thread_id),
                     tags=["agent_chat"]
                 ):
+                    langfuse_callback = CallbackHandler(
+                        trace_context={
+                            "trace_id": root_span.trace_id,
+                            "parent_span_id": root_span.id 
+                        }
+                    )
+                    callbacks.append(langfuse_callback)
                     
-                    # Because we are inside the context, initializing the handler here 
-                    # automatically binds it to the OTel trace ID!
-                    lf_handler = CallbackHandler()
-                    callbacks.append(lf_handler)
-                    
-                    # 4. Delegate File Processing to the sub-service
-                    preprocessed_files = []
-                    if files:
-                        preprocessed_files = await self.file_ingestion_service.process_uploads(files)
-                        
                     config: RunnableConfig = {
                         "configurable": {
-                            "thread_id": str(thread_id),
-                            "sync_file_callback": self.file_ingestion_service.wait_for_file_readiness
+                            "thread_id": str(thread_id)
                         },
                         "callbacks": callbacks 
                     }
                     
-                    # Retrieve existing state
+                    #  Hydrate Workspace Context
+                    active_project_name = None
+                    if project_id:
+                        project = await self.workspace_service.get_project(project_id)
+                        if project:
+                            active_project_name = project.name
+                    
+                    # Fallback to state if already exists
                     existing_state = await self.graph.aget_state(config)
+                    if not active_project_name and existing_state and existing_state.values:
+                        active_project_name = existing_state.values.get("active_project_name")
+                    
+                    active_project_name = active_project_name or "Default Project"
 
-                    # Hierarchy Persistence Logic:
-                    # Priority: 1. Explicit Argument -> 2. Existing State -> 3. "Default"
-                    final_project = project_name or (existing_state.values.get("project_name") if (existing_state and existing_state.values) else None) or "Default Project"
-                    final_dataset = dataset_name or (existing_state.values.get("dataset_name") if (existing_state and existing_state.values) else None) or "Default Dataset"
-
-                    previous_files = existing_state.values.get("uploaded_files", []) if (existing_state and existing_state.values) else []
-
+                    active_datasets = []
+                    if dataset_ids:
+                        datasets = await self.workspace_service.get_datasets_by_ids(dataset_ids)
+                        for ds in datasets:
+                            ds_files = []
+                            for f in ds.files:
+                                ds_files.append({
+                                    "file_name": f.file_name,
+                                    "file_type": str(f.file_type),
+                                    "rustfs_uri": f.rustfs_uri
+                                })
+                            
+                            active_datasets.append({
+                                "dataset_id": str(ds.id),
+                                "dataset_name": ds.name,
+                                "files": ds_files
+                            })
+                    
+                    if not active_datasets and existing_state and existing_state.values:
+                        active_datasets = existing_state.values.get("active_datasets", [])
+                    
                     # Build initial state
                     initial_state = {
                         "query": query,
                         "messages": [HumanMessage(content=query)],      
-                        "uploaded_files": previous_files + preprocessed_files, 
-                        "project_name": final_project,
-                        "dataset_name": final_dataset,
+                        "active_project_name": active_project_name,
+                        "active_datasets": active_datasets,
                         "iteration_count": 0,
-                        "max_iterations": LANGGRAPH_STATE_MAX_ITERATIONS 
                     }
 
                     # Langgraph executes entirely within the Langfuse root_span
@@ -133,21 +145,21 @@ class AgentService:
                     root_span.update(
                         input={
                             "user_query": query,
-                            "project": final_project,
-                            "dataset": final_dataset
+                            "project": active_project_name,
+                            "dataset": active_datasets
                         },
                         output={"final_answer": agent_response.answer}
                     )
 
                     return agent_response
             except Exception as e:
-                # 🌟 Log the error BEFORE the 'with' block exits
+                # Log the error BEFORE the 'with' block exits
                 logger.error(f"Execution Error within Span: {e}")
                 raise # Re-raise to let the controller handle the HTTP response
 
 
     async def get_conversation_history(self, thread_id: uuid.UUID) -> dict:
-        """Retrieves the conversation history and execution data from the LangGraph checkpointer."""
+        """Retrieves the conversation history from the LangGraph checkpointer."""
         config: RunnableConfig = {
             "configurable": {
                 "thread_id": str(thread_id)
@@ -168,35 +180,21 @@ class AgentService:
             }
 
         state_values = state_snapshot.values
-
-        # 1. Extract the custom execution lists from your AgentState
-        rag_results = state_values.get("rag_results", [])
-        tool_results = state_values.get("tool_results", [])
-        web_results = state_values.get("web_results", [])
-
-        # 2. Format standard chat messages for the API response
-        raw_messages = state_values.get("messages", [])
         formatted_messages = []
-        
-        for msg in raw_messages:
-            msg_type = msg.type # Usually 'human', 'ai', 'tool', etc.
-            
-            # We only map human and AI messages here because your custom 
-            # tool_results array already holds the beautifully structured tool data
-            if msg_type in ["human", "ai"]:
+        for msg in state_values.get("messages", []):
+            if msg.type in ["human", "ai"]:
                 formatted_messages.append({
-                    "role": "user" if msg_type == "human" else "assistant",
+                    "role": "user" if msg.type == "human" else "assistant",
                     "content": msg.content
                 })
 
-        # 3. Return the rich payload
         return {
             "thread_id": thread_id,
             "messages": formatted_messages,
-            "rag_results": rag_results,
-            "tool_results": tool_results,
-            "web_results": web_results,
-            "summary": state_values.get("summary", "") # Optional: grab the rolling summary too!
+            "rag_results": state_values.get("rag_results", []),
+            "tool_results": state_values.get("tool_results", []),
+            "web_results": state_values.get("web_results", []),
+            "summary": state_values.get("summary", "")
         }
     
     async def _consolidate_sources(self, raw_sources: list) -> List[RAGSourceItem]:
@@ -219,4 +217,3 @@ class AgentService:
                 unique_sources[file_name].highest_score = max(current_max, score)
                 
         return list(unique_sources.values())
-

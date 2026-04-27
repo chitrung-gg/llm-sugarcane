@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from loguru import logger
 
 from app.configs.loggings.loggings import init_opentelemetry, setup_logging
-from app.configs.storage.databases import genome_connection_pool, langgraph_connection_pool
+from app.configs.storage.databases import genome_connection_pool, langgraph_connection_pool, userdata_connection_pool
 
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
@@ -15,7 +15,7 @@ from fastapi import FastAPI
 
 
 from app.core.app_container import get_container
-from app.api.v1 import chat_endpoint, ingestion_endpoint
+from app.api.v1 import chat_endpoint, ingestion_endpoint, workspace_endpoint
 
 
 @asynccontextmanager
@@ -27,6 +27,9 @@ async def lifespan(app: FastAPI):
     
     logger.info("🔌 Opening LangGraph PostgreSQL connection pool...")
     await langgraph_connection_pool.open()
+
+    logger.info("🔌 Opening UserData PostgreSQL connection pool...")
+    await userdata_connection_pool.open()
 
     # logger.info("🔌 Opening RustFS client ...")
     # await rustfs_client.__aenter__()
@@ -44,6 +47,9 @@ async def lifespan(app: FastAPI):
     logger.info("🔌 Closing LangGraph PostgreSQL connection pool...")
     await langgraph_connection_pool.close()
 
+    logger.info("🔌 Closing UserData PostgreSQL connection pool...")
+    await userdata_connection_pool.close()
+
     # logger.info("🔌 Closing RustFS client ...")
     # await rustfs_client.__aexit__(None, None, None)
 
@@ -56,6 +62,7 @@ FastAPIInstrumentor.instrument_app(app)
 
 app.include_router(chat_endpoint.router, prefix="/api/v1/agent")
 app.include_router(ingestion_endpoint.router, prefix="/api/v1/ingest")
+app.include_router(workspace_endpoint.router, prefix="/api/v1/workspace")
 
 @app.get("/")
 async def root():

@@ -93,6 +93,12 @@ class Settings(BaseSettings):
         validation_alias="LANGGRAPH_POSTGRES_URL"
     )
 
+    # --- User Data Postgres ---
+    userdata_postgres_url: str = Field(
+        default="postgresql://userdata:userdata@localhost:5432/sugarcane",
+        validation_alias="USERDATA_POSTGRES_URL"
+    )
+
     # --- KnowledgeGraph's Postgres ---
     knowledgegraph_postgres_url: str = Field(
         default="postgresql://knowledge:knowledge@localhost:5432/sugarcane",

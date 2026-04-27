@@ -11,6 +11,7 @@ class IngestionSourceType(StrEnum):
     # --- Manual & Local Sources ---
     CURATED_DOCUMENT = "curated_document"   # Uploaded PDFs/Files
     LOCAL_DATABASE = "local_database"       # Internal Postgres genome syncs
+    USER_GENOME = "user_genome"
     
     # --- Agentic Web Sources ---
     AGENT_WEB_SEARCH = "agent_web_search"   # SearXNG / General Web
