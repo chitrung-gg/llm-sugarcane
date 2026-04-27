@@ -35,7 +35,7 @@ def make_rag_node(
     vector_store_volatile: QdrantVectorStore,
     llm_service: LLMService
 ):
-    # @tracing(observation_type=ObservationType.RETRIEVER)
+    @tracing(observation_type=ObservationType.RETRIEVER)
     async def rag(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:
@@ -80,6 +80,7 @@ def make_rag_node(
         logger.debug(f"Executing Qdrant search with query: {optimized_query}")
 
         combined_results = []
+        project_name = state.get("active_project_name")
 
         # Fetch from both stores
         solid_results = await vector_store_solid.asimilarity_search_with_score(optimized_query, k=solid_k)
@@ -87,7 +88,17 @@ def make_rag_node(
             doc.page_content = f"[SOURCE TIER: CURATED (High Trust)] {doc.page_content}"
             doc.metadata["source_tier"] = "CURATED"
 
-        volatile_results = await vector_store_volatile.asimilarity_search_with_score(optimized_query, k=volatile_k)
+        volatile_filter = None
+        if project_name:
+            # Assumes your ingestion service now tags chunks with 'project_name'
+            volatile_filter = {"project_name": project_name}
+        
+        volatile_results = await vector_store_volatile.asimilarity_search_with_score(
+            optimized_query, 
+            k=volatile_k,
+            filter=volatile_filter
+        )
+
         for doc, score in volatile_results:
             doc.page_content = f"[SOURCE TIER: INFERRED/PROVISIONAL (Agent Discovery)] {doc.page_content}"
             doc.metadata["source_tier"] = "INFERRED"

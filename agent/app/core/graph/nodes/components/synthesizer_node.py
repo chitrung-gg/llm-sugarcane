@@ -23,17 +23,17 @@ from langgraph.types import Command
 # Define how the LLM should output its answer
 class SynthesizerOutput(BaseModel):
     answer: str = Field(
-        description="The detailed response to the user based on the provided contexts. Always politely explain if specific data could not be found. If the user asks for more information or a deep dive, provide a thorough, multi-paragraph technical explanation extracting all possible details from the context."
+        description="The detailed response to the user. If a background process was triggered (like indexing), confirm it to the user."
     )
     is_complete: bool = Field(
-        description="Set to True if you fully answered the query OR if you have exhausted the context and no further tools could possibly help. Set to False ONLY if you specifically need the Router to run a new tool you haven't tried yet."
+        description="Set to True if you fully answered the query OR if you have triggered the requested action (like retriggering a pipeline). Set to False ONLY if a tool failed and you need to try a DIFFERENT approach."
     )
     missing_info: str = Field(
-        description="If is_complete is False, explicitly state what specific information is missing so the Router can search for it next. If complete, leave empty."
+        description="If is_complete is False, explicitly state what specific information is missing."
     )
     
 def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
-    # @tracing(observation_type=ObservationType.CHAIN)
+    @tracing(observation_type=ObservationType.CHAIN)
     async def synthesizer(state: AgentState) -> Command[
         Literal[AgentGraphNode.SUMMARIZER, AgentGraphNode.ROUTER]
     ]:
@@ -47,15 +47,10 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         query = state["query"]
         messages = state.get("messages", [])
 
-        # Detect if this is the final allowed loop
         is_final_attempt = current_iteration >= max_iterations
 
-        # Extract the uploaded file text from the messages
-        file_context = ""
-        for msg in state.get("messages", []):
-            # Look for the SystemMessage created by the Input Analyzer
-            if getattr(msg, "content", "").startswith("The user has uploaded the following files"):
-                file_context = msg.content
+        #  Use file_context directly from state
+        file_context = state.get("file_context", "")
 
         # Format context
         rag_context = "\n".join([f"- [Doc: {r.get('source_file')}] {r.get('content')}" for r in state.get("rag_results", [])])
@@ -63,8 +58,8 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')}" for r in state.get("tool_results", [])])
 
         context_string = f"""
-            --- UPLOADED FILE CONTENT ---
-            {file_context if file_context else "No files uploaded."}
+            --- ACTIVE WORKSPACE/FILE CONTEXT ---
+            {file_context if file_context else "No active context."}
             
             --- RAG KNOWLEDGE ---
             {rag_context if rag_context else "No RAG data found."}
@@ -72,7 +67,7 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             --- WEB SEARCH RESULTS ---
             {web_context if web_context else "No web data found."}
 
-            --- TOOL OUTPUTS ---
+            --- TOOL OUTPUTS (Check here for successful actions) ---
             {tool_context if tool_context else "No tool data found."}
         """
 
@@ -141,34 +136,19 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         updates = {
             "final_answer": result.answer,
             "is_complete": result.is_complete,
-            # "iteration_count": current_iteration + 1 # Increment loop counter!
+            "messages": [AIMessage(content=result.answer)]
         }
         
-        last_intent = state.get("last_intent", "")
-        router_gave_up = (last_intent == "direct_answer")
-
-        # Evaluator-optimizer pattern
-        if is_final_attempt or router_gave_up:
-            if router_gave_up:
-                logger.warning("🛑 Router chose direct_answer. Forcing the graph to SUMMARIZER to prevent looping.")
-            else:
-                logger.error("🛑 Max iterations reached! Forcing the graph to SUMMARIZER.")
-                
-            updates["messages"] = [AIMessage(content=result.answer)]
+        # Determine destination
+        if is_final_attempt or result.is_complete or state.get("last_intent") == "direct_answer":
             destination = AgentGraphNode.SUMMARIZER
-            
-        elif result.is_complete:
-            logger.debug("✅ Answer complete. Sending to SUMMARIZER.")
-            updates["messages"] = [AIMessage(content=result.answer)]
-            destination = AgentGraphNode.SUMMARIZER
-            
         else:
             logger.warning("⚠️ Answer incomplete. Sending back to ROUTER.")
-            feedback_msg = AIMessage(
-                content=f"Internal Thought: I partially answered the user, but I am still missing: {result.missing_info}. "
-                        f"I need to route to a different tool to find this missing information."
-            )
-            updates["messages"] = [feedback_msg]
+            updates["messages"] = [
+                AIMessage(
+                    content=f"Thought: I am still missing info: {result.missing_info}"
+                )
+            ]
             destination = AgentGraphNode.ROUTER
 
         return Command(

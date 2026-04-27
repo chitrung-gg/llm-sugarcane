@@ -21,7 +21,7 @@ def make_router_node(
     llm_service: LLMService,
     available_tools: dict[str, BaseTool]
 ):
-    # @tracing(observation_type=ObservationType.CHAIN)
+    @tracing(observation_type=ObservationType.CHAIN)
     async def router(state: AgentState) -> Command[
         Literal[
             AgentGraphNode.RAG,
@@ -119,8 +119,32 @@ def make_router_node(
         
         intents_str = "\n            ".join(available_intents_list)
 
-        # 1. Base System Instructions (Includes File Context)
+        # 1. Build the Dynamic Workspace Context
+        active_project = state.get("active_project_name", "Default Project")
+        active_datasets = state.get("active_datasets", [])
+        
+        if not active_datasets:
+            workspace_str = f"ACTIVE PROJECT: {active_project}\nNo active genomic datasets selected."
+        else:
+            blocks = [f"=== ACTIVE WORKSPACE: {active_project} ==="]
+            for idx, ds in enumerate(active_datasets, 1):
+                source_type = "User Uploaded" if ds.get("is_user_uploaded") else "System Native"
+                block = (
+                    f"Dataset {idx}: {ds.get('dataset_name')} ({source_type})\n"
+                    f" - dataset_id: {ds.get('dataset_id')}\n"
+                    f" - fasta_uri: {ds.get('fasta_uri', 'N/A')}\n"
+                    f" - gff3_uri: {ds.get('gff3_uri', 'N/A')}"
+                )
+                blocks.append(block)
+            
+            blocks.append(
+                "CRITICAL: When running backend tools, you MUST use the exact `dataset_id` listed above."
+            )
+            workspace_str = "\n\n".join(blocks)
+
+        # 2. Format the Base System Instructions
         system_instructions = ROUTER_SYSTEM_INSTRUCTIONS.format(
+            workspace_context=workspace_str,
             file_context=state.get('file_context', 'No files uploaded.'),
             tool_list_str=tool_list_str,
             conversation_summary=state.get('summary', 'No summary available yet.')

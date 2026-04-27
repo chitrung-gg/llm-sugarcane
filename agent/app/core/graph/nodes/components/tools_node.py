@@ -16,7 +16,7 @@ from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.graph.state.agent_state import AgentState, ToolResult
 
 def make_tools_node(available_tools: dict[str, BaseTool]):
-    # @tracing(observation_type=ObservationType.TOOL)
+    @tracing(observation_type=ObservationType.TOOL)
     async def tools(state: AgentState) -> Command[
         Literal[AgentGraphNode.ENRICHMENT]
     ]:

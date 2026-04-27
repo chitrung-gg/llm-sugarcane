@@ -29,7 +29,7 @@ def make_web_search_node(
     llm_service: LLMService
 ):
     """Factory to create the web search node with injected dependency."""
-    # @tracing(observation_type=ObservationType.RETRIEVER)
+    @tracing(observation_type=ObservationType.RETRIEVER)
     async def web_search(state: AgentState) -> Command[
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:

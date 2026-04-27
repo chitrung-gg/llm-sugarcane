@@ -33,91 +33,50 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
         logger.debug(f"State keys: {list(state.keys())}")
         logger.debug(f"Query: {state.get('query')}")
 
-        files = state.get("uploaded_files", [])
-        logger.debug(f"Uploaded files count: {len(files)}")
-
         file_context = ""
         ephemeral_chunks = []
 
-        if files:
-            for f in files:
-                file_name = f.get('file_name', 'Unknown')
-                file_type = f.get('file_type', 'unknown')   # Trusted classification from initial_state
-                file_path = f.get('file_path')
-                local_content = f.get('local_content')
-                rustfs_uri = f.get('rustfs_uri')
-                description = f.get('description', '')
+        project = state.get("active_project_name", "Default Project")
+        datasets = state.get("active_datasets", [])
 
-                # 1. HEAVY GENOMIC DATASETS (Already in S3)
-                if file_type == UploadedFileType.GENOMIC_DATASET or rustfs_uri:
-                    logger.debug(f"🧬 {file_name} is a genomic dataset. Passing S3 URI to state.")
-                    file_context += INPUT_ANALYZER_GENOMIC_FILE_NOTE.format(
-                        file_name=file_name,
-                        rustfs_uri=rustfs_uri,
-                        description=description
-                    )
+        # Hierarchical Workspace Context Injection
+        workspace_header = f"### ACTIVE WORKSPACE CONTEXT\n- **Project**: {project}\n"
+        if datasets:
+            workspace_header += "- **Active Cultivars/Datasets**:\n"
+            for ds in datasets:
+                ds_name = ds.get('dataset_name', 'Unknown Cultivar')
+                ds_id = ds.get('dataset_id', 'N/A')
+                workspace_header += f"  - {ds_name} (ID: {ds_id})\n"
                 
-                # 2. LOCAL TEXT / SEQUENCES / SAMPLES
-                elif local_content:
-                    logger.debug(f"📝 {file_name} has local content available. Injecting directly.")
-                    file_context += f"--- Start of Content: {file_name} (Type: {file_type}) ---\nDescription: {description}\n{local_content}\n--- End of {file_name} ---\n\n"
-                    
-                    doc = Document(
-                        page_content=local_content,
-                        metadata={"source": file_name, "type": file_type}
-                    )
-                    ephemeral_chunks.append(doc)
-                    
-                # 3. DOCUMENTS REQUIRING OCR/DOCLING
-                elif file_type == UploadedFileType.CONTEXT_DOCUMENT and file_path:
-                    logger.debug(f"Parsing uploaded file with Docling: {file_name}")
-                    try:
-                        # Process heavy files in background thread to prevent blocking 
-                        chunks = await asyncio.to_thread(
-                            document_processor.process_and_get_chunks, file_path
-                        )
-                        parsed_text = "\n".join([chunk.page_content for chunk in chunks])
+                # List files associated with this cultivar
+                files = ds.get('files', [])
+                if files:
+                    workspace_header += "    Available Files:\n"
+                    for f in files:
+                        f_name = f.get('file_name')
+                        f_type = f.get('file_type')
+                        f_uri = f.get('rustfs_uri')
+                        workspace_header += f"    * {f_name} (Type: {f_type}, URI: {f_uri})\n"
+        
+        file_context += workspace_header + "\n"
 
-                        if len(parsed_text) > settings.gemini_max_input_token:
-                            logger.warning(f"⚠️ {file_name} is massive. Saving to RAM for local BM25 search.")
-                            ephemeral_chunks.extend(chunks)
-                            file_context += INPUT_ANALYZER_MASSIVE_FILE_NOTE.format(
-                                file_name=file_name
-                            )
-                        else:    
-                            logger.debug(f"📄 {file_name} parsed successfully. Injecting directly.")
-                            file_context += f"--- Start of Content: {file_name} (Type: {file_type}) ---\n{parsed_text}\n--- End of {file_name} ---\n\n"
-
-                    except Exception as e:
-                        logger.exception(f"Failed to parse uploaded file {file_name}")
-                        file_context += f"--- Start of Content: {file_name} ---\n[Error: Could not extract text from this file.]\n--- End of {file_name} ---\n\n"
-                
-                # Failsafe
-                else:
-                    logger.warning(f"❓ File {file_name} lacked expected fields for type '{file_type}'.")
-            if file_context:
-                file_context = f"{INPUT_ANALYZER_FILE_CONTEXT_HEADER}{file_context}"
-                logger.debug("Successfully extracted file content.")
-        else:
-            logger.debug("No uploaded files provided")
+        # Note: 'uploaded_files' is now legacy/ephemeral. 
+        # Most data now flows through 'active_datasets' (NotebookLM pattern).
+        # legacy_files = state.get("uploaded_files", [])
+        # if legacy_files:
+        #     # ... process legacy files if needed ...
+        #     pass
 
         current_iter = state.get("iteration_count", 0)
         max_iter = state.get("max_iterations")
 
-        logger.debug(f"Iteration count: {current_iter}")
-        logger.debug(f"Max iterations: {max_iter}")
-
-        elapsed = int((time.time() - start_time) * 1000)
-        logger.debug(f"Input Analyzer execution time: {elapsed} ms")
+        logger.debug(f"Input Analyzer execution time: {int((time.time() - start_time) * 1000)} ms")
 
         return Command(
             goto=AgentGraphNode.ROUTER,
             update={
-                # System instructions/context about files for the Router
-                "file_context": file_context, # Store in separate field
+                "file_context": file_context,
                 "uploaded_chunks": ephemeral_chunks,
-
-                # Reset standard ReAct loop variables for the new run
                 "tool_results": [],
                 "web_results": [],
                 "rag_results": [],

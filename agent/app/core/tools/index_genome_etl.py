@@ -1,4 +1,5 @@
 import httpx
+import uuid
 from typing import Optional
 from langchain_core.tools import tool
 from app.core.tools.registry.registry_tool import register_agent_tool
@@ -10,29 +11,39 @@ async def index_new_genome(
     s3_uri: str, 
     genome_name: str, 
     file_type: str,
-    project_name: Optional[str] = None,
-    dataset_name: Optional[str] = None
+    dataset_id: uuid.UUID,
+    is_public: bool = False,
+    user_id: Optional[uuid.UUID] = None
 ) -> dict:
     """
-    Triggers the backend ETL pipeline to parse, embed, and index a newly uploaded genome file.
-    Use this immediately after a user uploads a .fasta or .gff3 file that needs processing.
-    
-    Args:
-        s3_uri: The S3 location of the file.
-        genome_name: The display name for this genome.
-        file_type: 'fasta' or 'gff3'.
-        project_name: The top-level workspace/project name.
-        dataset_name: The specific cultivar/dataset name.
+        Triggers the backend ETL pipeline to process and index genomic data files from S3.
+        Use this tool after a user uploads a genomic file to RustFS/S3 to make it searchable and 
+        available for bioinformatics analysis (BLAST, Synteny, Primer Design).
+        
+        Args:
+            s3_uri: The S3 location of the file (e.g., 's3://bucket/path/file.fasta.gz').
+            genome_name: The display name or variety/cultivar name of the genome.
+            file_type: The semantic type of the file:
+                - 'genome' or 'assembly': Main genomic sequence (FASTA). Triggers BLAST indexing and N50 analysis.
+                - 'gff3': Annotation file. Triggers gene feature parsing and semantic extraction for AI search.
+                - 'cds': Coding sequences (FASTA).
+                - 'protein': Protein sequences (FASTA).
+                - 'gene': Gene-specific sequences (FASTA).
+            dataset_id: The unique ID of the Cultivar/Dataset container.
+            is_public: Set to True for system-wide reference genomes, False for private user variants.
+            user_id: The unique ID of the owner. Mandatory if is_public is False.
     """
     settings = get_settings()
     url = f"{settings.genome_backend_api_url}/api/v1/etl/trigger-genome"
     
+    # 🌟 Updated to work with the full DTO format
     payload = {
         "s3_uri": s3_uri,
         "genome_name": genome_name,
         "file_type": file_type,
-        "project_name": project_name,
-        "dataset_name": dataset_name
+        "dataset_id": str(dataset_id),
+        "is_public": is_public,
+        "user_id": str(user_id) if user_id else None
     }
     
     try:
