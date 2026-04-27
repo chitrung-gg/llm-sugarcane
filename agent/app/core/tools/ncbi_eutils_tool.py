@@ -474,9 +474,9 @@ def build_eutils_params(**kwargs) -> Dict[str, Any]:
     """Helper function to cleanly pass params via aiohttp instead of manual URL building."""
     params = kwargs.copy()
     
-    if settings.ncbi_tool:
-        # NCBI STRICT RULE: Tool name must NOT contain spaces
-        raw_tool = _unwrap_secret(settings.ncbi_tool)
+    if settings.ncbi_agent_name:
+        # Agent tool name to declare for NCBI must NOT contain spaces
+        raw_tool = _unwrap_secret(settings.ncbi_agent_name)
         params['tool'] = raw_tool.replace(" ", "_")
         
     if settings.ncbi_email:

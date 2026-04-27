@@ -15,7 +15,6 @@ from app.core.tools.registry.registry_tool import get_agent_tools, register_agen
 from app.services.knowledge.knowledge_service import KnowledgeService
 from app.services.agent.agent_service import AgentService
 from app.core.tools.ncbi_eutils_tool import get_gene_metadata_by_symbol, search_literature_for_traits, search_ncbi_genome
-from app.core.tools.openapi_tool import build_openapi_tools
 from app.core.graph.graph import build_agent_graph
 from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
@@ -63,7 +62,7 @@ class AppContainer:
         await self._init_llm_service() 
         await self._init_rustfs_session()
         await self._init_searx_wrapper()
-        await self._init_ncbi_tools()
+        # await self._init_ncbi_tools()
         
         # 2. Databases & Storage
         await self._init_embedding_model()
@@ -217,8 +216,8 @@ class AppContainer:
         register_agent_tool(self._graph_rag_tool)
         
         # Register dynamic tools (like NCBI)
-        for t in self.ncbi_tools:
-            register_agent_tool(t)
+        # for t in self.ncbi_tools:
+        #     register_agent_tool(t)
 
         self._agent_graph = await build_agent_graph(
             llm_service=self.llm_service,
@@ -234,16 +233,16 @@ class AppContainer:
         """Initialize RustFS session (S3 compatible)"""
         self._rustfs_session = rustfs_session
 
-    async def _init_ncbi_tools(self):
-        """Initialize dynamic tools from NCBI OpenAPI spec."""
-        settings = get_settings()
-        api_key = settings.ncbi_api_key.get_secret_value() if settings.ncbi_api_key else None
+    # async def _init_ncbi_tools(self):
+    #     """Initialize dynamic tools from NCBI OpenAPI spec."""
+    #     settings = get_settings()
+    #     api_key = settings.ncbi_api_key.get_secret_value() if settings.ncbi_api_key else None
         
-        self._ncbi_tools = build_openapi_tools(
-            llm=self.llm_service.get_primary_model(),
-            openapi_yaml_path=settings.ncbi_openapi_yaml_path,
-            api_key=api_key
-        )
+    #     self._ncbi_tools = build_openapi_tools(
+    #         llm=self.llm_service.get_primary_model(),
+    #         openapi_yaml_path=settings.ncbi_openapi_yaml_path,
+    #         api_key=api_key
+    #     )
     
 
     # --- Public accessors ---
@@ -317,9 +316,9 @@ class AppContainer:
         assert self._rustfs_session, "Container not initialized (RustFSClient missing)"
         return self._rustfs_session
     
-    @property
-    def ncbi_tools(self) -> List[BaseTool]:
-        return self._ncbi_tools
+    # @property
+    # def ncbi_tools(self) -> List[BaseTool]:
+    #     return self._ncbi_tools
 
 # Singleton instance
 _container = AppContainer()

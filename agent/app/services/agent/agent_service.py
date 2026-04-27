@@ -14,8 +14,9 @@ from langfuse.langchain import CallbackHandler
 from loguru import logger
 from opentelemetry import trace
 
+from app.utils.observability.tracing import tracing
 from app.services.workspace.workspace_service import WorkspaceService
-from app.common.constants import LANGFUSE_GRAPH_OBSERVATION_NAME, LANGGRAPH_STATE_MAX_ITERATIONS
+from app.common.constants import LANGFUSE_GRAPH_OBSERVATION_NAME, LANGGRAPH_STATE_MAX_ITERATIONS, ObservationType
 from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
 from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem
@@ -35,6 +36,8 @@ class AgentService:
         self.langfuse_client = langfuse_client
         self.settings = get_settings()
 
+
+    @tracing(observation_type=ObservationType.AGENT)
     async def process_langgraph_chat(
         self,
         thread_id: uuid.UUID,

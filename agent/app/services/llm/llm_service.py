@@ -44,7 +44,7 @@ class LLMService(BaseModel):
         common_config = {
             "google_api_key": api_key,
             "temperature": 0.0,
-            "max_retries": 0,  # We'll use LangChain's with_retry instead of the basic provider retry
+            # "max_retries": settings.llm_max_retries,  # We'll use LangChain's with_retry instead of the basic provider retry
             "timeout": settings.llm_timeout,  
         }
         
@@ -98,14 +98,14 @@ class LLMService(BaseModel):
     
     def get_structured_secondary_model(self, schema: Type[BaseModel]) -> Runnable:
         """Returns a primary model configured with structured output AND retry logic."""
-        return self._primary_model.with_structured_output(schema).with_retry(**self._retry_config)
+        return self._secondary_model.with_structured_output(schema).with_retry(**self._retry_config)
     
     def get_structured_tertiary_model(self, schema: Type[BaseModel]) -> Runnable:
         """Returns a primary model configured with structured output AND retry logic."""
-        return self._primary_model.with_structured_output(schema).with_retry(**self._retry_config)
+        return self._tertiary_model.with_structured_output(schema).with_retry(**self._retry_config)
     
     def get_structured_quaternary_model(self, schema: Type[BaseModel]) -> Runnable:
         """Returns a primary model configured with structured output AND retry logic."""
-        return self._primary_model.with_structured_output(schema).with_retry(**self._retry_config)
+        return self._quaternary_model.with_structured_output(schema).with_retry(**self._retry_config)
     
     

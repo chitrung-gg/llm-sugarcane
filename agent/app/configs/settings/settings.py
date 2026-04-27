@@ -24,8 +24,12 @@ class Settings(BaseSettings):
         default="gemini-3-flash-preview", 
         validation_alias="GEMINI_PRIMARY_MODEL"
     )
+    # gemini_secondary_model: str = Field(
+    #     default="gemini-3.1-flash-lite-preview", 
+    #     validation_alias="GEMINI_SECONDARY_MODEL"
+    # )
     gemini_secondary_model: str = Field(
-        default="gemini-3.1-flash-lite-preview", 
+        default="gemini-2.5-flash", 
         validation_alias="GEMINI_SECONDARY_MODEL"
     )
     gemini_tertiary_model: str = Field(
@@ -116,7 +120,7 @@ class Settings(BaseSettings):
 
     # --- LLM Service ---
     llm_max_retries: int = 3
-    llm_timeout: int = 30
+    llm_timeout: int = 1000
 
     # --- Log ---
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
@@ -156,11 +160,11 @@ class Settings(BaseSettings):
     )
 
     # --- NCBI Tool ---
-    ncbi_openapi_yaml_path: str = Field(
-        default="resources/ncbi_dataset_openapi_truncated.yaml", 
-        validation_alias="NCBI_OPENAPI_YAML_PATH"
-    )
-    ncbi_tool: SecretStr | None = Field(
+    # ncbi_openapi_yaml_path: str = Field(
+    #     default="resources/ncbi_dataset_openapi_truncated.yaml", 
+    #     validation_alias="NCBI_OPENAPI_YAML_PATH"
+    # )
+    ncbi_agent_name: SecretStr | None = Field(
         default=None, 
         validation_alias="NCBI_TOOL"
     )
