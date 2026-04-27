@@ -12,6 +12,19 @@ from opentelemetry.semconv.attributes import service_attributes
 
 from app.configs.settings.settings import get_settings
 
+class StreamToLogger:
+    """Fake file-like stream object that redirects writes to a logger instance."""
+    def __init__(self, logger, log_level=logging.INFO):
+        self.logger = logger
+        self.log_level = log_level
+
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.log_level, line.rstrip())
+
+    def flush(self):
+        pass  # Standard stdout has a flush method
+
 class InterceptHandler(logging.Handler):
     """
     Intercepts standard Python logging messages and routes them to Loguru.
@@ -104,6 +117,9 @@ def setup_logging():
     #     colorize=False        # Disable color codes for file logs so they are readable in text editors
     # )
 
+    # Redirect all print() to logger
+    sys.stdout = StreamToLogger(logger, logging.INFO)
+
     # Intercept everything at the root logger level
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 
@@ -123,13 +139,15 @@ def setup_logging():
         "RapidOCR",
         "onnxruntime",
         "urllib3", # Catches those HTTP GET logs from RapidOCR
+        "deepeval",
     )
-
+    
     for logger_name in loggers_to_hijack:
         hijacked_logger = logging.getLogger(logger_name)
         hijacked_logger.handlers = [InterceptHandler()]
         hijacked_logger.propagate = False # Prevent double-logging
-        
+
+       
         # We let Loguru handle the filtering, so we set standard loggers to lowest level
         hijacked_logger.setLevel(logging.DEBUG)
     

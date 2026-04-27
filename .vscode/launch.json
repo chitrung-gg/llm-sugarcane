@@ -5,6 +5,45 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Next.js: debug server-side",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run dev",
+            "cwd": "${workspaceFolder}/frontend"
+        },
+        {
+            "name": "Python: Debug RAG Evaluations",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/agent/evaluation/rag_test.py",
+            "cwd": "${workspaceFolder}/agent",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/agent"
+            },
+            "envFile": "${workspaceFolder}/agent/.env",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        // {
+        //     "name": "Next.js: debug client-side",
+        //     "type": "chrome",
+        //     "request": "launch",
+        //     "url": "http://localhost:3000",
+        //     "webRoot": "${workspaceFolder}/frontend"
+        // },
+        // {
+        //     "name": "Next.js: debug full stack",
+        //     "type": "node-terminal",
+        //     "request": "launch",
+        //     "command": "npm run dev",
+        //     "cwd": "${workspaceFolder}/frontend",
+        //     "serverReadyAction": {
+        //         "pattern": "- Local: +http://localhost:([0-9]+)",
+        //         "uriFormat": "http://localhost:%s",
+        //         "action": "debugWithChrome"
+        //     }
+        // },
+        {
             "name": "Python Debugger: Debug Sugarcane Genome Agent",
             "type": "debugpy",
             "request": "launch",

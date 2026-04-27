@@ -53,7 +53,8 @@ def make_rag_node(
                                    
         # 1. Query Optimization
         system_prompt = RAG_QUERY_OPTIMIZATION_PROMPT.format(
-            conversation_summary=state.get("summary", "No prior context.")
+            conversation_summary=state.get("summary", "No prior context."),
+            user_question=original_query
         )
 
         messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
