@@ -13,6 +13,7 @@ class UserProject(SQLModel, table=True):
     __tablename__: ClassVar[Any] = "user_projects"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(index=True, description="UUID of the user who owns this project")
     
     # Names are just labels now, not structural keys
     name: str = Field(index=True) 

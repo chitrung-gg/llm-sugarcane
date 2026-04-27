@@ -8,7 +8,7 @@ from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.configs.storage.databases import userdata_connection_pool
 from app.models.user.user_project import UserProject
 from app.models.user.user_dataset import UserDataset, UserDatasetFile
-from app.common.constants import UploadedFileType
+from app.common.constants import SYSTEM_OWNER_ID, UploadedFileType
 
 class WorkspaceService:
     """Handles CRUD for user projects, datasets (cultivars), and files."""
@@ -20,6 +20,7 @@ class WorkspaceService:
     async def create_project(
         self, 
         name: str, 
+        owner_id: uuid.UUID = SYSTEM_OWNER_ID,
         description: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> UserProject:
@@ -27,12 +28,12 @@ class WorkspaceService:
             project_id = uuid.uuid4()
             await conn.execute(
                 """
-                INSERT INTO user_projects (id, name, description, dataset_metadata, created_at)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO user_projects (id, owner_id, name, description, dataset_metadata, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
-                (project_id, name, description, json.dumps(metadata) if metadata else None, datetime.now())
+                (project_id, owner_id, name, description, json.dumps(metadata) if metadata else None, datetime.now())
             )
-            return UserProject(id=project_id, name=name, description=description, dataset_metadata=metadata)
+            return UserProject(id=project_id, owner_id=owner_id, name=name, description=description, dataset_metadata=metadata)
 
     async def get_projects(self) -> List[UserProject]:
         async with userdata_connection_pool.connection() as conn:

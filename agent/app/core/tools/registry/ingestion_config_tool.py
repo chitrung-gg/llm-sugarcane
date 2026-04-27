@@ -15,4 +15,5 @@ class IngestionConfig(BaseModel):
     )
 
     skip_relevance_check: bool = Field(default=False)
+    is_public: bool = Field(default=False, description="Whether the data from this source is public/system-wide.")
 

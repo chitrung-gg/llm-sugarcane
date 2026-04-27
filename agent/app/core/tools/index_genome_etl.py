@@ -1,9 +1,47 @@
 import httpx
 import uuid
-from typing import Optional
+from typing import Optional, Dict, Any
 from langchain_core.tools import tool
 from app.core.tools.registry.registry_tool import register_agent_tool
 from app.configs.settings.settings import get_settings
+
+async def trigger_genome_indexing(
+    s3_uri: str, 
+    genome_name: str, 
+    file_type: str,
+    dataset_id: uuid.UUID,
+    is_public: bool = False,
+    user_id: Optional[uuid.UUID] = None
+) -> Dict[str, Any]:
+    """Underlying implementation for genome indexing trigger."""
+    settings = get_settings()
+    url = f"{settings.genome_backend_api_url}/api/v1/etl/trigger-genome"
+    
+    payload = {
+        "s3_uri": s3_uri,
+        "genome_name": genome_name,
+        "file_type": file_type,
+        "dataset_id": str(dataset_id),
+        "is_public": is_public,
+        "user_id": str(user_id) if user_id else None
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            
+            return {
+                "status": "SUCCESS",
+                "message": f"Successfully triggered indexing pipeline for {genome_name}.",
+                "job_id": data.get("run_id")
+            }
+    except Exception as e:
+        return {
+            "status": "ERROR",
+            "message": f"Failed to contact the processing server: {str(e)}"
+        }
 
 @register_agent_tool
 @tool
@@ -33,32 +71,11 @@ async def index_new_genome(
             is_public: Set to True for system-wide reference genomes, False for private user variants.
             user_id: The unique ID of the owner. Mandatory if is_public is False.
     """
-    settings = get_settings()
-    url = f"{settings.genome_backend_api_url}/api/v1/etl/trigger-genome"
-    
-    # 🌟 Updated to work with the full DTO format
-    payload = {
-        "s3_uri": s3_uri,
-        "genome_name": genome_name,
-        "file_type": file_type,
-        "dataset_id": str(dataset_id),
-        "is_public": is_public,
-        "user_id": str(user_id) if user_id else None
-    }
-    
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            
-            return {
-                "status": "SUCCESS",
-                "message": f"Successfully triggered indexing pipeline for {genome_name}.",
-                "job_id": data.get("run_id")
-            }
-    except Exception as e:
-        return {
-            "status": "ERROR",
-            "message": f"Failed to contact the processing server: {str(e)}"
-        }
+    return await trigger_genome_indexing(
+        s3_uri=s3_uri,
+        genome_name=genome_name,
+        file_type=file_type,
+        dataset_id=dataset_id,
+        is_public=is_public,
+        user_id=user_id
+    )

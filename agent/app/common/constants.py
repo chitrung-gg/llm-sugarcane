@@ -1,7 +1,11 @@
+import uuid
 from enum import StrEnum
 from pathlib import Path
 from typing import Final, Set
 
+
+# --- 0. GLOBAL IDS ---
+SYSTEM_OWNER_ID: Final[uuid.UUID] = uuid.UUID("00000000-0000-0000-0000-000000000000")
 
 # Langgraph
 LANGGRAPH_STATE_MAX_ITERATIONS = 3

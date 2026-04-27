@@ -10,12 +10,14 @@ from app.models.user.user_project import UserProject
 from app.models.user.user_dataset import UserDataset
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.core.vector_store.vector_store import VectorStoreType
+from app.common.constants import SYSTEM_OWNER_ID
 
 router = APIRouter()
 
 @router.post("/projects", response_model=UserProject, status_code=status.HTTP_201_CREATED)
 async def create_project(
     name: str = Form(...), 
+    user_id: uuid.UUID = Form(SYSTEM_OWNER_ID, description="UUID of the owner"),
     description: Optional[str] = Form(None),
     metadata: Optional[str] = Form(None, description="JSON string of project metadata"),
     workspace_service: WorkspaceService = Depends(get_workspace_service)
@@ -28,7 +30,7 @@ async def create_project(
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid JSON for metadata")
             
-    return await workspace_service.create_project(name, description, parsed_metadata)
+    return await workspace_service.create_project(name, user_id, description, parsed_metadata)
 
 @router.get("/projects", response_model=List[UserProject])
 async def list_projects(
@@ -80,8 +82,9 @@ async def list_project_datasets(
 async def upload_dataset_files(
     dataset_id: uuid.UUID,
     files: List[UploadFile] = File(...),
+    user_id: uuid.UUID = Form(SYSTEM_OWNER_ID, description="UUID of the user"),
     files_metadata: Optional[str] = Form(None, description="JSON mapping of filename to metadata"),
-    source_type: IngestionSourceType = Form(IngestionSourceType.USER_GENOME),
+    source_type: IngestionSourceType = Form(IngestionSourceType.USER_PRIVATE_GENOME),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service),
     workspace_service: WorkspaceService = Depends(get_workspace_service)
 ):
@@ -102,6 +105,7 @@ async def upload_dataset_files(
         files=files,
         source_type=source_type,
         vector_store=VectorStoreType.VOLATILE,
+        user_id=user_id,
         project_id=dataset.project_id,
         dataset_id=dataset_id,
         files_metadata=parsed_files_metadata

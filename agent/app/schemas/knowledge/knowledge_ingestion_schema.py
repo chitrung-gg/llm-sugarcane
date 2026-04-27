@@ -8,13 +8,18 @@ class IngestionConfidenceTier(StrEnum):
 
 
 class IngestionSourceType(StrEnum):
-    # --- Manual & Local Sources ---
-    CURATED_DOCUMENT = "curated_document"   # Uploaded PDFs/Files
-    LOCAL_DATABASE = "local_database"       # Internal Postgres genome syncs
-    USER_GENOME = "user_genome"
+    # --- System & Reference Sources (Public/Global) ---
+    SYSTEM_REFERENCE_GENOME = "system_reference_genome"
+    SYSTEM_CURATED_DOCUMENT = "system_curated_document"
+    SYSTEM_DATABASE = "system_database"
     
-    # --- Agentic Web Sources ---
-    AGENT_WEB_SEARCH = "agent_web_search"   # SearXNG / General Web
+    # --- User & Private Sources (Scoped to User/Project) ---
+    USER_PRIVATE_GENOME = "user_private_genome"
+    USER_PRIVATE_DOCUMENT = "user_private_document"
+    USER_PRIVATE_DATABASE = "user_private_database"
+    
+    # --- Agentic & Temporary Sources ---
+    AGENT_WEB_SEARCH = "agent_web_search"
     
     # --- Agentic NCBI APIs ---
     NCBI_LITERATURE = "ncbi_literature"     # PubMed Abstracts

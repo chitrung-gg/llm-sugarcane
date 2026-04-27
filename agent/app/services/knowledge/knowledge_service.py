@@ -17,9 +17,11 @@ from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.core.vector_store.vector_store import VectorStoreType
 from app.core.workers.celery import celery
 from app.configs.storage.databases import userdata_connection_pool
-from app.utils.files.files_classifier import is_genomic_file, is_knowledge_file
+from app.utils.files.files_classifier import is_genomic_file, is_knowledge_file, get_genomic_file_type
 from app.utils.files.files_validator import validate_genomic_file, validate_knowledge_file
 from app.services.workspace.workspace_service import WorkspaceService
+from app.common.constants import SYSTEM_OWNER_ID
+from app.core.tools.index_genome_etl import trigger_genome_indexing
 
 class KnowledgeService:
     """
@@ -36,6 +38,7 @@ class KnowledgeService:
         files: List[UploadFile], 
         source_type: IngestionSourceType, 
         vector_store: VectorStoreType,
+        user_id: uuid.UUID = SYSTEM_OWNER_ID,
         project_id: Optional[uuid.UUID] = None,
         dataset_id: Optional[uuid.UUID] = None,
         files_metadata: Optional[Dict[str, Any]] = None # Mapping of filename -> metadata dict
@@ -109,7 +112,30 @@ class KnowledgeService:
                             file_metadata=this_file_meta
                         )
 
-                    # 5. Trigger Celery Task
+                    # 5. Trigger Backend ETL for Genomic Files
+                    if source_type in [IngestionSourceType.USER_PRIVATE_GENOME, IngestionSourceType.SYSTEM_REFERENCE_GENOME] and dataset_id:
+                        logger.info(f"Triggering backend genomic ETL for: {original_filename}")
+                        
+                        genomic_type = get_genomic_file_type(original_filename)
+                        
+                        etl_result = await trigger_genome_indexing(
+                            s3_uri=target_uri,
+                            genome_name=original_filename, # User can rename later
+                            file_type=genomic_type,
+                            dataset_id=dataset_id,
+                            is_public=(source_type == IngestionSourceType.SYSTEM_REFERENCE_GENOME),
+                            user_id=user_id
+                        )
+                        
+                        dispatched_tasks.append({
+                            "file": original_filename,
+                            "status": etl_result.get("status"),
+                            "message": etl_result.get("message"),
+                            "job_id": etl_result.get("job_id")
+                        })
+                        continue
+
+                    # 6. Trigger Celery Task for Knowledge Documents
                     logger.info(f"Dispatching ingestion task for {target_uri}")
                     task = celery.send_task(
                         "llm.tasks.process_document_ingestion",
@@ -119,6 +145,7 @@ class KnowledgeService:
                                 "original_filename": original_filename,
                                 "source_type": source_type.value,
                                 "vector_store": vector_store.value,
+                                "owner_id": str(user_id),
                                 "project_id": str(project_id) if project_id else None,
                                 "dataset_id": str(dataset_id) if dataset_id else None
                             }

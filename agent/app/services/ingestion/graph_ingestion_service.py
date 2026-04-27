@@ -17,6 +17,7 @@ from app.configs.storage.databases import genome_connection_pool
 from langchain_qdrant import QdrantVectorStore
 from langchain_neo4j.graphs.graph_document import GraphDocument, Node, Relationship
 from langchain_core.documents import Document
+from app.common.constants import SYSTEM_OWNER_ID
 
 
 class GraphIngestionService:
@@ -43,7 +44,9 @@ class GraphIngestionService:
         self,
         source_text: str, 
         source_metadata: Optional[Dict[str, Any]] = None,
-        project_name: Optional[str] = None
+        project_name: Optional[str] = None,
+        owner_id: uuid.UUID = SYSTEM_OWNER_ID,
+        is_public: Optional[bool] = None
     ):
         try:
             source_meta = source_metadata or {}
@@ -54,19 +57,20 @@ class GraphIngestionService:
             if not tool_config:
                 logger.info(f"Source '{tool_name}' not in registry. Defaulting to general text ingestion.")
                 # We dynamically construct a config for unstructured/unregistered text
-                # Make sure the Enum values match your IngestionSourceType/IngestionConfidenceTier schemas
                 tool_config = IngestionConfig(
                     vector_store_type=VectorStoreType.SOLID, 
-                    source_type_label=IngestionSourceType.CURATED_DOCUMENT, # Or GENERAL_TEXT depending on your schema
-                    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED, # Baseline trust for unregistered sources
-                    skip_relevance_check=False # Forces the LLM to strictly evaluate relevance
+                    source_type_label=IngestionSourceType.USER_PRIVATE_DOCUMENT if owner_id != SYSTEM_OWNER_ID else IngestionSourceType.SYSTEM_CURATED_DOCUMENT,
+                    ingestion_confidence_tier=IngestionConfidenceTier.INFERRED, 
+                    skip_relevance_check=False,
+                    is_public=False if owner_id != SYSTEM_OWNER_ID else True
                 )
+            
+            # Use provided is_public or default to tool_config
+            final_is_public = is_public if is_public is not None else tool_config.is_public
 
             # Fast-fail: Do not ingest tool error messages or "not found" results.
-            # This saves LLM tokens and prevents garbage data in your databases.
-            text_lower = source_text.strip().lower()
             if not self._is_ingestable_payload(source_text):
-                logger.debug(f"Graph Ingestion Aborted: Output from {tool_name} failed heuristic checks (likely a tool error or empty result).")
+                logger.debug(f"Graph Ingestion Aborted: Output from {tool_name} failed heuristic checks.")
                 return
             
             # 2. Extract Data via LLM
@@ -77,7 +81,7 @@ class GraphIngestionService:
                 logger.warning(f"Ingestion Aborted: Output from {tool_name} is not domain relevant.")
                 return
             
-            # 3.1. USE LLM CONFIDENCE: If the text is pure garbage, abort to save DB space
+            # 3.1. USE LLM CONFIDENCE
             if components.overall_confidence < 0.4:
                 logger.warning(f"Ingestion Aborted: LLM Overall Confidence too low ({components.overall_confidence}).")
                 return
@@ -99,7 +103,7 @@ class GraphIngestionService:
             node_registry = {}
 
             # 5. Save to PostgreSQL
-            logger.info("Saving to PostgreSQL...")
+            logger.info(f"Saving to PostgreSQL (Owner: {owner_id}, Public: {final_is_public})...")
             async with genome_connection_pool.connection() as conn:
                 for node in components.nodes:
                     if node.label not in self.allowed_labels:
@@ -113,54 +117,52 @@ class GraphIngestionService:
                         "description": node.description,
                         "aliases": node.aliases,
                         "recent_source": source_meta,
-                        "llm_overall_confidence": components.overall_confidence # Track it in Postgres!
+                        "llm_overall_confidence": components.overall_confidence
                     })
                     
-                    # Upsert Postgres: || operator merges JSONB, retaining old keys while updating new ones
+                    # Upsert Postgres with composite unique constraint (name, owner_id)
                     await conn.execute(
                         """
-                        INSERT INTO knowledge_entities (global_id, name, entity_type, knowledge_entities_metadata)
-                        VALUES (%s, %s, %s, %s::jsonb)
-                        ON CONFLICT (name) DO UPDATE 
+                        INSERT INTO knowledge_entities (global_id, name, entity_type, owner_id, is_public, knowledge_entities_metadata)
+                        VALUES (%s, %s, %s, %s, %s, %s::jsonb)
+                        ON CONFLICT (name, owner_id) DO UPDATE 
                         SET entity_type = EXCLUDED.entity_type,
+                            is_public = EXCLUDED.is_public,
                             knowledge_entities_metadata = COALESCE(knowledge_entities.knowledge_entities_metadata, '{}'::jsonb) || EXCLUDED.knowledge_entities_metadata
                         RETURNING global_id
                         """,
-                        (global_id, node.name, node.label, meta_payload)
+                        (global_id, node.name, node.label, owner_id, final_is_public, meta_payload)
                     )
 
             # 6. Save to Neo4j
             logger.info("Saving to Neo4j safely via LangChain...")
-            # 6.1. Convert your custom Pydantic Nodes into LangChain Nodes
             langchain_nodes = {}
             for node in components.nodes:
                 if node.name in node_registry:
                     node_info = node_registry[node.name]
                     
-                    # Langchain's Node safely escapes labels and properties
                     lc_node = Node(
-                        id=node.name, # Primary match key
+                        id=f"{node.name}_{owner_id}", # Scoped ID for Neo4j
                         type=node_info['label'], 
                         properties={
-                            "global_id": str(node_info['id']), # Syncs with Postgres/Qdrant
+                            "name": node.name,
+                            "global_id": str(node_info['id']),
+                            "owner_id": str(owner_id),
+                            "is_public": final_is_public,
                             "description": node.description
                         }
                     )
                     langchain_nodes[node.name] = lc_node
 
-            # 6.2. Convert your custom Pydantic Relationships into LangChain Relationships
             langchain_rels = []
             for rel in components.relationships:
-                # Filter out weak relationships right at the edge!
                 if rel.confidence < 0.4:
-                    logger.debug(f"Skipping weak relationship: {rel.source_name} -> {rel.target_name} (Conf: {rel.confidence})")
                     continue
 
                 if rel.source_name in langchain_nodes and rel.target_name in langchain_nodes:
                     source_node = langchain_nodes[rel.source_name]
                     target_node = langchain_nodes[rel.target_name]
                     
-                    # LangChain safely sanitizes the relationship type
                     safe_type = rel.type.strip().upper().replace(" ", "_").replace("-", "_")
                     
                     lc_rel = Relationship(
@@ -170,23 +172,23 @@ class GraphIngestionService:
                         properties={
                             "evidence": rel.evidence,
                             "context": rel.context,
-                            "confidence": rel.confidence,  # The Semantic Trust (From LLM)
+                            "confidence": rel.confidence,
+                            "owner_id": str(owner_id),
+                            "is_public": final_is_public,
                             "source_type": tool_config.source_type_label, 
-                            "source_tier": tool_config.ingestion_confidence_tier.value, # The Structural Trust
+                            "source_tier": tool_config.ingestion_confidence_tier.value,
                             "tool_used": tool_name
                         }
                     )
                     langchain_rels.append(lc_rel)
 
-            # 6.3. Create a GraphDocument and let LangChain handle the complex MERGE logic!
             if langchain_rels:
                 graph_document = GraphDocument(
                     nodes=list(langchain_nodes.values()),
                     relationships=langchain_rels,
-                    source=Document(page_content=source_text) # Keeps track of where this came from
+                    source=Document(page_content=source_text)
                 )
 
-                # This single line safely upserts the nodes and relationships into Neo4j
                 await asyncio.to_thread(
                     self.knowledge_graph.add_graph_documents,
                     [graph_document],
@@ -199,25 +201,26 @@ class GraphIngestionService:
             for node in components.nodes:
                 if node.name in node_registry:
                     node_info = node_registry[node.name]
-                    text_to_embed = f"{node.name} is a {node_info['label']}. Description: {node.description or 'None'}. Context: {source_text[:200]}..."
+                    text_to_embed = f"{node.name} is a {node_info['label']}. Owner: {owner_id}. Description: {node.description or 'None'}. Context: {source_text[:200]}..."
                     
                     documents.append(text_to_embed)
                     metadatas.append({
-                        "global_id": str(node_info['id']), # Matches Postgres and Neo4j perfectly
+                        "global_id": str(node_info['id']),
                         "entity_type": node_info['label'], 
                         "name": node.name,
+                        "owner_id": str(owner_id),
+                        "is_public": final_is_public,
                         "project_name": project_name,
                         "source_tier": tool_config.ingestion_confidence_tier.value,
                         "tool_used": tool_name,
-                        "llm_confidence": components.overall_confidence # Track it in Qdrant!
+                        "llm_confidence": components.overall_confidence
                     })
-                    ids.append(str(node_info['id'])) # Qdrant accepts string UUIDs natively
+                    ids.append(str(node_info['id']))
                     
             if documents:
                 await target_vector_store.aadd_texts(texts=documents, metadatas=metadatas, ids=ids)
                 
-            logger.info(f"Graph ingestion complete: {len(components.nodes)} nodes, {len(components.relationships)} relationships.")
-            
+            logger.info(f"Graph ingestion complete: {len(components.nodes)} nodes for owner {owner_id}.")            
         except Exception as e:
             logger.error("Graph ingestion failed: {e}", e=e)
             raise e

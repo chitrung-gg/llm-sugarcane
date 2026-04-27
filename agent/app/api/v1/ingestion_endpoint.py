@@ -1,5 +1,6 @@
 from importlib.metadata import files
 from typing import List
+import uuid
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from app.core.dependencies import get_knowledge_service
@@ -13,10 +14,13 @@ from celery.result import AsyncResult
 router = APIRouter()
 settings = get_settings()
 
+from app.common.constants import SYSTEM_OWNER_ID
+
 @router.post("/file", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_file(
     files: List[UploadFile] = File(...),
     source_type: IngestionSourceType = Form(...), 
+    user_id: uuid.UUID = Form(SYSTEM_OWNER_ID, description="UUID of the user"),
     vector_store: VectorStoreType = Form(VectorStoreType.SOLID),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
 ):
@@ -27,6 +31,7 @@ async def ingest_file(
     return await knowledge_service.dispatch_ingestion_tasks(
         files=files,
         source_type=source_type,
+        user_id=user_id,
         vector_store=vector_store
     )
 

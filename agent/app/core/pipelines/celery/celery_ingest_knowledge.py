@@ -21,13 +21,15 @@ from app.core.tools.registry.registry_tool import KNOWLEDGE_GRAPH_TOOL_REGISTRY
 from app.core.tools.registry.ingestion_config_tool import IngestionConfig
 from app.core.vector_store.vector_store import VectorStoreType
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionConfidenceTier, IngestionSourceType
+from app.common.constants import SYSTEM_OWNER_ID
 
 if "manual_document_upload" not in KNOWLEDGE_GRAPH_TOOL_REGISTRY:
     KNOWLEDGE_GRAPH_TOOL_REGISTRY["manual_document_upload"] = IngestionConfig(
         vector_store_type=VectorStoreType.SOLID,
-        source_type_label=IngestionSourceType.CURATED_DOCUMENT, 
+        source_type_label=IngestionSourceType.USER_PRIVATE_DOCUMENT, 
         ingestion_confidence_tier=IngestionConfidenceTier.CURATED, 
-        skip_relevance_check=False
+        skip_relevance_check=False,
+        is_public=False
     )
 
 try:
@@ -84,12 +86,18 @@ def celery_ingest_graph_knowledge(self, source_text: str, source_metadata: Optio
     logger.info(f"Celery picked up graph ingestion task. Text length: {len(source_text)}")
 
     async def async_runner():
-        # 🌟 FIX 2: Await the container initialization INSIDE the async block
+        # Await the container initialization INSIDE the async block
         container = await self.get_ready_container_async()
         
+        meta = source_metadata or {}
+        owner_id_str = meta.get("owner_id")
+        owner_id = uuid.UUID(owner_id_str) if owner_id_str and owner_id_str != "SYSTEM" else SYSTEM_OWNER_ID
+
         await container.graph_ingestion_service.ingest_knowledge(
             source_text=source_text,
-            source_metadata=source_metadata
+            source_metadata=source_metadata,
+            owner_id=owner_id,
+            is_public=meta.get("is_public")
         )
 
     try:
@@ -105,7 +113,7 @@ def process_document_ingestion(self, target_uri: str, metadata: dict):
     settings = get_settings()
 
     async def async_run():
-        # 🌟 FIX 3: Await the container initialization INSIDE the async block
+        # Await the container initialization INSIDE the async block
         container = await self.get_ready_container_async()
 
         local_file_path = target_uri
@@ -167,6 +175,10 @@ def process_document_ingestion(self, target_uri: str, metadata: dict):
                 )
 
                 tasks = []
+                owner_id_str = metadata.get("owner_id")
+                owner_id = uuid.UUID(owner_id_str) if owner_id_str and owner_id_str != "SYSTEM" else SYSTEM_OWNER_ID
+                is_public = metadata.get("is_public")
+
                 for chunk_index, chunk in current_batch:
                     task = container.graph_ingestion_service.ingest_knowledge(
                         source_text=chunk.page_content,
@@ -174,7 +186,9 @@ def process_document_ingestion(self, target_uri: str, metadata: dict):
                             **metadata, 
                             "tool": "manual_document_upload", 
                             "chunk_index": chunk_index
-                        }
+                        },
+                        owner_id=owner_id,
+                        is_public=is_public
                     )
                     tasks.append(task)
 
