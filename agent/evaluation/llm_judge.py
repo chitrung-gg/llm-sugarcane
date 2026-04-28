@@ -1,0 +1,94 @@
+import re
+from typing import Any, Optional, Type
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.runnables import Runnable
+from loguru import logger
+from deepeval.models.base_model import DeepEvalBaseLLM
+from google.api_core import exceptions as google_exceptions
+from pydantic import BaseModel
+
+
+from app.configs.settings.settings import get_settings
+
+
+class GoogleGeminiJudge(DeepEvalBaseLLM):
+    def __init__(self, model_name: str):
+        settings = get_settings()
+        api_key = settings.google_api_key.get_secret_value() if settings.google_api_key else None
+
+        common_config = {
+            "google_api_key": api_key,
+            "temperature": 0.0,
+            "timeout": settings.llm_timeout,  
+        }
+
+        # Define transient errors to retry
+        transient_errors = (
+            google_exceptions.ServiceUnavailable,
+            google_exceptions.DeadlineExceeded,
+            google_exceptions.InternalServerError,
+            google_exceptions.Aborted,
+            google_exceptions.Unknown,
+        )
+
+        self._retry_config = {
+            "retry_if_exception_type": transient_errors,
+            "wait_exponential_jitter": True,
+            "stop_after_attempt": settings.llm_max_retries
+        }
+
+        if not api_key:
+            raise ValueError("Google API Key not found!")
+        
+        self.model_name_str = model_name
+        self.model = ChatGoogleGenerativeAI(
+            model=model_name, 
+            **common_config
+        )
+        
+    def load_model(self) -> Any:
+        return self.model
+    
+    def get_structured_model(self, schema: Type[BaseModel]) -> Runnable:
+        """Returns a primary model configured with structured output AND retry logic."""
+        return self.model.with_structured_output(schema).with_retry(**self._retry_config)
+
+    def _clean_and_log(self, prompt: str, raw_output: str) -> str:
+        """Logs the raw output and strips markdown to prevent DeepEval JSON crashes."""
+        logger.debug(f"[{self.model_name_str} Judge] Prompt Sent:\n{prompt[:200]}...")
+        logger.debug(f"[{self.model_name_str} Judge] Raw Output Received:\n{raw_output}")
+        
+        # Strip markdown code blocks
+        cleaned = re.sub(r"```json\s*", "", raw_output, flags=re.IGNORECASE)
+        cleaned = re.sub(r"```\s*", "", cleaned)
+        return cleaned.strip()
+
+    def generate(self, prompt: str, **kwargs) -> Any:
+        # Extract schema from kwargs if it exists
+        schema = kwargs.get("schema")
+        
+        if schema:
+            logger.info(f"🚦 [{self.model_name_str} Judge] Calling Synchronously (Structured)...")
+            structured_model = self.get_structured_model(schema)
+            return structured_model.invoke(prompt)
+        else:
+            logger.info(f"🚦 [{self.model_name_str} Judge] Calling Synchronously (Text)...")
+            res = self.model.invoke(prompt)
+            return self._clean_and_log(prompt, str(res.content))
+
+    async def a_generate(self, prompt: str, **kwargs) -> Any:
+        # Extract schema from kwargs if it exists
+        schema = kwargs.get("schema")
+        
+        if schema:
+            logger.info(f"🚦 [{self.model_name_str} Judge] Calling Asynchronously (Structured)...")
+            structured_model = self.get_structured_model(schema)
+            return await structured_model.ainvoke(prompt)
+        else:
+            logger.info(f"🚦 [{self.model_name_str} Judge] Calling Asynchronously (Text)...")
+            res = await self.model.ainvoke(prompt)
+            return self._clean_and_log(prompt, str(res.content))
+
+    def get_model_name(self):
+        return f"Google Gemini ({self.model_name_str})"
