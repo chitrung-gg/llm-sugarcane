@@ -56,13 +56,16 @@ class GraphIngestionService:
             tool_config = KNOWLEDGE_GRAPH_TOOL_REGISTRY.get(tool_name)
             if not tool_config:
                 logger.info(f"Source '{tool_name}' not in registry. Defaulting to general text ingestion.")
-                # We dynamically construct a config for unstructured/unregistered text
+
+                is_system = (owner_id == SYSTEM_OWNER_ID)
+
                 tool_config = IngestionConfig(
-                    vector_store_type=VectorStoreType.SOLID, 
-                    source_type_label=IngestionSourceType.USER_PRIVATE_DOCUMENT if owner_id != SYSTEM_OWNER_ID else IngestionSourceType.SYSTEM_CURATED_DOCUMENT,
+                    # If it's a user file, send to VOLATILE. If system, send to SOLID.
+                    vector_store_type=VectorStoreType.SOLID if is_system else VectorStoreType.VOLATILE, 
+                    source_type_label=IngestionSourceType.SYSTEM_CURATED_DOCUMENT if is_system else IngestionSourceType.USER_PRIVATE_DOCUMENT,
                     ingestion_confidence_tier=IngestionConfidenceTier.INFERRED, 
                     skip_relevance_check=False,
-                    is_public=False if owner_id != SYSTEM_OWNER_ID else True
+                    is_public=is_system # Public if system, private if user
                 )
             
             # Use provided is_public or default to tool_config
@@ -100,12 +103,13 @@ class GraphIngestionService:
                 logger.error("The vector store type has not been configured.")
                 return
 
+            unique_nodes = {node.name: node for node in components.nodes if node.label in self.allowed_labels}.values()
             node_registry = {}
 
             # 5. Save to PostgreSQL
             logger.info(f"Saving to PostgreSQL (Owner: {owner_id}, Public: {final_is_public})...")
             async with genome_connection_pool.connection() as conn:
-                for node in components.nodes:
+                for node in unique_nodes:
                     if node.label not in self.allowed_labels:
                         continue
                         
@@ -137,7 +141,7 @@ class GraphIngestionService:
             # 6. Save to Neo4j
             logger.info("Saving to Neo4j safely via LangChain...")
             langchain_nodes = {}
-            for node in components.nodes:
+            for node in unique_nodes:
                 if node.name in node_registry:
                     node_info = node_registry[node.name]
                     
@@ -196,15 +200,31 @@ class GraphIngestionService:
                 )
             
             # 7. Save to Qdrant
-            logger.info("Saving to Qdrant...")
-            documents, metadatas, ids = [], [], []
-            for node in components.nodes:
+            logger.info("Saving to Qdrant concurrently...")
+            
+            # Helper function to embed a single node
+            async def _embed_single_node(node_name, text, meta, n_id):
+                try:
+                    await asyncio.to_thread(
+                        target_vector_store.add_texts,
+                        texts=[text], 
+                        metadatas=[meta], 
+                        ids=[n_id]
+                    )
+                    return True  # Success
+                except Exception as e:
+                    logger.warning(f"⚠️ Dropped node '{node_name}' due to embedding failure (Likely Google Safety Filter): {e}")
+                    return False # Failure
+
+            tasks = []
+            
+            # 1. Build the tasks
+            for node in unique_nodes: # Or components.nodes based on your actual variable
                 if node.name in node_registry:
                     node_info = node_registry[node.name]
                     text_to_embed = f"{node.name} is a {node_info['label']}. Owner: {owner_id}. Description: {node.description or 'None'}. Context: {source_text[:200]}..."
                     
-                    documents.append(text_to_embed)
-                    metadatas.append({
+                    metadata = {
                         "global_id": str(node_info['id']),
                         "entity_type": node_info['label'], 
                         "name": node.name,
@@ -214,13 +234,21 @@ class GraphIngestionService:
                         "source_tier": tool_config.ingestion_confidence_tier.value,
                         "tool_used": tool_name,
                         "llm_confidence": components.overall_confidence
-                    })
-                    ids.append(str(node_info['id']))
+                    }
+                    node_id = str(node_info['id'])
                     
-            if documents:
-                await target_vector_store.aadd_texts(texts=documents, metadatas=metadatas, ids=ids)
+                    # Add the un-awaited task to our list
+                    tasks.append(_embed_single_node(node.name, text_to_embed, metadata, node_id))
+            
+            # 2. Execute all tasks in parallel!
+            if tasks:
+                # return_exceptions=True prevents one bad task from cancelling the others
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                success_count = sum(1 for r in results if r is True)
+            else:
+                success_count = 0
                 
-            logger.info(f"Graph ingestion complete: {len(components.nodes)} nodes for owner {owner_id}.")            
+            logger.info(f"Graph ingestion complete: {success_count}/{len(tasks)} nodes successfully embedded for owner {owner_id}.")  
         except Exception as e:
             logger.error("Graph ingestion failed: {e}", e=e)
             raise e

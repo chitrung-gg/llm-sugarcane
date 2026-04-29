@@ -114,6 +114,23 @@ async def run_rag_evaluations():
                 }
                 final_state = await agent_service.graph.ainvoke(initial_state, config=config)
                 
+                # Aggregate all sources of information used by the agent
+                retrieval_context = []
+
+                # 1. Add Vector RAG results
+                retrieval_context.extend([str(res["content"]) for res in final_state.get("rag_results", [])])
+
+                # 2. Add Tool outputs (Knowledge Graph, NCBI, etc.)
+                retrieval_context.extend([str(res["output"]) for res in final_state.get("tool_results", [])])
+
+                # 3. Add Web Search snippets
+                retrieval_context.extend([str(res["snippet"]) for res in final_state.get("web_results", [])])
+
+                test_case = LLMTestCase(
+                    input=query,
+                    actual_output=str(final_state.get("final_answer", "")),
+                    retrieval_context=retrieval_context # Now includes all retrieved data
+                )
                 # 3. Build Test Case
                 test_case = LLMTestCase(
                     input=query,

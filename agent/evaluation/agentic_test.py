@@ -62,7 +62,7 @@ async def run_agentic_evaluations():
         # --- Instantiate Judges ---
         tool_judge = GoogleGeminiJudge(model_name=settings.gemini_primary_model)
         task_judge = GoogleGeminiJudge(model_name=settings.gemini_secondary_model)
-        # efficiency_judge = GoogleGeminiJudge(model_name=settings.gemini_tertiary_model)
+        efficiency_judge = GoogleGeminiJudge(model_name=settings.gemini_tertiary_model)
 
         # --- Define Agentic Metrics ---
         metrics = [
@@ -76,11 +76,11 @@ async def run_agentic_evaluations():
                 model=task_judge, 
                 async_mode=False
             ),
-            # StepEfficiencyMetric(
-            #     threshold=0.7,
-            #     model=efficiency_judge,
-            #     async_mode=False
-            # )
+            StepEfficiencyMetric(
+                threshold=0.7,
+                model=efficiency_judge,
+                async_mode=False
+            )
         ]
 
         # --- Define Agent-Specific Test Queries ---
