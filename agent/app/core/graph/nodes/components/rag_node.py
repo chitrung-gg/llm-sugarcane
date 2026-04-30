@@ -84,7 +84,7 @@ def make_rag_node(
         project_name = state.get("active_project_name")
 
         # Fetch from both stores
-        solid_results = await vector_store_solid.asimilarity_search_with_score(optimized_query, k=solid_k)
+        solid_results = await vector_store_solid.asimilarity_search_with_score(query=optimized_query, k=solid_k)
         for doc, score in solid_results:
             doc.page_content = f"[SOURCE TIER: CURATED (High Trust)] {doc.page_content}"
             doc.metadata["source_tier"] = "CURATED"
@@ -95,7 +95,7 @@ def make_rag_node(
             volatile_filter = {"project_name": project_name}
         
         volatile_results = await vector_store_volatile.asimilarity_search_with_score(
-            optimized_query, 
+            query=optimized_query, 
             k=volatile_k,
             filter=volatile_filter
         )

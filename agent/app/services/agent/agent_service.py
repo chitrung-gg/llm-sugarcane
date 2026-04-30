@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from langfuse import Langfuse, propagate_attributes
 from langfuse.types import TraceContext
 from langgraph.graph.state import CompiledStateGraph, RunnableConfig
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from langfuse.langchain import CallbackHandler
 from loguru import logger
 from opentelemetry import trace
@@ -48,6 +48,7 @@ class AgentService:
         """Executes reasoning strictly using pre-ingested datasets."""
         start_time = time.time()
         callbacks = []
+        execution_id = uuid.uuid4()
 
         # 1. Grab OTel Span Context
         current_otel_span = trace.get_current_span()
@@ -63,6 +64,12 @@ class AgentService:
             as_type="agent",
             trace_context=trace_ctx
         ) as root_span:
+            config: RunnableConfig = {
+                "configurable": {
+                    "thread_id": str(thread_id)
+                },
+                "callbacks": callbacks 
+            }
             try:
                 with propagate_attributes(
                     session_id=str(thread_id),
@@ -75,13 +82,6 @@ class AgentService:
                         }
                     )
                     callbacks.append(langfuse_callback)
-                    
-                    config: RunnableConfig = {
-                        "configurable": {
-                            "thread_id": str(thread_id)
-                        },
-                        "callbacks": callbacks 
-                    }
                     
                     #  Hydrate Workspace Context
                     active_project_name = None
@@ -118,13 +118,26 @@ class AgentService:
                     if not active_datasets and existing_state and existing_state.values:
                         active_datasets = existing_state.values.get("active_datasets", [])
                     
+                    # Check for duplicate user message to avoid history pollution on retry
+                    messages_to_add = []
+                    should_add_query = True
+                    if existing_state and existing_state.values and existing_state.values.get("messages"):
+                        last_msg = existing_state.values["messages"][-1]
+                        if isinstance(last_msg, HumanMessage) and last_msg.content == query:
+                            logger.info(f"Detected retry for same query in thread {thread_id}. Skipping duplicate HumanMessage.")
+                            should_add_query = False
+                    
+                    if should_add_query:
+                        messages_to_add.append(HumanMessage(content=query))
+
                     # Build initial state
                     initial_state = {
                         "query": query,
-                        "messages": [HumanMessage(content=query)],      
+                        "messages": messages_to_add,      
                         "active_project_name": active_project_name,
                         "active_datasets": active_datasets,
                         "iteration_count": 0,
+                        "execution_id": execution_id
                     }
 
                     # Langgraph executes entirely within the Langfuse root_span
@@ -156,8 +169,24 @@ class AgentService:
 
                     return agent_response
             except Exception as e:
-                # Log the error BEFORE the 'with' block exits
                 logger.error(f"Execution Error within Span: {e}")
+                # Record the failure in the conversation history
+                try:
+                    error_msg = f"I encountered a system error: {str(e)}"
+                    await self.graph.aupdate_state(config, {
+                        "messages": [
+                            AIMessage(
+                                content=error_msg, 
+                                additional_kwargs={
+                                    "is_error": True,
+                                    "execution_id": str(execution_id)
+                                }
+                            )
+                        ]
+                    })
+                except Exception as update_err:
+                    logger.warning(f"Failed to record error in graph state: {update_err}")
+                
                 raise # Re-raise to let the controller handle the HTTP response
 
 
@@ -186,10 +215,22 @@ class AgentService:
         formatted_messages = []
         for msg in state_values.get("messages", []):
             if msg.type in ["human", "ai"]:
-                formatted_messages.append({
+                msg_data = {
                     "role": "user" if msg.type == "human" else "assistant",
                     "content": msg.content
-                })
+                }
+                
+                # Expose metadata for the UI (e.g. thoughts, errors)
+                if msg.type == "ai":
+                    msg_data["execution_id"] = msg.additional_kwargs.get("execution_id")
+                    if msg.additional_kwargs.get("is_thought"):
+                        msg_data["type"] = "thought"
+                    elif msg.additional_kwargs.get("is_error"):
+                        msg_data["type"] = "error"
+                    else:
+                        msg_data["type"] = "answer"
+                
+                formatted_messages.append(msg_data)
 
         return {
             "thread_id": thread_id,
@@ -199,7 +240,7 @@ class AgentService:
             "web_results": state_values.get("web_results", []),
             "summary": state_values.get("summary", "")
         }
-    
+        
     async def _consolidate_sources(self, raw_sources: list) -> List[RAGSourceItem]:
         """Groups raw chunks by source_file to return a clean summary."""
         unique_sources = {}

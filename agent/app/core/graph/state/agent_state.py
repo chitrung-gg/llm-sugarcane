@@ -1,4 +1,5 @@
 import operator
+import uuid
 from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
 from langgraph.graph import add_messages
@@ -85,7 +86,9 @@ class AgentState(TypedDict):
     # Source tracking - will be populated by each node
     sources_used: List[RecordSource]
     
+    # Metadata
+    execution_id: Optional[uuid.UUID] # Correlation ID for the current request-response cycle
+
     # Final
     final_answer: str
     is_complete: bool
-

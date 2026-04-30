@@ -136,7 +136,12 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         updates = {
             "final_answer": result.answer,
             "is_complete": result.is_complete,
-            "messages": [AIMessage(content=result.answer)]
+            "messages": [
+                AIMessage(
+                    content=result.answer,
+                    additional_kwargs={"execution_id": str(state.get("execution_id"))}
+                )
+            ]
         }
         
         # Determine destination
@@ -146,7 +151,11 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             logger.warning("⚠️ Answer incomplete. Sending back to ROUTER.")
             updates["messages"] = [
                 AIMessage(
-                    content=f"Thought: I am still missing info: {result.missing_info}"
+                    content=f"Thought: I am still missing info: {result.missing_info}",
+                    additional_kwargs={
+                        "is_thought": True,
+                        "execution_id": str(state.get("execution_id"))
+                    }
                 )
             ]
             destination = AgentGraphNode.ROUTER
