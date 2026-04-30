@@ -9,7 +9,13 @@ import { FolderPlus, Sprout } from "lucide-react"
 
 import { useCreateProject } from "@/hooks/use-projects"
 
-export function NewProjectDialog({ children }: { children: React.ReactNode }) {
+export function NewProjectDialog({ 
+  children, 
+  nativeButton = true 
+}: { 
+  children: React.ReactNode;
+  nativeButton?: boolean;
+}) {
   const [open, setOpen] = React.useState(false)
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
@@ -33,7 +39,7 @@ export function NewProjectDialog({ children }: { children: React.ReactNode }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={children} />
+      <DialogTrigger render={children} nativeButton={nativeButton} />
       <DialogContent className="sm:max-w-[480px] rounded-2xl border-stone-200 bg-white p-0 overflow-hidden shadow-2xl">
         <div className="bg-emerald-700 p-8 text-white relative overflow-hidden">
           <Sprout className="absolute -right-4 -bottom-4 h-32 w-32 text-white/10 rotate-12" />

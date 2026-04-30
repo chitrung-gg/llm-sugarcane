@@ -5,17 +5,27 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogDescription, D
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Database } from "lucide-react"
+import { Database, Sprout, FileText } from "lucide-react"
 
 import { useCreateDataset } from "@/hooks/use-datasets"
 import { useParams } from "next/navigation"
+import { cn } from "@/lib/utils"
 
-export function AddDatasetDialog({ children }: { children: React.ReactNode }) {
+export function AddDatasetDialog({ 
+  children, 
+  projectName,
+  nativeButton = true
+}: { 
+  children: React.ReactNode;
+  projectName?: string;
+  nativeButton?: boolean;
+}) {
   const params = useParams()
   const projectId = params.id as string
   const [open, setOpen] = React.useState(false)
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
+  const [dataType, setDataType] = React.useState<"genome" | "knowledge">("genome")
   
   const createMutation = useCreateDataset()
 
@@ -37,7 +47,7 @@ export function AddDatasetDialog({ children }: { children: React.ReactNode }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={children} />
+      <DialogTrigger render={children} nativeButton={nativeButton} />
       <DialogContent className="sm:max-w-[480px] rounded-2xl border-stone-200 bg-white p-0 overflow-hidden shadow-2xl">
         <div className="bg-stone-900 p-8 text-white">
           <div className="space-y-1">
@@ -52,12 +62,53 @@ export function AddDatasetDialog({ children }: { children: React.ReactNode }) {
         </div>
         
         <div className="p-8 space-y-6">
+          {/* Project Context Box */}
+          <div className="bg-stone-50 border border-stone-100 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest leading-none mb-1.5">Target Project</p>
+              <p className="text-sm font-bold text-stone-900">{projectName || "Active Project"}</p>
+            </div>
+            <div className="bg-white p-2 rounded-lg border border-stone-100 shadow-sm">
+              <Sprout className="h-4 w-4 text-emerald-700" />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400 ml-1">Dataset Category</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setDataType("genome")}
+                className={cn(
+                  "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
+                  dataType === "genome" 
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm" 
+                    : "border-stone-100 bg-white text-stone-400 hover:border-stone-200"
+                )}
+              >
+                <Database className="h-5 w-5" />
+                <span className="text-xs font-bold uppercase tracking-wider">Genome</span>
+              </button>
+              <button 
+                onClick={() => setDataType("knowledge")}
+                className={cn(
+                  "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
+                  dataType === "knowledge" 
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm" 
+                    : "border-stone-100 bg-white text-stone-400 hover:border-stone-200"
+                )}
+              >
+                <FileText className="h-5 w-5" />
+                <span className="text-xs font-bold uppercase tracking-wider">Knowledge</span>
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400 ml-1">Dataset Alias / Cultivar</Label>
             <Input 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., SP80-3280 High Sucrose Variant" 
+              placeholder={dataType === "genome" ? "e.g., Cultivar R570 Reference" : "e.g., Metabolic Pathway Study"} 
               className="h-12 rounded-xl border-stone-200 bg-stone-50/50 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 font-medium" 
             />
           </div>

@@ -76,7 +76,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="border-b border-stone-100/50">
+      <SidebarHeader className="border-b border-stone-100/50 p-4 pb-2">
+        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-700/60 mb-2 ml-1 group-data-[collapsible=icon]:hidden">Research Project</p>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -84,21 +85,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground border border-stone-200/50 shadow-sm"
                   >
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-emerald-700 text-white">
                       <Sprout className="size-4" aria-hidden="true" />
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-bold text-stone-900">{activeProject?.name || "Select Project"}</span>
-                      <span className="truncate text-[10px] font-bold text-emerald-700/60 uppercase tracking-widest leading-none mt-0.5">Assistant</span>
+                      <span className="truncate text-[10px] font-bold text-emerald-700/60 uppercase tracking-widest leading-none mt-0.5">Active Workspace</span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4" aria-hidden="true" />
                   </SidebarMenuButton>
                 }
               />
               <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg" side="bottom" align="start" sideOffset={4}>
-                <DropdownMenuLabel className="text-xs text-stone-500 uppercase tracking-widest font-bold">Projects</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs text-stone-500 uppercase tracking-widest font-bold">Switch Project</DropdownMenuLabel>
                 {projects.map((project) => (
                   <DropdownMenuItem key={project.id} onClick={() => setSelectedProjectId(project.id)} className="gap-2 p-2">
                     <div className="flex size-6 items-center justify-center rounded-sm border">
@@ -109,7 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
-                <NewProjectDialog>
+                <NewProjectDialog nativeButton={false}>
                   <DropdownMenuItem className="gap-2 p-2" onSelect={(e) => e.preventDefault()}>
                     <div className="flex size-6 items-center justify-center rounded-md border bg-stone-50">
                       <Plus className="size-4" />
@@ -201,7 +202,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>
-                <AddDatasetDialog>
+                <AddDatasetDialog projectName={activeProject?.name}>
                   <SidebarMenuButton className="text-stone-400 font-bold hover:text-emerald-700">
                     <Plus className="size-4" />
                     <span>Add Dataset</span>

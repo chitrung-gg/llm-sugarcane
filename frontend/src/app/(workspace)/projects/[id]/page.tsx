@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Database, FileCode, GraduationCap, Loader2 } from "lucide-react"
+import { Database, FileCode, GraduationCap, Loader2, Dna } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -102,16 +102,46 @@ function ProjectContent({ id }: { id: string }) {
         <div className="md:col-span-1 lg:col-span-4">
           <UploadZone />
         </div>
-        <Card className="md:col-span-1 lg:col-span-3 border-stone-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-bold text-stone-800">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-stone-400 font-medium italic">
-              No recent activity to show. Upload some data to get started.
-            </div>
-          </CardContent>
-        </Card>
+        <div className="md:col-span-1 lg:col-span-3 space-y-4">
+          <Card className="border-stone-200 shadow-sm overflow-hidden">
+            <CardHeader className="bg-stone-50/50 border-b border-stone-100">
+              <CardTitle className="font-bold text-stone-800 flex items-center gap-2">
+                <Database className="h-4 w-4 text-emerald-700" />
+                Project Datasets
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {datasets.length === 0 ? (
+                <div className="p-6 text-sm text-stone-400 font-medium italic text-center">
+                  No datasets created yet.
+                </div>
+              ) : (
+                <div className="divide-y divide-stone-100">
+                  {datasets.map((ds) => (
+                    <div key={ds.id} className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-stone-700">{ds.name}</span>
+                        <span className="text-[10px] bg-stone-100 px-2 py-0.5 rounded-full text-stone-500 font-bold uppercase tracking-tighter">
+                          {ds.files?.length || 0} Files
+                        </span>
+                      </div>
+                      {ds.files && ds.files.length > 0 && (
+                        <div className="space-y-1.5 ml-1">
+                          {ds.files.map((f) => (
+                            <div key={f.id} className="flex items-center gap-2 text-[11px] text-stone-500 font-medium">
+                              {f.file_type.includes('genome') ? <Dna className="size-3 text-emerald-600/70" /> : <FileCode className="size-3 text-blue-600/70" />}
+                              <span className="truncate">{f.file_name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
