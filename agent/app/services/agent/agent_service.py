@@ -13,13 +13,15 @@ from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from langfuse.langchain import CallbackHandler
 from loguru import logger
 from opentelemetry import trace
+import json
 
 from app.utils.observability.tracing import tracing
 from app.services.workspace.workspace_service import WorkspaceService
-from app.common.constants import LANGFUSE_GRAPH_OBSERVATION_NAME, LANGGRAPH_STATE_MAX_ITERATIONS, ObservationType
+from app.common.constants import LANGFUSE_GRAPH_OBSERVATION_NAME, LANGGRAPH_STATE_MAX_ITERATIONS, ObservationType, SYSTEM_OWNER_ID
 from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
 from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem
+from app.configs.storage.databases import langgraph_connection_pool
 
 
 class AgentService:
@@ -36,6 +38,25 @@ class AgentService:
         self.langfuse_client = langfuse_client
         self.settings = get_settings()
 
+    async def _ensure_thread_exists(self, thread_id: uuid.UUID, project_id: Optional[uuid.UUID] = None):
+        async with langgraph_connection_pool.connection() as conn:
+            # Check if exists
+            cursor = await conn.execute("SELECT id FROM chat_threads WHERE thread_id = %s", (thread_id,))
+            if not await cursor.fetchone():
+                await conn.execute(
+                    "INSERT INTO chat_threads (thread_id, user_id, project_id) VALUES (%s, %s, %s)",
+                    (thread_id, SYSTEM_OWNER_ID, project_id)
+                )
+
+    async def _save_chat_message(self, thread_id: uuid.UUID, role: str, content: str, type: str = "answer", execution_id: Optional[uuid.UUID] = None, metadata: Optional[dict] = None):
+        async with langgraph_connection_pool.connection() as conn:
+            await conn.execute(
+                """
+                INSERT INTO chat_messages (thread_id, role, content, type, execution_id, metadata)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (thread_id, role, content, type, execution_id, json.dumps(metadata) if metadata else None)
+            )
 
     @tracing(observation_type=ObservationType.AGENT)
     async def process_langgraph_chat(
@@ -129,6 +150,10 @@ class AgentService:
                     
                     if should_add_query:
                         messages_to_add.append(HumanMessage(content=query))
+                    
+                    # Persist thread and user message
+                    await self._ensure_thread_exists(thread_id, project_id)
+                    await self._save_chat_message(thread_id, "user", query)
 
                     # Build initial state
                     initial_state = {
@@ -148,13 +173,38 @@ class AgentService:
                     consolidated_sources = await self._consolidate_sources(raw_sources)
                     process_time = time.time() - start_time
 
+                    thoughts = []
+                    for msg in final_state.get("messages", []):
+                        if msg.type == "ai" and msg.additional_kwargs.get("is_thought") and msg.additional_kwargs.get("execution_id") == str(execution_id):
+                            thoughts.append(msg.content)
+                            # Persist thought
+                            await self._save_chat_message(
+                                thread_id=thread_id,
+                                role="assistant",
+                                content=msg.content,
+                                type="thought",
+                                execution_id=execution_id
+                            )
+
+                    final_answer = final_state.get("final_answer", "No answer generated.")
+                    # Persist final answer
+                    await self._save_chat_message(
+                        thread_id=thread_id,
+                        role="assistant",
+                        content=final_answer,
+                        type="answer",
+                        execution_id=execution_id
+                    )
+
                     agent_response = AgentResponse(
                         thread_id=thread_id,
-                        answer=final_state.get("final_answer", "No answer generated."),
+                        answer=final_answer,
+                        thoughts=thoughts,
                         rag_sources=consolidated_sources, 
                         web_results=final_state.get("web_results", []),
                         tool_executions=final_state.get("tool_results", []),
-                        execution_time=process_time
+                        execution_time=process_time,
+                        execution_id=execution_id
                     )
 
                     # Instead of set_trace_io, update the span's own attributes
@@ -184,6 +234,14 @@ class AgentService:
                             )
                         ]
                     })
+                    # Persist error message
+                    await self._save_chat_message(
+                        thread_id=thread_id,
+                        role="assistant",
+                        content=error_msg,
+                        type="error",
+                        execution_id=execution_id
+                    )
                 except Exception as update_err:
                     logger.warning(f"Failed to record error in graph state: {update_err}")
                 
@@ -191,55 +249,30 @@ class AgentService:
 
 
     async def get_conversation_history(self, thread_id: uuid.UUID) -> dict:
-        """Retrieves the conversation history from the LangGraph checkpointer."""
-        config: RunnableConfig = {
-            "configurable": {
-                "thread_id": str(thread_id)
-            }
-        }
-
-        # Retrieve the latest state snapshot for this thread
-        state_snapshot = await self.graph.aget_state(config)
-
-        # If the thread doesn't exist or has no state, return empty structure
-        if not state_snapshot or not state_snapshot.values:
+        """Retrieves the conversation history from the chat_messages table."""
+        async with langgraph_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT role, content, type, execution_id, metadata FROM chat_messages WHERE thread_id = %s ORDER BY created_at ASC",
+                (thread_id,)
+            )
+            rows = await cursor.fetchall()
+            
+            formatted_messages = []
+            for row in rows:
+                formatted_messages.append({
+                    "role": row["role"],
+                    "content": row["content"],
+                    "type": row["type"],
+                    "execution_id": row["execution_id"]
+                })
+            
             return {
-                "thread_id": thread_id, 
-                "messages": [],
-                "rag_results": [],
+                "thread_id": thread_id,
+                "messages": formatted_messages,
+                "rag_results": [], 
                 "tool_results": [],
                 "web_results": []
             }
-
-        state_values = state_snapshot.values
-        formatted_messages = []
-        for msg in state_values.get("messages", []):
-            if msg.type in ["human", "ai"]:
-                msg_data = {
-                    "role": "user" if msg.type == "human" else "assistant",
-                    "content": msg.content
-                }
-                
-                # Expose metadata for the UI (e.g. thoughts, errors)
-                if msg.type == "ai":
-                    msg_data["execution_id"] = msg.additional_kwargs.get("execution_id")
-                    if msg.additional_kwargs.get("is_thought"):
-                        msg_data["type"] = "thought"
-                    elif msg.additional_kwargs.get("is_error"):
-                        msg_data["type"] = "error"
-                    else:
-                        msg_data["type"] = "answer"
-                
-                formatted_messages.append(msg_data)
-
-        return {
-            "thread_id": thread_id,
-            "messages": formatted_messages,
-            "rag_results": state_values.get("rag_results", []),
-            "tool_results": state_values.get("tool_results", []),
-            "web_results": state_values.get("web_results", []),
-            "summary": state_values.get("summary", "")
-        }
         
     async def _consolidate_sources(self, raw_sources: list) -> List[RAGSourceItem]:
         """Groups raw chunks by source_file to return a clean summary."""

@@ -26,7 +26,9 @@ class AgentResponse(BaseModel):
     """Main response schema for the Agent API."""
     thread_id: uuid.UUID
     answer: str
+    thoughts: List[str] = Field(default_factory=list)
     rag_sources: List[RAGSourceItem] = Field(default_factory=list)
     web_results: List[WebResultItem] = Field(default_factory=list)
     tool_executions: List[ToolExecutionItem] = Field(default_factory=list)
     execution_time: float
+    execution_id: uuid.UUID
