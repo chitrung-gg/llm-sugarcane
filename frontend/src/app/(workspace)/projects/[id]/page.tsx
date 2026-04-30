@@ -1,5 +1,7 @@
+"use client"
+
 import * as React from "react"
-import { Database, FileCode, GraduationCap } from "lucide-react"
+import { Database, FileCode, GraduationCap, Loader2 } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -7,57 +9,88 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { UploadZone } from "@/components/datasets/upload-zone"
+import { useProject } from "@/hooks/use-projects"
+import { useProjectDatasets } from "@/hooks/use-datasets"
 
 interface ProjectPageProps {
-  params: Promise<{ id: string }>
+  params: React.Usable<{ id: string }>
 }
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
-  const { id } = await params
+export default function ProjectPage({ params }: ProjectPageProps) {
+  const { id } = React.use(params)
   
-  // Mock data for stats
+  return <ProjectContent id={id} />
+}
+
+function ProjectContent({ id }: { id: string }) {
+  const { data: project, isLoading: projectLoading } = useProject(id)
+  const { data: datasets = [], isLoading: datasetsLoading } = useProjectDatasets(id)
+  
+  if (projectLoading || datasetsLoading) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-stone-300" />
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-xl font-bold text-stone-800">Project not found</h2>
+        <p className="text-stone-500">The requested research project could not be located.</p>
+      </div>
+    )
+  }
+
+  // Calculate stats
+  const totalDatasets = datasets.length
+  const totalFiles = datasets.reduce((acc, ds) => acc + (ds.files?.length || 0), 0)
+  const genomeFiles = datasets.reduce((acc, ds) => 
+    acc + (ds.files?.filter(f => f.file_type.includes('genome')).length || 0), 0)
+
   const stats = [
     {
       title: "Datasets",
-      value: "12",
-      description: "Total cultivars tracked",
+      value: totalDatasets.toString(),
+      description: "Cultivars in this project",
       icon: Database,
     },
     {
-      title: "Genomic Files",
-      value: "45",
-      description: ".fasta, .gff, .bam files",
+      title: "Total Files",
+      value: totalFiles.toString(),
+      description: "Genomes & Research Docs",
       icon: FileCode,
     },
     {
-      title: "Knowledge Docs",
-      value: "128",
-      description: ".pdf, .json research docs",
+      title: "Genome Assets",
+      value: genomeFiles.toString(),
+      description: ".fasta, .gff, .bam files",
       icon: GraduationCap,
     },
   ]
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight uppercase">{id}</h1>
-        <p className="text-muted-foreground">
-          Overview and data management for your sugarcane research project.
+        <h1 className="text-3xl font-bold tracking-tight uppercase text-stone-900">{project.name}</h1>
+        <p className="text-muted-foreground mt-1">
+          {project.description || "Overview and data management for your sugarcane research project."}
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         {stats.map((stat) => (
-          <Card key={stat.title}>
+          <Card key={stat.title} className="border-stone-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-bold text-stone-500 uppercase tracking-wider">
                 {stat.title}
               </CardTitle>
-              <stat.icon className="h-4 w-4 text-primary" />
+              <stat.icon className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-stone-900">{stat.value}</div>
+              <p className="text-xs text-stone-400 font-medium">
                 {stat.description}
               </p>
             </CardContent>
@@ -69,12 +102,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         <div className="md:col-span-1 lg:col-span-4">
           <UploadZone />
         </div>
-        <Card className="md:col-span-1 lg:col-span-3">
+        <Card className="md:col-span-1 lg:col-span-3 border-stone-200 shadow-sm">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle className="font-bold text-stone-800">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-stone-400 font-medium italic">
               No recent activity to show. Upload some data to get started.
             </div>
           </CardContent>

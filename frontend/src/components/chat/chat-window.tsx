@@ -2,14 +2,17 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { api } from "@/lib/api-client";
 import { v4 as uuidv4 } from "uuid";
-import { Send, User, Bot, Loader2, Database, Dna, FileText } from "lucide-react";
+import { Send, User, Bot, Loader2, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useProjectDatasets } from "@/hooks/use-datasets";
 
 interface Message {
   id: string;
@@ -22,11 +25,6 @@ interface ChatResponse {
   thread_id: string;
 }
 
-interface Dataset {
-  id: string;
-  name: string;
-}
-
 export function ChatWindow() {
   const params = useParams();
   const projectId = params.id as string;
@@ -36,18 +34,8 @@ export function ChatWindow() {
   const [selectedDatasets, setSelectedDatasets] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Fetch project datasets
-  const { data: datasets } = useQuery({
-    queryKey: ["datasets", projectId],
-    queryFn: async () => {
-      // In production, this would be api.get(`/workspace/projects/${projectId}/datasets`)
-      // For demo, return mock data matching sidebar
-      return [
-        { id: "ds1", name: "R570 Reference" },
-        { id: "ds2", name: "SP80-3280 Hybrid" },
-      ];
-    },
-  });
+  // Fetch real project datasets
+  const { data: datasets, isLoading: datasetsLoading } = useProjectDatasets(projectId);
 
   const mutation = useMutation({
     mutationFn: async (query: string) => {
@@ -58,6 +46,7 @@ export function ChatWindow() {
         formData.append("project_id", projectId);
       }
       if (selectedDatasets.length > 0) {
+        // Send as JSON string as required by the backend fix
         formData.append("dataset_ids", JSON.stringify(selectedDatasets));
       }
 
@@ -110,23 +99,29 @@ export function ChatWindow() {
   return (
     <div className="flex flex-col h-full bg-stone-50/50">
       {/* Context Selection Bar */}
-      <div className="border-b bg-white p-3 flex items-center gap-3 overflow-x-auto">
-        <span className="text-xs font-bold text-stone-400 uppercase tracking-widest whitespace-nowrap ml-2">Context:</span>
-        {datasets?.map((ds) => (
-          <button
-            key={ds.id}
-            onClick={() => toggleDataset(ds.id)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all whitespace-nowrap",
-              selectedDatasets.includes(ds.id)
-                ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
-                : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
-            )}
-          >
-            <Database className="h-3 w-3" />
-            {ds.name}
-          </button>
-        ))}
+      <div className="border-b bg-white p-3 flex items-center gap-3 overflow-x-auto min-h-[56px]">
+        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em] whitespace-nowrap ml-2">Active Context:</span>
+        {datasetsLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin text-stone-300" />
+        ) : datasets?.length === 0 ? (
+          <span className="text-xs text-stone-400 italic">No datasets in this project.</span>
+        ) : (
+          datasets?.map((ds) => (
+            <button
+              key={ds.id}
+              onClick={() => toggleDataset(ds.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all whitespace-nowrap",
+                selectedDatasets.includes(ds.id)
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
+                  : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
+              )}
+            >
+              <Database className="h-3 w-3" />
+              {ds.name}
+            </button>
+          ))
+        )}
       </div>
 
       <ScrollArea className="flex-1 p-4">
@@ -136,8 +131,8 @@ export function ChatWindow() {
               <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Bot className="h-6 w-6 text-emerald-700" />
               </div>
-              <h2 className="text-xl font-bold mb-2 text-stone-800">Sugarcane Assistant</h2>
-              <p className="max-w-xs mx-auto text-sm">Select datasets above and ask questions about sugarcane genetics or research papers.</p>
+              <h2 className="text-xl font-bold mb-2 text-stone-800 tracking-tight">Sugarcane Research Assistant</h2>
+              <p className="max-w-xs mx-auto text-sm font-medium text-stone-500 leading-relaxed">Select biological datasets above to provide context for your queries.</p>
             </div>
           )}
           
@@ -163,8 +158,10 @@ export function ChatWindow() {
                   ? "bg-stone-100 text-stone-900 border border-stone-200" 
                   : "bg-white text-stone-800 border border-emerald-100"
               )}>
-                <div className="whitespace-pre-wrap leading-relaxed">
-                  {message.content}
+                <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
                 </div>
               </div>
             </div>

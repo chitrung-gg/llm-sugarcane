@@ -34,7 +34,7 @@ export default function LoginPage() {
     },
   })
 
-  async function onSubmit(data: LoginFormValues) {
+  async function onSubmit() {
     setIsLoading(true)
     setTimeout(() => {
       setIsLoading(false)
@@ -56,14 +56,14 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,var(--color-emerald-50),transparent_40%)]">
-        <div className="w-full max-w-[400px]">
+      <main className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
           <Card className="border-stone-200 shadow-xl shadow-stone-200/50 rounded-2xl bg-white overflow-hidden">
             <CardHeader className="space-y-1 pt-10 pb-6 text-center">
               <div className="mx-auto bg-stone-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 border border-stone-100">
                 <FlaskConical className="h-8 w-8 text-emerald-700" />
               </div>
-              <CardTitle className="text-2xl font-black text-stone-900">Welcome Back</CardTitle>
+              <CardTitle className="text-2xl font-bold text-stone-900">Welcome Back</CardTitle>
               <CardDescription className="text-stone-500 font-medium">
                 Sign in to your sugarcane research workspace
               </CardDescription>
@@ -108,7 +108,7 @@ export default function LoginPage() {
 
               <CardFooter className="px-8 pt-6 pb-10 flex flex-col space-y-4">
                 <Button 
-                  className="w-full h-12 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black transition-all shadow-lg shadow-emerald-700/20 active:scale-[0.98]" 
+                  className="w-full h-12 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition-all shadow-lg shadow-emerald-700/20 active:scale-[0.98]" 
                   type="submit" 
                   disabled={isLoading}
                 >
@@ -125,7 +125,7 @@ export default function LoginPage() {
       </main>
 
       <footer className="w-full py-6 text-center">
-        <p className="text-[10px] font-black text-stone-300 uppercase tracking-[0.3em]">
+        <p className="text-[10px] font-bold text-stone-300 uppercase tracking-[0.3em]">
           Genomic Intelligence System
         </p>
       </footer>
