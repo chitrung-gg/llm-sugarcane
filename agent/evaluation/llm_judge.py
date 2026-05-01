@@ -15,12 +15,12 @@ from app.configs.settings.settings import get_settings
 class GoogleGeminiJudge(DeepEvalBaseLLM):
     def __init__(self, model_name: str):
         settings = get_settings()
-        api_key = settings.google_api_key.get_secret_value() if settings.google_api_key else None
+        api_key = settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None
 
         common_config = {
             "google_api_key": api_key,
             "temperature": 0.0,
-            "timeout": settings.llm_timeout,  
+            "timeout": settings.LLM_TIMEOUT,  
         }
 
         # Define transient errors to retry
@@ -35,7 +35,7 @@ class GoogleGeminiJudge(DeepEvalBaseLLM):
         self._retry_config = {
             "retry_if_exception_type": transient_errors,
             "wait_exponential_jitter": True, 
-            "stop_after_attempt": settings.llm_max_retries, 
+            "stop_after_attempt": settings.LLM_MAX_RETRIES, 
             "exponential_jitter_params": {
                 "initial": 0.5,
                 "max": 2.0,

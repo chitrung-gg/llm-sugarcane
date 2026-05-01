@@ -53,8 +53,8 @@ async def run_agentic_evaluations():
 
         # --- Instantiate Judges ---
         # Note: You can route these to different models if you want to save costs on simpler metrics
-        task_judge = GoogleGeminiJudge(model_name=settings.gemini_primary_model)
-        efficiency_judge = GoogleGeminiJudge(model_name=settings.gemini_tertiary_model)
+        task_judge = GoogleGeminiJudge(model_name=settings.GEMINI_PRIMARY_MODEL)
+        efficiency_judge = GoogleGeminiJudge(model_name=settings.GEMINI_TERTIARY_MODEL)
 
         # --- 1. Sugarcane RAG Quality GEval ---
         sugarcane_rag_quality_geval = GEval(

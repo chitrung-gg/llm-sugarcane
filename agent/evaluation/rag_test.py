@@ -46,9 +46,9 @@ async def run_rag_evaluations():
         agent_service = container.agent_service
 
         # 2. Setup the Judge and Metrics
-        faithfulness_judge = GoogleGeminiJudge(model_name=settings.gemini_primary_model)
-        answer_rel_judge = GoogleGeminiJudge(model_name=settings.gemini_secondary_model)
-        context_rel_judge = GoogleGeminiJudge(model_name=settings.gemini_tertiary_model)
+        faithfulness_judge = GoogleGeminiJudge(model_name=settings.GEMINI_PRIMARY_MODEL)
+        answer_rel_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
+        context_rel_judge = GoogleGeminiJudge(model_name=settings.GEMINI_TERTIARY_MODEL)
 
         metrics = [
             FaithfulnessMetric(

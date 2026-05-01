@@ -60,9 +60,9 @@ async def run_agentic_evaluations():
         agent_service = container.agent_service
 
         # --- Instantiate Judges ---
-        tool_judge = GoogleGeminiJudge(model_name=settings.gemini_primary_model)
-        task_judge = GoogleGeminiJudge(model_name=settings.gemini_secondary_model)
-        efficiency_judge = GoogleGeminiJudge(model_name=settings.gemini_tertiary_model)
+        tool_judge = GoogleGeminiJudge(model_name=settings.GEMINI_PRIMARY_MODEL)
+        task_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
+        efficiency_judge = GoogleGeminiJudge(model_name=settings.GEMINI_TERTIARY_MODEL)
 
         # --- Define Agentic Metrics ---
         metrics = [

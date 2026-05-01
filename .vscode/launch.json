@@ -24,6 +24,32 @@
             "console": "integratedTerminal",
             "justMyCode": true
         },
+        {
+            "name": "Python: Debug Agentic Evaluations",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/agent/evaluation/agentic_test.py",
+            "cwd": "${workspaceFolder}/agent",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/agent"
+            },
+            "envFile": "${workspaceFolder}/agent/.env",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Debug GEval Evaluations",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/agent/evaluation/geval_test.py",
+            "cwd": "${workspaceFolder}/agent",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/agent"
+            },
+            "envFile": "${workspaceFolder}/agent/.env",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
         // {
         //     "name": "Next.js: debug client-side",
         //     "type": "chrome",
