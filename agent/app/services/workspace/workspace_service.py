@@ -5,7 +5,7 @@ from loguru import logger
 import json
 
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
-from app.configs.storage.databases import userdata_connection_pool
+from app.configs.storage.databases import userdata_connection_pool, langgraph_connection_pool, genome_connection_pool
 from app.models.user.user_project import UserProject
 from app.models.user.user_dataset import UserDataset, UserDatasetFile
 from app.common.constants import SYSTEM_OWNER_ID, UploadedFileType
@@ -79,13 +79,14 @@ class WorkspaceService:
             )
 
     async def get_project_datasets(self, project_id: uuid.UUID) -> List[UserDataset]:
+        """Returns metadata overviews for all datasets in a project."""
         async with userdata_connection_pool.connection() as conn:
             cursor = await conn.execute(
                 "SELECT id, project_id, name, description, dataset_metadata, created_at FROM user_datasets WHERE project_id = %s",
                 (project_id,)
             )
-            rows = await cursor.fetchall()
-            return [UserDataset(**row) for row in rows]
+            dataset_rows = await cursor.fetchall()
+            return [UserDataset(**row) for row in dataset_rows]
 
     async def get_dataset(self, dataset_id: uuid.UUID) -> Optional[UserDataset]:
         async with userdata_connection_pool.connection() as conn:
@@ -99,16 +100,48 @@ class WorkspaceService:
                 return None
             
             dataset = UserDataset(**row)
-            
-            # 2. Fetch its files
+            # 2. Fetch its files from both sources
+            dataset.files = await self.get_dataset_files(dataset_id)
+            return dataset
+
+    async def get_dataset_files(self, dataset_id: uuid.UUID) -> List[UserDatasetFile]:
+        """Aggregates files from both user_dataset_files and genomes tables."""
+        all_files = []
+        
+        # 1. Fetch from user_dataset_files (Knowledge/Documents)
+        async with userdata_connection_pool.connection() as conn:
             cursor = await conn.execute(
                 "SELECT id, dataset_id, file_id, file_name, file_type, rustfs_uri, file_metadata, created_at FROM user_dataset_files WHERE dataset_id = %s",
                 (dataset_id,)
             )
-            file_rows = await cursor.fetchall()
-            dataset.files = [UserDatasetFile(**f) for f in file_rows]
+            rows = await cursor.fetchall()
+            all_files.extend([UserDatasetFile(**row) for row in rows])
             
-            return dataset
+        # 2. Fetch from genomes (Genomic Data)
+        async with genome_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT global_id as id, dataset_id, global_id as file_id, name as file_name, 
+                       'user_private_genome' as file_type, genome_path as rustfs_uri, 
+                       genome_metadata as file_metadata, created_at 
+                FROM genomes WHERE dataset_id = %s
+                """,
+                (dataset_id,)
+            )
+            rows = await cursor.fetchall()
+            for row in rows:
+                # Map genome record to UserDatasetFile format for frontend consistency
+                all_files.append(UserDatasetFile(
+                    id=row["id"],
+                    dataset_id=row["dataset_id"],
+                    file_id=row["file_id"],
+                    file_name=row["file_name"],
+                    file_type=IngestionSourceType.USER_PRIVATE_GENOME,
+                    rustfs_uri=row["rustfs_uri"] or "No primary path",
+                    file_metadata=row["file_metadata"],
+                    created_at=row["created_at"]
+                ))
+        return all_files
 
     async def get_datasets_by_ids(self, dataset_ids: List[uuid.UUID]) -> List[UserDataset]:
         if not dataset_ids:
@@ -150,3 +183,13 @@ class WorkspaceService:
                 file_name=file_name, file_type=file_type, rustfs_uri=rustfs_uri,
                 file_metadata=file_metadata
             )
+
+    # --- Thread Logic ---
+    async def get_project_threads(self, project_id: uuid.UUID) -> List[Dict[str, Any]]:
+        async with langgraph_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT thread_id as id, project_id, title, created_at FROM chat_threads WHERE project_id = %s ORDER BY created_at DESC",
+                (project_id,)
+            )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]

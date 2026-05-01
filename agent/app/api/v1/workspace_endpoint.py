@@ -7,7 +7,7 @@ from app.core.dependencies import get_workspace_service, get_knowledge_service
 from app.services.workspace.workspace_service import WorkspaceService
 from app.services.knowledge.knowledge_service import KnowledgeService
 from app.models.user.user_project import UserProject
-from app.models.user.user_dataset import UserDataset
+from app.models.user.user_dataset import UserDataset, UserDatasetFile
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.core.vector_store.vector_store import VectorStoreType
 from app.common.constants import SYSTEM_OWNER_ID
@@ -78,6 +78,14 @@ async def list_project_datasets(
     """List all datasets associated with a project."""
     return await workspace_service.get_project_datasets(project_id)
 
+@router.get("/datasets/{dataset_id}/files", response_model=List[UserDatasetFile])
+async def list_dataset_files(
+    dataset_id: uuid.UUID,
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """List all files associated with a specific dataset (Cultivar)."""
+    return await workspace_service.get_dataset_files(dataset_id)
+
 @router.post("/datasets/{dataset_id}/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_dataset_files(
     dataset_id: uuid.UUID,
@@ -110,3 +118,11 @@ async def upload_dataset_files(
         dataset_id=dataset_id,
         files_metadata=parsed_files_metadata
     )
+
+@router.get("/projects/{project_id}/threads")
+async def list_project_threads(
+    project_id: uuid.UUID,
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """List all chat threads associated with a project."""
+    return await workspace_service.get_project_threads(project_id)

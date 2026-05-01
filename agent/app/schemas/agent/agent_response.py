@@ -22,6 +22,11 @@ class ToolExecutionItem(BaseModel):
     output: str
     execution_time_ms: Optional[int] = None
 
+class ThreadTitleOutput(BaseModel):
+    title: str = Field(
+        description="A very short, concise title (max 10 words) summarizing the biological research query. Do not include quotes."
+    )
+
 class AgentResponse(BaseModel):
     """Main response schema for the Agent API."""
     thread_id: uuid.UUID

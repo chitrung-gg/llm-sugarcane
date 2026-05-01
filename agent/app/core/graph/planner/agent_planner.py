@@ -26,3 +26,9 @@ class AgentStepObservation(BaseModel):
         default_factory=dict, 
         description="Crucial variables (e.g., {'gene_id': 'ROC-123', 's3_uri': 's3://...'})"
     )
+
+class PlanExecuteState(TypedDict):
+    query: str
+    plan: List[AgentStepPlan] 
+    past_steps: Annotated[List[AgentStepObservation], operator.add]
+    final_answer: str

@@ -20,7 +20,7 @@ from app.services.workspace.workspace_service import WorkspaceService
 from app.common.constants import LANGFUSE_GRAPH_OBSERVATION_NAME, LANGGRAPH_STATE_MAX_ITERATIONS, ObservationType, SYSTEM_OWNER_ID
 from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
-from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem
+from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem, ThreadTitleOutput
 from app.configs.storage.databases import langgraph_connection_pool
 
 
@@ -37,26 +37,6 @@ class AgentService:
         self.llm_service = llm_service
         self.langfuse_client = langfuse_client
         self.settings = get_settings()
-
-    async def _ensure_thread_exists(self, thread_id: uuid.UUID, project_id: Optional[uuid.UUID] = None):
-        async with langgraph_connection_pool.connection() as conn:
-            # Check if exists
-            cursor = await conn.execute("SELECT id FROM chat_threads WHERE thread_id = %s", (thread_id,))
-            if not await cursor.fetchone():
-                await conn.execute(
-                    "INSERT INTO chat_threads (thread_id, user_id, project_id) VALUES (%s, %s, %s)",
-                    (thread_id, SYSTEM_OWNER_ID, project_id)
-                )
-
-    async def _save_chat_message(self, thread_id: uuid.UUID, role: str, content: str, type: str = "answer", execution_id: Optional[uuid.UUID] = None, metadata: Optional[dict] = None):
-        async with langgraph_connection_pool.connection() as conn:
-            await conn.execute(
-                """
-                INSERT INTO chat_messages (thread_id, role, content, type, execution_id, metadata)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """,
-                (thread_id, role, content, type, execution_id, json.dumps(metadata) if metadata else None)
-            )
 
     @tracing(observation_type=ObservationType.AGENT)
     async def process_langgraph_chat(
@@ -153,7 +133,14 @@ class AgentService:
                     
                     # Persist thread and user message
                     await self._ensure_thread_exists(thread_id, project_id)
-                    await self._save_chat_message(thread_id, "user", query)
+                    await self._save_chat_message(thread_id=thread_id, role="user", content=query, execution_id=execution_id)
+
+                    # Trigger title generation if it doesn't exist yet
+                    async with langgraph_connection_pool.connection() as conn:
+                        cursor = await conn.execute("SELECT title FROM chat_threads WHERE thread_id = %s", (thread_id,))
+                        row = await cursor.fetchone()
+                        if row and not row['title']:
+                            asyncio.create_task(self._generate_and_update_title(thread_id, query))
 
                     # Build initial state
                     initial_state = {
@@ -252,20 +239,20 @@ class AgentService:
         """Retrieves the conversation history from the chat_messages table."""
         async with langgraph_connection_pool.connection() as conn:
             cursor = await conn.execute(
-                "SELECT role, content, type, execution_id, metadata FROM chat_messages WHERE thread_id = %s ORDER BY created_at ASC",
+                "SELECT id, role, content, type, execution_id, metadata FROM chat_messages WHERE thread_id = %s ORDER BY created_at ASC",
                 (thread_id,)
             )
             rows = await cursor.fetchall()
-            
+
             formatted_messages = []
             for row in rows:
                 formatted_messages.append({
+                    "id": str(row["id"]),
                     "role": row["role"],
                     "content": row["content"],
                     "type": row["type"],
                     "execution_id": row["execution_id"]
-                })
-            
+                })            
             return {
                 "thread_id": thread_id,
                 "messages": formatted_messages,
@@ -274,6 +261,44 @@ class AgentService:
                 "web_results": []
             }
         
+    async def _ensure_thread_exists(self, thread_id: uuid.UUID, project_id: Optional[uuid.UUID] = None):
+        async with langgraph_connection_pool.connection() as conn:
+            # Check if exists
+            cursor = await conn.execute("SELECT id FROM chat_threads WHERE thread_id = %s", (thread_id,))
+            if not await cursor.fetchone():
+                await conn.execute(
+                    "INSERT INTO chat_threads (thread_id, user_id, project_id) VALUES (%s, %s, %s)",
+                    (thread_id, SYSTEM_OWNER_ID, project_id)
+                )
+
+    async def _save_chat_message(self, thread_id: uuid.UUID, role: str, content: str, type: str = "answer", execution_id: Optional[uuid.UUID] = None, metadata: Optional[dict] = None):
+        async with langgraph_connection_pool.connection() as conn:
+            await conn.execute(
+                """
+                INSERT INTO chat_messages (thread_id, role, content, type, execution_id, metadata)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (thread_id, role, content, type, execution_id, json.dumps(metadata) if metadata else None)
+            )
+
+    async def _generate_and_update_title(self, thread_id: uuid.UUID, first_query: str):
+        """Generates a short title based on the first query and updates the thread."""
+        try:
+            # Simple prompt for title generation
+            prompt = f"Generate a very short, concise title (max 5 words) for a biological research conversation that starts with: '{first_query}'"
+            # Use secondary model for speed
+            llm = self.llm_service.get_structured_secondary_model(ThreadTitleOutput)
+            response = await llm.ainvoke(prompt)
+            title = response.title.strip().strip('"')
+            
+            async with langgraph_connection_pool.connection() as conn:
+                await conn.execute(
+                    "UPDATE chat_threads SET title = %s WHERE thread_id = %s",
+                    (title, thread_id)
+                )
+        except Exception as e:
+            logger.warning(f"Failed to generate title: {e}")
+            
     async def _consolidate_sources(self, raw_sources: list) -> List[RAGSourceItem]:
         """Groups raw chunks by source_file to return a clean summary."""
         unique_sources = {}
