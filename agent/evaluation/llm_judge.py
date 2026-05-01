@@ -34,8 +34,13 @@ class GoogleGeminiJudge(DeepEvalBaseLLM):
 
         self._retry_config = {
             "retry_if_exception_type": transient_errors,
-            "wait_exponential_jitter": True,
-            "stop_after_attempt": settings.llm_max_retries
+            "wait_exponential_jitter": True, 
+            "stop_after_attempt": settings.llm_max_retries, 
+            "exponential_jitter_params": {
+                "initial": 0.5,
+                "max": 2.0,
+                "jitter": 0.5
+            }
         }
 
         if not api_key:

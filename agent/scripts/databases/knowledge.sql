@@ -3,11 +3,16 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.knowledge_entities
 (
     global_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name character varying UNIQUE NOT NULL,       -- e.g., 'ScDREB2', 'Smut', 'Root'
+    name character varying NOT NULL,               -- Removed UNIQUE here
     entity_type character varying NOT NULL,       -- Enum: 'Gene', 'Trait', 'Disease', 'Tissue'
-    reference_sequence text,                      -- Standard FASTA (if applicable)
+    reference_sequence text,                      
+    owner_id UUID DEFAULT '00000000-0000-0000-0000-000000000000', -- Added
+    is_public BOOLEAN DEFAULT FALSE,                               -- Added
     knowledge_entities_metadata JSONB,            
-    created_at timestamp with time zone DEFAULT now()
+    created_at timestamp with time zone DEFAULT now(),
+    
+    -- Added the composite constraint
+    CONSTRAINT unique_name_per_owner UNIQUE (name, owner_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.knowledge_references
