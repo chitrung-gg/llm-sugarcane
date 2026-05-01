@@ -51,8 +51,8 @@ def make_web_search_node(
             optimized_query = suggested_query
         else:
             original_query = state["query"]
-            search_timeout = getattr(settings, 'web_search_timeout_sec', 15.0)
-            max_query_length = getattr(settings, 'web_search_max_query_length', 150)
+            search_timeout = settings.WEB_SEARCH_TIMEOUT_SEC
+            max_query_length = settings.WEB_SEARCH_MAX_QUERY_LENGTH
 
             # 1. Query Optimization
             system_prompt = WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT.format(
@@ -83,7 +83,7 @@ def make_web_search_node(
 
         # 2. Execute search
         new_web_results = []
-        num_results_to_fetch = getattr(settings, 'web_search_num_results', 10)
+        num_results_to_fetch = settings.WEB_SEARCH_NUM_RESULTS
 
         try:
             raw_results = await asyncio.to_thread(

@@ -53,10 +53,10 @@ class KnowledgeService:
             AsyncContextManager[S3Client],
             self.rustfs_session.client(
                 "s3",
-                endpoint_url=self.settings.rustfs_endpoint_url,
-                aws_access_key_id=self.settings.rustfs_access_key_id,
-                aws_secret_access_key=self.settings.rustfs_secret_access_key,
-                region_name=self.settings.rustfs_region_name
+                endpoint_url=self.settings.RUSTFS_ENDPOINT_URL,
+                aws_access_key_id=self.settings.RUSTFS_ACCESS_KEY_ID,
+                aws_secret_access_key=self.settings.RUSTFS_SECRET_ACCESS_KEY,
+                region_name=self.settings.RUSTFS_REGION_NAME
             )
         )
 
@@ -203,7 +203,7 @@ class KnowledgeService:
         file_id: str,
         source_type: IngestionSourceType
     ) -> tuple[str, str]:
-        bucket_name = self.settings.rustfs_users_bucket
+        bucket_name = self.settings.RUSTFS_USERS_BUCKET
         is_already_gz = original_filename.endswith(".gz")
         
         # Only compress if it's a genomic file AND it isn't already compressed

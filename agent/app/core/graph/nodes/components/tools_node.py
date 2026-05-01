@@ -37,25 +37,14 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
 
         overall_start = time.time()
 
-        max_output_length = getattr(settings, 'max_tool_output_length', 20000)
+        max_output_length = settings.TOOLS_MAX_TOOL_OUTPUT_LENGTH
 
         async def _execute_single_tool(tool_call) -> ToolResult:
             """Helper function to execute a single tool concurrently."""
             tool_start = time.time()
             
-            # 1. Parse the tool call
-            if isinstance(tool_call, ToolCallRequest):
-                tool_name = str(tool_call.name)
-                tool_args = getattr(tool_call, "args", {})
-            elif isinstance(tool_call, dict):
-                tool_name = str(tool_call.get("name", "unknown_tool"))
-                tool_args = tool_call.get("args", {})
-            else:
-                tool_name = str(tool_call)
-                tool_args = {}
-            
-            if not isinstance(tool_args, dict):
-                tool_args = {}
+            tool_name = str(tool_call.name)
+            tool_args = tool_call.args
 
             logger.debug("[Tools] Executing tool: {tool_name}", tool_name=tool_name)
 

@@ -37,9 +37,9 @@ def make_summarizer_node(llm_service: LLMService):
         summary = state.get("summary", "")
         messages = state.get("messages", [])
 
-        max_messages = getattr(settings, 'summary_trigger_threshold', 10)
-        keep_messages = getattr(settings, 'summary_keep_last_n', 2)
-        timeout_sec = getattr(settings, 'summary_timeout_sec', 20.0)
+        max_messages = settings.SUMMARIZER_SUMMARY_TRIGGER_THRESHOLD
+        keep_messages = settings.SUMMARIZER_SUMMARY_KEEP_LAST_N
+        timeout_sec = settings.SUMMARIZER_SUMMARY_TIMEOUT_SEC
 
         # Only summarize if we have a significant number of messages (e.g., > 10)
         # to avoid summarizing every single turn which is expensive.

@@ -15,7 +15,7 @@ async def trigger_genome_indexing(
 ) -> Dict[str, Any]:
     """Underlying implementation for genome indexing trigger."""
     settings = get_settings()
-    url = f"{settings.genome_backend_api_url}/api/v1/etl/trigger-genome"
+    url = f"{settings.GENOME_BACKEND_API_URL}/api/v1/etl/trigger-genome"
     
     payload = {
         "s3_uri": s3_uri,

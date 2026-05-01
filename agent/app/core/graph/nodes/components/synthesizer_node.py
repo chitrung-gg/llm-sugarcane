@@ -40,7 +40,7 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         logger.debug("[Synthesizer] ✍️ Generating final response")
         
         settings = get_settings()
-        synthesizer_timeout = getattr(settings, 'synthesizer_timeout_sec', 45.0) 
+        synthesizer_timeout = settings.SYNTHESIZER_TIMEOUT_SEC
 
         current_iteration = state.get("iteration_count", 0)
         max_iterations = state.get("max_iterations", 3)

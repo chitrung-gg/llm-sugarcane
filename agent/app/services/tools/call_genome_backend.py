@@ -11,7 +11,7 @@ async def call_genome_backend(method: str, endpoint: str, params=None, json_data
     settings = get_settings()
 
     # Grab URL
-    base_url = getattr(settings, "genome_backend_api_url", "http://localhost:8000").rstrip("/")
+    base_url = settings.GENOME_BACKEND_API_URL.rstrip("/")
     endpoint = endpoint if endpoint.startswith("/") else f"/{endpoint}"
     url = f"{base_url}{endpoint}"
 

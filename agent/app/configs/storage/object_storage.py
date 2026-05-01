@@ -8,7 +8,7 @@ settings = get_settings()
 
 # Type hint: An async context manager that yields an S3Client
 rustfs_session: aioboto3.Session = aioboto3.Session(
-    aws_access_key_id=settings.rustfs_access_key_id,
-    aws_secret_access_key=settings.rustfs_secret_access_key,
-    region_name=settings.rustfs_region_name
+    aws_access_key_id=settings.RUSTFS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.RUSTFS_SECRET_ACCESS_KEY,
+    region_name=settings.RUSTFS_REGION_NAME
 )

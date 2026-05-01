@@ -26,7 +26,7 @@ class LLMService(BaseModel):
     
     def model_post_init(self, _context: Any):
         settings = get_settings()
-        api_key = settings.google_api_key.get_secret_value() if settings.google_api_key else None
+        api_key = settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None
 
         if not api_key:
             raise ValueError("Google API Key not found!")
@@ -44,13 +44,13 @@ class LLMService(BaseModel):
             "google_api_key": api_key,
             "temperature": 0.0,
             # "max_retries": settings.llm_max_retries,  # We'll use LangChain's with_retry instead of the basic provider retry
-            "timeout": settings.llm_timeout,  
+            "timeout": settings.LLM_TIMEOUT,  
         }
         
         self._retry_config = {
             "retry_if_exception_type": transient_errors,
             "wait_exponential_jitter": True, 
-            "stop_after_attempt": settings.llm_max_retries, 
+            "stop_after_attempt": settings.LLM_MAX_RETRIES, 
             "exponential_jitter_params": {
                 "initial": 0.5,
                 "max": 2.0,
@@ -59,29 +59,29 @@ class LLMService(BaseModel):
         }
 
         self._primary_model = ChatGoogleGenerativeAI(
-            model=settings.gemini_primary_model, 
+            model=settings.GEMINI_PRIMARY_MODEL, 
             **common_config
         )
         self._secondary_model = ChatGoogleGenerativeAI(
-            model=settings.gemini_secondary_model,
+            model=settings.GEMINI_SECONDARY_MODEL,
             **common_config
         )
         self._tertiary_model = ChatGoogleGenerativeAI(
-            model=settings.gemini_tertiary_model,
+            model=settings.GEMINI_TERTIARY_MODEL,
             **common_config
         )
         self._quaternary_model = ChatGoogleGenerativeAI(
-            model=settings.gemini_quaternary_model,
+            model=settings.GEMINI_QUATERNARY_MODEL,
             **common_config
         )
 
         logger.info(f"""
             LLMService ready with Native Retry Strategy |
-            Primary: {settings.gemini_primary_model} |
-            Secondary: {settings.gemini_secondary_model} |
-            Tertiary: {settings.gemini_tertiary_model} |
-            Quaternary: {settings.gemini_quaternary_model}
-            Max Attempts: {settings.llm_max_retries} | Timeout: {settings.llm_timeout}s
+            Primary: {settings.GEMINI_PRIMARY_MODEL} |
+            Secondary: {settings.GEMINI_SECONDARY_MODEL} |
+            Tertiary: {settings.GEMINI_TERTIARY_MODEL} |
+            Quaternary: {settings.GEMINI_QUATERNARY_MODEL}
+            Max Attempts: {settings.LLM_MAX_RETRIES} | Timeout: {settings.LLM_TIMEOUT}s
         """)
 
     def get_primary_model(self) -> BaseChatModel:

@@ -18,7 +18,6 @@ import json
 from app.utils.observability.tracing import tracing
 from app.services.workspace.workspace_service import WorkspaceService
 from app.common.constants import LANGFUSE_GRAPH_OBSERVATION_NAME, LANGGRAPH_STATE_MAX_ITERATIONS, ObservationType, SYSTEM_OWNER_ID
-from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
 from app.schemas.agent.agent_response import AgentResponse, RAGSourceItem, ThreadTitleOutput
 from app.configs.storage.databases import langgraph_connection_pool
@@ -36,7 +35,6 @@ class AgentService:
         self.workspace_service = workspace_service
         self.llm_service = llm_service
         self.langfuse_client = langfuse_client
-        self.settings = get_settings()
 
     @tracing(observation_type=ObservationType.AGENT)
     async def process_langgraph_chat(

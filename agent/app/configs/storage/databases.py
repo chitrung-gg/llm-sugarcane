@@ -8,7 +8,7 @@ from app.configs.settings.settings import get_settings
 settings = get_settings()
 
 langgraph_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
-    conninfo=settings.langgraph_postgres_url,
+    conninfo=settings.LANGGRAPH_POSTGRES_URL,
     # max_size=20,
     kwargs={
         "autocommit": True,
@@ -18,7 +18,7 @@ langgraph_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = Async
 )
 
 userdata_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
-    conninfo=settings.userdata_postgres_url,
+    conninfo=settings.USERDATA_POSTGRES_URL,
     # max_size=20,
     kwargs={
         "autocommit": True,
@@ -28,7 +28,7 @@ userdata_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncC
 )
 
 genome_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
-    conninfo=settings.genome_postgres_url,
+    conninfo=settings.GENOME_POSTGRES_URL,
     # max_size=20,
     kwargs={
         "autocommit": True,

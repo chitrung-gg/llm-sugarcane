@@ -31,7 +31,7 @@ def make_replanner_node(llm_service: LLMService):
         past_steps = state.get("past_steps", [])
         plan = state.get("plan", [])
         iteration_count = state.get("iteration_count", 0)
-        max_planner_iteration = getattr(settings, "max_planner_iteration", 10)
+        max_planner_iteration = settings.REPLANNER_MAX_PLANNER_ITERATION
 
         # Circuit Breaker
         if iteration_count >= max_planner_iteration:

@@ -45,7 +45,7 @@ class DoclingGenericSplitter(AbstractDocumentSplitter):
         # Config HybridChunker
         # Use better embedding model as from the MTEB Leaderboard if resources allow
         tokenizer = HuggingFaceTokenizer(
-            tokenizer=AutoTokenizer.from_pretrained(settings.hugging_face_tokenizer),
+            tokenizer=AutoTokenizer.from_pretrained(settings.HUGGING_FACE_TOKENIZER),
             max_tokens=500
         )
 

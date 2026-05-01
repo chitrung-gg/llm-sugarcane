@@ -139,10 +139,10 @@ def knowledge_ingestion_pipeline():
                         AsyncContextManager[S3Client],
                         container.rustfs_session.client(
                             's3',
-                            endpoint_url=settings.rustfs_endpoint_url,
-                            aws_access_key_id=settings.rustfs_access_key_id,
-                            aws_secret_access_key=settings.rustfs_secret_access_key,
-                            region_name=settings.rustfs_region_name
+                            endpoint_url=settings.RUSTFS_ENDPOINT_URL,
+                            aws_access_key_id=settings.RUSTFS_ACCESS_KEY_ID,
+                            aws_secret_access_key=settings.RUSTFS_SECRET_ACCESS_KEY,
+                            region_name=settings.RUSTFS_REGION_NAME
                         )
                     )
 

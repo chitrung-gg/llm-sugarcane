@@ -3,13 +3,13 @@ from typing import List
 import uuid
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
+from loguru import logger
+from app.utils.pipelines.airflow_client import get_airflow_run_status
 from app.core.dependencies import get_knowledge_service
 from app.core.vector_store.vector_store import VectorStoreType
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.services.knowledge.knowledge_service import KnowledgeService
 from app.configs.settings.settings import get_settings
-from app.core.workers.celery import celery
-from celery.result import AsyncResult
 
 router = APIRouter()
 settings = get_settings()
@@ -38,32 +38,45 @@ async def ingest_file(
 @router.get("/task/{task_id}")
 async def get_task_status(task_id: str):
     """
-    Checks the status and progress of a background ingestion task.
-    Returns comprehensive task information.
+    Checks the status of an Airflow ingestion task (previously Celery).
+    We map Airflow states back to Celery-like states for frontend compatibility.
     """
-    task_result = AsyncResult(task_id, app=celery)
+    # Assuming this endpoint is checking the document ingestion DAG.
+    # If it could be multiple DAGs, you might need to pass dag_id as a query param.
+    dag_id = "knowledge_ingestion_pipeline" 
     
-    response = {
-        "task_id": task_id,
-        "status": task_result.status,
-        "ready": task_result.ready(),
-        "successful": task_result.successful(),
-        "failed": task_result.failed(),
-    }
+    try:
+        # Offload the synchronous requests call to a background thread
+        import asyncio
+        airflow_run = await asyncio.to_thread(
+            get_airflow_run_status, 
+            dag_id=dag_id, 
+            dag_run_id=task_id
+        )
+        
+        airflow_state = airflow_run.get("state", "unknown").upper()
+        
+        # Map Airflow state strings to Celery-like status strings
+        is_ready = airflow_state in ['SUCCESS', 'FAILED']
+        
+        response = {
+            "task_id": task_id,
+            "status": airflow_state, # Will be QUEUED, RUNNING, SUCCESS, or FAILED
+            "ready": is_ready,
+            "successful": airflow_state == 'SUCCESS',
+            "failed": airflow_state == 'FAILED',
+        }
 
-    # date_done is available when the task has reached a terminal state
-    if task_result.date_done:
-        response["date_done"] = task_result.date_done.isoformat()
+        # Add completion date if available
+        if airflow_run.get("end_date"):
+            response["date_done"] = airflow_run.get("end_date")
 
-    if task_result.status == 'SUCCESS':
-        response["result"] = task_result.result
-    elif task_result.status == 'FAILURE':
-        # result contains the exception instance in case of failure
-        response["error"] = str(task_result.result)
-        response["traceback"] = task_result.traceback
-    else:
-        # 'info' contains metadata passed via update_state (e.g., progress)
-        # or the result if the task is finished but status is not SUCCESS/FAILURE
-        response["meta"] = task_result.info
+        # In Airflow, detailed errors usually live in task instances, but we can return general info
+        if airflow_state == 'FAILED':
+            response["error"] = "Workflow execution failed in Airflow. Check Airflow UI for detailed logs."
 
-    return response
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error checking task status: {e}")
+        raise HTTPException(status_code=500, detail="Could not retrieve task status.")

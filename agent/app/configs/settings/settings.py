@@ -15,171 +15,212 @@ class Settings(BaseSettings):
     )
 
     # --- Gemini ---
-    google_api_key: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
-    # gemini_primary_model: str = Field(
+    GOOGLE_API_KEY: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
+    # GEMINI_PRIMARY_MODEL: str = Field(
     #     default="gemma-4-31b-it", 
     #     validation_alias="GEMINI_PRIMARY_MODEL"
     # )
-    gemini_primary_model: str = Field(
+    GEMINI_PRIMARY_MODEL: str = Field(
         default="gemini-3-flash-preview", 
         validation_alias="GEMINI_PRIMARY_MODEL"
     )
-    # gemini_secondary_model: str = Field(
+    # GEMINI_SECONDARY_MODEL: str = Field(
     #     default="gemini-3.1-flash-lite-preview", 
     #     validation_alias="GEMINI_SECONDARY_MODEL"
     # )
-    gemini_secondary_model: str = Field(
+    GEMINI_SECONDARY_MODEL: str = Field(
         default="gemini-2.5-flash", 
         validation_alias="GEMINI_SECONDARY_MODEL"
     )
-    gemini_tertiary_model: str = Field(
+    GEMINI_TERTIARY_MODEL: str = Field(
         default="gemini-2.5-flash-lite", 
         validation_alias="GEMINI_TERTIARY_MODEL"
     )
-    gemini_quaternary_model: str = Field(
+    GEMINI_QUATERNARY_MODEL: str = Field(
         default="gemma-4-26b-a4b-it", 
         validation_alias="GEMINI_QUATERNARY_MODEL"
     )
 
-    gemini_embedding_model: str = Field(
+    GEMINI_EMBEDDING_MODEL: str = Field(
         default="gemini-embedding-2-preview",   # "gemini-embedding-001"
-        validation_alias="GEMINI_PRIMARY_EMBEDDING_MODEL"
+        validation_alias="GEMINI_EMBEDDING_MODEL"
     ) 
-    gemini_max_input_token: int = 200000
+    GEMINI_MAX_INPUT_TOKEN: int = 200000
 
     # --- Langfuse ---
-    langfuse_secret_key: SecretStr | None = Field(default=None, validation_alias="LANGFUSE_SECRET_KEY")
-    langfuse_public_key: SecretStr | None = Field(default=None, validation_alias="LANGFUSE_PUBLIC_KEY")
-    langfuse_base_url: str = Field(default="https://cloud.langfuse.com", validation_alias="LANGFUSE_BASE_URL")
+    LANGFUSE_SECRET_KEY: SecretStr | None = Field(default=None, validation_alias="LANGFUSE_SECRET_KEY")
+    LANGFUSE_PUBLIC_KEY: SecretStr | None = Field(default=None, validation_alias="LANGFUSE_PUBLIC_KEY")
+    LANGFUSE_BASE_URL: str = Field(default="https://cloud.langfuse.com", validation_alias="LANGFUSE_BASE_URL")
     
     # --- Qdrant ---
-    qdrant_url: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
-    qdrant_api_key: SecretStr | None = Field(default=None, validation_alias="QDRANT_API_KEY")
-    qdrant_solid_knowledge_collection_name: str = Field(
+    QDRANT_URL: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
+    QDRANT_API_KEY: SecretStr | None = Field(default=None, validation_alias="QDRANT_API_KEY")
+    QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME: str = Field(
         default="sugarcane_docs",
         validation_alias="QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME"
     )
-    qdrant_volatile_knowledge_collection_name: str = Field(
+    QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME: str = Field(
         default="sugarcane_external_context",
         validation_alias="QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME"
     )
 
-    qdrant_vector_size: int = 3072   # 768 to save storage
-    qdrant_prefer_grpc: bool = True
-    rag_score_threshold: float = 0.70
+    QDRANT_VECTOR_SIZE: int = 3072   # 768 to save storage
+    QDRANT_PREFER_GRPC: bool = True
+
+    QDRANT_SOLID_TOP_K: int = 5
+    QDRANT_VOLATILE_TOP_K: int = 3
+    QDRANT_FINAL_TOP_K: int = 5
+    QDRANT_MAX_QUERY_LENGTH: int = 200
 
     # --- Neo4j ---
-    neo4j_uri: str = Field(
+    NEO4J_URI: str = Field(
         default="neo4j://localhost:7687",
         validation_alias="NEO4J_URI"
     )
-    neo4j_username: str = Field(
+    NEO4J_USERNAME: str = Field(
         default="neo4j",
         validation_alias="NEO4J_USERNAME"
     )
-    neo4j_password: SecretStr = Field(
+    NEO4J_PASSWORD: SecretStr = Field(
         default=SecretStr("neo4j"), 
         validation_alias="NEO4J_PASSWORD"
     )
 
     # --- InMemory Store ---
-    inmemory_retriever_top_k: int = 3
+    INMEMORY_RETRIEVER_TOP_K: int = 3
 
     # --- Genome Postgres ---
-    genome_postgres_url: str = Field(
+    GENOME_POSTGRES_URL: str = Field(
         default="postgresql://genome:genome@localhost:5432/sugarcane",
         validation_alias="GENOME_POSTGRES_URL"
     )
 
     # --- LangGraph's Postgres Checkpointer ---
-    langgraph_postgres_url: str = Field(
+    LANGGRAPH_POSTGRES_URL: str = Field(
         default="postgresql://langgraph:langgraph@localhost:5432/sugarcane",
         validation_alias="LANGGRAPH_POSTGRES_URL"
     )
 
     # --- User Data Postgres ---
-    userdata_postgres_url: str = Field(
+    USERDATA_POSTGRES_URL: str = Field(
         default="postgresql://userdata:userdata@localhost:5432/sugarcane",
         validation_alias="USERDATA_POSTGRES_URL"
     )
 
     # --- KnowledgeGraph's Postgres ---
-    knowledgegraph_postgres_url: str = Field(
+    KNOWLEDGEGRAPH_POSTGRES_URL: str = Field(
         default="postgresql://knowledge:knowledge@localhost:5432/sugarcane",
         validation_alias="KNOWLEDGEGRAPH_POSTGRES_URL"
     )
 
     # --- RabbitMQ ---
-    knowledgegraph_rabbitmq_url: str = Field(
+    KNOWLEDGEGRAPH_RABBITMQ_URL: str = Field(
         default="amqp://rabbitmq:rabbitmq@localhost:5672/llm-ingest-knowledgegraph",
         validation_alias="KNOWLEDGEGRAPH_RABBITMQ_URL"
     )
 
     # --- SearxNG ---
-    searx_host: SecretStr | None = Field(default=None, validation_alias="SEARXNG_HOST")  
+    SEARXNG_HOST: SecretStr | None = Field(default=None, validation_alias="SEARXNG_HOST")  
 
     # --- LLM Service ---
-    llm_max_retries: int = 3
-    llm_timeout: int = 20
+    LLM_MAX_RETRIES: int = 3
+    LLM_TIMEOUT: int = 20
 
     # --- Log ---
-    log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
+    LOG_LEVEL: str = Field(default="INFO", validation_alias="LOG_LEVEL")
 
     # --- Langchain Docling ---
-    docling_allow_external_plugins: str = Field(default="0", validation_alias="DOCLING_ALLOW_EXTERNAL_PLUGINS")
+    DOCLING_ALLOW_EXTERNAL_PLUGINS: str = Field(default="1", validation_alias="DOCLING_ALLOW_EXTERNAL_PLUGINS")
     
     # --- HuggingFaceTokenizer for DocumentProcessor ---
-    hugging_face_tokenizer: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", validation_alias="HUGGING_FACE_TOKENIZER")
+    HUGGING_FACE_TOKENIZER: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", validation_alias="HUGGING_FACE_TOKENIZER")
 
     # --- RustFS ---
-    rustfs_endpoint_url: str = Field(
+    RUSTFS_ENDPOINT_URL: str = Field(
         default="http://localhost:9000",
         validation_alias="RUSTFS_ENDPOINT_URL"
     )
-    rustfs_access_key_id: str = Field(
+    RUSTFS_ACCESS_KEY_ID: str = Field(
         default="rustfs",
         validation_alias="RUSTFS_ACCESS_KEY_ID"
     )
-    rustfs_secret_access_key: str = Field(
+    RUSTFS_SECRET_ACCESS_KEY: str = Field(
         default="rustfs",
         validation_alias="RUSTFS_SECRET_ACCESS_KEY"
     )
-    rustfs_region_name: str = Field(
+    RUSTFS_REGION_NAME: str = Field(
         default="ap-southeast-1",
         validation_alias="RUSTFS_REGION_NAME"
     )
-    rustfs_users_bucket: str = Field(
+    RUSTFS_USERS_BUCKET: str = Field(
         default="users-bucket",
         validation_alias="RUSTFS_USERS_BUCKET"
     )
     
 
     # --- Genome Tool ---
-    genome_backend_api_url: str = Field(
+    GENOME_BACKEND_API_URL: str = Field(
         default="http://localhost:8001", validation_alias="GENOME_BACKEND_API_URL"
     )
 
     # --- NCBI Tool ---
-    # ncbi_openapi_yaml_path: str = Field(
+    # NCBI_OPENAPI_YAML_PATH: str = Field(
     #     default="resources/ncbi_dataset_openapi_truncated.yaml", 
     #     validation_alias="NCBI_OPENAPI_YAML_PATH"
     # )
-    ncbi_agent_name: SecretStr | None = Field(
+    NCBI_AGENT_NAME: SecretStr | None = Field(
         default=None, 
-        validation_alias="NCBI_TOOL"
+        validation_alias="NCBI_AGENT_NAME"
     )
-    ncbi_email: SecretStr | None = Field(
+    NCBI_EMAIL: SecretStr | None = Field(
         default=None, 
         validation_alias="NCBI_EMAIL"
     )
-    ncbi_api_key: SecretStr | None = Field(
+    NCBI_API_KEY: SecretStr | None = Field(
         default=None, 
         validation_alias="NCBI_API_KEY"
     )
 
+    # Airflow
+    AIRFLOW_BASE_URL: str = Field(
+        default="http://localhost:8080",
+        validation_alias="AIRFLOW_BASE_URL"
+    )
+    AIRFLOW_API_AUTH_USERNAME: str = Field(
+        default="airflow",
+        validation_alias="AIRFLOW_API_AUTH_USERNAME"
+    )
+    AIRFLOW_API_AUTH_PASSWORD: SecretStr | None = Field(
+        default=None,
+        validation_alias="AIRFLOW_API_AUTH_PASSWORD"
+    )
+
+
+
+    # Graph Nodes
+    REPLANNER_MAX_PLANNER_ITERATION: int = 10
+
+    ROUTER_MAX_RAG_RESULTS_LENGTH: int = 1000
+    ROUTER_MAX_WEB_RESULTS_LENGTH: int = 1000
+    ROUTER_MAX_TOOL_RESULTS_LENGTH: int = 3000
+
+    RAG_INMEMORY_RETRIEVER_TOP_K: int = 3
+
+    TOOLS_MAX_TOOL_OUTPUT_LENGTH: int = 20000
+
+    WEB_SEARCH_TIMEOUT_SEC: float = 15.0
+    WEB_SEARCH_MAX_QUERY_LENGTH: int = 150
+    WEB_SEARCH_NUM_RESULTS: int = 10
+
+    SUMMARIZER_SUMMARY_TRIGGER_THRESHOLD: int = 10
+    SUMMARIZER_SUMMARY_KEEP_LAST_N: int = 2
+    SUMMARIZER_SUMMARY_TIMEOUT_SEC: float = 20.0
+
+    SYNTHESIZER_TIMEOUT_SEC: float = 45.0
+
+
     # --- App ---
-    app_env: str = Field(default="development", validation_alias="APP_ENV")
-    debug: bool = False
+    APP_ENV: str = Field(default="development", validation_alias="APP_ENV")
 
 
 @lru_cache()

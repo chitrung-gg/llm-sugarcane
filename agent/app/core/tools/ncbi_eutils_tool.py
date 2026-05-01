@@ -17,7 +17,7 @@ EUTILS_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 DATASETS_BASE = "https://api.ncbi.nlm.nih.gov/datasets/v2"
 
 # Set up the rate limiter
-RATE_LIMIT = 10 if settings.ncbi_api_key else 3
+RATE_LIMIT = 10 if settings.NCBI_API_KEY else 3
 limiter = AsyncLimiter(RATE_LIMIT, 1)
 
 @ingestion_to_persistence_layer(
@@ -474,24 +474,24 @@ def build_eutils_params(**kwargs) -> Dict[str, Any]:
     """Helper function to cleanly pass params via aiohttp instead of manual URL building."""
     params = kwargs.copy()
     
-    if settings.ncbi_agent_name:
+    if settings.NCBI_AGENT_NAME:
         # Agent tool name to declare for NCBI must NOT contain spaces
-        raw_tool = _unwrap_secret(settings.ncbi_agent_name)
+        raw_tool = _unwrap_secret(settings.NCBI_AGENT_NAME)
         params['tool'] = raw_tool.replace(" ", "_")
         
-    if settings.ncbi_email:
-        params['email'] = _unwrap_secret(settings.ncbi_email)
+    if settings.NCBI_EMAIL:
+        params['email'] = _unwrap_secret(settings.NCBI_EMAIL)
         
-    if settings.ncbi_api_key:
-        params['api_key'] = _unwrap_secret(settings.ncbi_api_key)
+    if settings.NCBI_API_KEY:
+        params['api_key'] = _unwrap_secret(settings.NCBI_API_KEY)
         
     return params
 
 def get_datasets_headers() -> Dict[str, str]:
     """Helper to generate headers for Datasets v2 API, including optional API key."""
     headers = {"Accept": "application/json"}
-    if settings.ncbi_api_key:
-        headers["api-key"] = _unwrap_secret(settings.ncbi_api_key)
+    if settings.NCBI_API_KEY:
+        headers["api-key"] = _unwrap_secret(settings.NCBI_API_KEY)
     return headers
 
 def _format_dataset_report(report: Dict[str, Any]) -> str:

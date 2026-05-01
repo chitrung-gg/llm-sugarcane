@@ -1,22 +1,12 @@
-import asyncio
 import time
-from langfuse import observe
 from loguru import logger
 from typing import Any, Dict, List, Literal, Optional
 
-from app.common.constants import ObservationType, UploadedFileType
+from app.common.constants import ObservationType
 from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
-from app.configs.settings.settings import get_settings
 from app.utils.document_processor import DocumentProcessor
 from app.core.graph.state.agent_state import AgentState
-from app.core.prompts.input_analyzer_prompts import (
-    INPUT_ANALYZER_GENOMIC_FILE_NOTE,
-    INPUT_ANALYZER_MASSIVE_FILE_NOTE,
-    INPUT_ANALYZER_FILE_CONTEXT_HEADER
-)
-from langchain_core.messages import SystemMessage
-from langchain_core.documents import Document
 from langgraph.types import Command
 
 
@@ -26,7 +16,6 @@ def make_input_analyzer_node(document_processor: DocumentProcessor):
     async def input_analyzer(state: AgentState) -> Command[
         Literal[AgentGraphNode.ROUTER]
     ]:
-        settings = get_settings()
         start_time = time.time()
 
         logger.debug("========== [Input Analyzer Node] ==========")

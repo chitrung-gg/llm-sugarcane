@@ -74,7 +74,7 @@ def patch_opentelemetry(record):
 def setup_logging():
     """Configures Loguru and intercepts all standard logging."""
     settings = get_settings()
-    log_level = settings.log_level.upper()
+    log_level = settings.LOG_LEVEL.upper()
 
     # Remove the default Loguru handler
     logger.remove()

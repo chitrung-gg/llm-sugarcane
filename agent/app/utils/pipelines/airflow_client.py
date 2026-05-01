@@ -17,14 +17,14 @@ def get_airflow_jwt_token(force_refresh: bool = False) -> str:
     if not force_refresh and _jwt_cache["token"]:
         return _jwt_cache["token"]
 
-    auth_url = f"{getattr(settings, "AIRFLOW_BASE_URL")}/auth/token"
+    auth_url = f"{settings.AIRFLOW_BASE_URL}/auth/token"
     
     try:
         response = requests.post(
             auth_url,
             json={
-                "username": getattr(settings, "AIRFLOW_API_AUTH_USERNAME"),
-                "password": getattr(settings, "AIRFLOW_API_AUTH_PASSWORD")
+                "username": settings.AIRFLOW_API_AUTH_USERNAME,
+                "password": settings.AIRFLOW_API_AUTH_PASSWORD
             },
             timeout=5
         )
@@ -46,7 +46,7 @@ def trigger_airflow_dag(conf_payload: dict, dag_id: str):
     """Uses a cached JWT token to trigger an Airflow DAG dynamically."""
     
     jwt_token = get_airflow_jwt_token()
-    trigger_url = f"{getattr(settings, "AIRFLOW_BASE_URL")}/api/v2/dags/{dag_id}/dagRuns"
+    trigger_url = f"{settings.AIRFLOW_BASE_URL}/api/v2/dags/{dag_id}/dagRuns"
     
     headers = {
         "Authorization": f"Bearer {jwt_token}",
@@ -91,3 +91,32 @@ def trigger_airflow_dag(conf_payload: dict, dag_id: str):
         logger.error(f"Failed to trigger Airflow DAG: {e}")
         
         raise HTTPException(status_code=503, detail="Failed to dispatch job to workflow engine.")
+    
+def get_airflow_run_status(dag_id: str, dag_run_id: str):
+    """Uses the cached JWT token to fetch the status of an Airflow DAG Run."""
+    jwt_token = get_airflow_jwt_token()
+    
+    # Airflow 2/3 REST API endpoint for checking a specific run
+    status_url = f"{settings.AIRFLOW_BASE_URL}/api/v2/dags/{dag_id}/dagRuns/{dag_run_id}"
+    
+    headers = {
+        "Authorization": f"Bearer {jwt_token}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.get(status_url, headers=headers, timeout=5)
+        
+        # Retry logic if token expired
+        if response.status_code == 401:
+            logger.warning("Cached Airflow JWT expired. Refreshing token and retrying...")
+            jwt_token = get_airflow_jwt_token(force_refresh=True)
+            headers["Authorization"] = f"Bearer {jwt_token}"
+            response = requests.get(status_url, headers=headers, timeout=5)
+            
+        response.raise_for_status()
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch Airflow status for {dag_run_id}: {e}")
+        raise HTTPException(status_code=503, detail="Failed to fetch workflow status.")

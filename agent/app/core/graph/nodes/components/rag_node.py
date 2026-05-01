@@ -47,10 +47,10 @@ def make_rag_node(
         
         original_query = state["query"]
 
-        solid_k = getattr(settings, 'qdrant_solid_top_k', 5)
-        volatile_k = getattr(settings, 'qdrant_volatile_top_k', 3)
-        final_top_k = getattr(settings, 'rag_final_top_k', 5)
-        max_query_length = getattr(settings, 'rag_max_query_length', 200)
+        solid_k = settings.QDRANT_SOLID_TOP_K
+        volatile_k = settings.QDRANT_VOLATILE_TOP_K
+        final_top_k = settings.QDRANT_FINAL_TOP_K
+        max_query_length = settings.QDRANT_MAX_QUERY_LENGTH
                                    
         # 1. Query Optimization
         system_prompt = RAG_QUERY_OPTIMIZATION_PROMPT.format(
@@ -153,7 +153,7 @@ def make_rag_node(
             def _build_bm25():
                 return BM25Retriever.from_documents(
                     ephemeral_chunks,
-                    k=getattr(settings, 'inmemory_retriever_top_k', 3),
+                    k=settings.RAG_INMEMORY_RETRIEVER_TOP_K,
                     bm25_variant="plus",
                 )
             

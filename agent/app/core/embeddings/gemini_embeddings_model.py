@@ -9,7 +9,7 @@ from app.configs.settings.settings import get_settings
 
 class GeminiEmbeddingModel(BaseModel):
     model_name: str = Field(
-        default_factory=lambda: get_settings().gemini_embedding_model
+        default_factory=lambda: get_settings().GEMINI_EMBEDDING_MODEL
     )
 
     _embeddings: Any = PrivateAttr()

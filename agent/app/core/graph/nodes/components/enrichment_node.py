@@ -32,15 +32,10 @@ def make_enrichment_node(
         new_results = tool_results[-num_new:] if num_new > 0 else []
 
         for result in new_results:
-            if isinstance(result, dict):
-                tool_name = result.get("tool_name", "")
-                status = result.get("status", "")
-                output = str(result.get("output", ""))
-            else:
-                tool_name = getattr(result, "tool_name", "")
-                status = getattr(result, "status", "")
-                output = str(getattr(result, "output", ""))
-            
+            tool_name = result.get("tool_name", "")
+            status = result.get("status", "")
+            output = str(result.get("output", ""))
+
             # Check if the tool_name exists as a key in our tool_registry
             if status == "success" and tool_name in tool_registry:
                 # Fetch the config just to log it nicely

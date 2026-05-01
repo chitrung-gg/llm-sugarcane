@@ -57,9 +57,9 @@ def make_router_node(
         tool_results = state.get("tool_results", [])
         web_results = state.get("web_results", [])
 
-        max_rag_results_length = getattr(settings, 'max_rag_results_length', 1000)
-        max_web_results_length = getattr(settings, 'max_web_results_length', 1000)
-        max_tool_results_length = getattr(settings, 'max_tool_results_length', 3000)
+        max_rag_results_length = settings.ROUTER_MAX_RAG_RESULTS_LENGTH
+        max_web_results_length = settings.ROUTER_MAX_WEB_RESULTS_LENGTH
+        max_tool_results_length = settings.ROUTER_MAX_TOOL_RESULTS_LENGTH
 
 
         execution_history = ""

@@ -88,11 +88,11 @@ class AppContainer:
         """Initialize the Langfuse singleton client with explicit Pydantic settings."""
         settings = get_settings()
         
-        if settings.langfuse_public_key and settings.langfuse_secret_key:
+        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
             self._langfuse_client = Langfuse(
-                public_key=settings.langfuse_public_key.get_secret_value(),
-                secret_key=settings.langfuse_secret_key.get_secret_value(),
-                host=settings.langfuse_base_url
+                public_key=settings.LANGFUSE_PUBLIC_KEY.get_secret_value(),
+                secret_key=settings.LANGFUSE_SECRET_KEY.get_secret_value(),
+                host=settings.LANGFUSE_BASE_URL
             )
             logger.info("✅ Langfuse client initialized.")
         else:
@@ -139,23 +139,23 @@ class AppContainer:
         """Initialize Qdrant using your Custom VectorStore Wrapper."""
         settings = get_settings()
 
-        if settings.qdrant_solid_knowledge_collection_name is None:
+        if settings.QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME is None:
             raise ValueError("Qdrant Collection Name is not configured")
 
-        if settings.qdrant_volatile_knowledge_collection_name is None:
+        if settings.QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME is None:
             raise ValueError("Qdrant Volatile Knowledge Collection Name is not configured")
         
         qdrant_config_solid = VectorStore(
-            collection_name=settings.qdrant_solid_knowledge_collection_name,
-            vector_size=settings.qdrant_vector_size, # 768
-            url=settings.qdrant_url,
+            collection_name=settings.QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME,
+            vector_size=settings.QDRANT_VECTOR_SIZE, # 768
+            url=settings.QDRANT_URL,
             dense_embedding=self.embedding_model 
         )
 
         qdrant_config_volatile = VectorStore(
-            collection_name=settings.qdrant_volatile_knowledge_collection_name,
-            vector_size=settings.qdrant_vector_size, # 768
-            url=settings.qdrant_url,
+            collection_name=settings.QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME,
+            vector_size=settings.QDRANT_VECTOR_SIZE, # 768
+            url=settings.QDRANT_URL,
             dense_embedding=self.embedding_model 
         )
 
@@ -166,11 +166,11 @@ class AppContainer:
         """Initialize SearXNG Wrapper."""
         settings = get_settings()
 
-        if settings.searx_host is None:
+        if settings.SEARXNG_HOST is None:
             raise ValueError("SEARX_HOST is not configured")
 
         self._searx_wrapper = SearxSearchWrapper(
-            searx_host=settings.searx_host.get_secret_value()
+            searx_host=settings.SEARXNG_HOST.get_secret_value()
         )
 
     async def _init_document_processor(self):
@@ -184,7 +184,7 @@ class AppContainer:
         settings = get_settings()
 
         # Assuming your Settings model has these variables defined
-        if not settings.neo4j_uri or not settings.neo4j_username or not settings.neo4j_password:
+        if not settings.NEO4J_URI or not settings.NEO4J_USERNAME or not settings.NEO4J_PASSWORD:
             logger.warning("Neo4j credentials not fully configured. Knowledge Graph will remain None.")
             return
 
@@ -192,9 +192,9 @@ class AppContainer:
             # Note: Neo4jGraph initialization is synchronous, 
             # but it is safe to run here during app startup.
             self._knowledge_graph = Neo4jGraph(
-                url=settings.neo4j_uri,
-                username=settings.neo4j_username,
-                password=settings.neo4j_password.get_secret_value()
+                url=settings.NEO4J_URI,
+                username=settings.NEO4J_USERNAME,
+                password=settings.NEO4J_PASSWORD.get_secret_value()
             )
             
             # Extract the schema immediately so it's cached in memory
