@@ -16,7 +16,7 @@ export function AddDatasetDialog({
   projectName,
   nativeButton = true
 }: { 
-  children: React.ReactNode;
+  children: React.ReactElement;
   projectName?: string;
   nativeButton?: boolean;
 }) {

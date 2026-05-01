@@ -1,17 +1,33 @@
 "use client"
 
 import * as React from "react"
-import { Sprout } from "lucide-react"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Sprout, Menu, X } from "lucide-react"
+import { useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { useWorkspace } from "@/hooks/use-workspace"
 
 export function WorkspaceHeader() {
+  const { toggleSidebar, open } = useSidebar()
+  const { activeProjectId } = useWorkspace()
+
   return (
     <header className="w-full px-4 py-3 flex items-center justify-between border-b border-stone-200 bg-white/80 backdrop-blur-md z-10 sticky top-0">
       <div className="flex items-center gap-4">
-        <SidebarTrigger className="-ml-1 text-stone-500" />
-        <Separator orientation="vertical" className="h-4" />
+        {activeProjectId && (
+          <>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleSidebar}
+              className="text-stone-500 hover:bg-stone-100 rounded-lg transition-all"
+            >
+              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+            <Separator orientation="vertical" className="h-4 bg-stone-200" />
+          </>
+        )}
         <div className="flex items-center gap-2.5">
           <div className="bg-emerald-700 p-1.5 rounded-lg shadow-sm">
             <Sprout className="h-4 w-4 text-white" />

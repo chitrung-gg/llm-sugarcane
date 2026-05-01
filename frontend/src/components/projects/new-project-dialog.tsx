@@ -13,7 +13,7 @@ export function NewProjectDialog({
   children, 
   nativeButton = true 
 }: { 
-  children: React.ReactNode;
+  children: React.ReactElement;
   nativeButton?: boolean;
 }) {
   const [open, setOpen] = React.useState(false)

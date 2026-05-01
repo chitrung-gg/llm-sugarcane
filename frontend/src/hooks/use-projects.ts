@@ -41,3 +41,35 @@ export function useCreateProject() {
     },
   });
 }
+
+export function useUpdateProject() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { projectId: string; name?: string; description?: string }) => {
+      const formData = new FormData();
+      if (data.name) formData.append("name", data.name);
+      if (data.description !== undefined) formData.append("description", data.description);
+      const response = await api.patch(`/workspace/projects/${data.projectId}`, formData);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects", variables.projectId] });
+    },
+  });
+}
+
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await api.delete(`/workspace/projects/${projectId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+}
