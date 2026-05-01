@@ -84,10 +84,10 @@ class GraphIngestionService:
                 logger.warning(f"Ingestion Aborted: Output from {tool_name} is not domain relevant.")
                 return
             
-            # 3.1. USE LLM CONFIDENCE
-            if components.overall_confidence < 0.4:
-                logger.warning(f"Ingestion Aborted: LLM Overall Confidence too low ({components.overall_confidence}).")
-                return
+            # # 3.1. USE LLM CONFIDENCE
+            # if components.overall_confidence < 0.25:
+            #     logger.warning(f"Ingestion Aborted: LLM Overall Confidence too low ({components.overall_confidence}).")
+            #     return
                 
             if not components.nodes:
                 logger.debug("Graph Ingestion Aborted: No valid nodes extracted.")
@@ -160,8 +160,8 @@ class GraphIngestionService:
 
             langchain_rels = []
             for rel in components.relationships:
-                if rel.confidence < 0.4:
-                    continue
+                # if rel.confidence < 0.4:
+                #     continue
 
                 if rel.source_name in langchain_nodes and rel.target_name in langchain_nodes:
                     source_node = langchain_nodes[rel.source_name]
@@ -222,7 +222,13 @@ class GraphIngestionService:
             for node in unique_nodes: # Or components.nodes based on your actual variable
                 if node.name in node_registry:
                     node_info = node_registry[node.name]
-                    text_to_embed = f"{node.name} is a {node_info['label']}. Owner: {owner_id}. Description: {node.description or 'None'}. Context: {source_text[:200]}..."
+                    text_to_embed = (
+                        f"ENTITY KNOWLEDGE SUMMARY:\n"
+                        f"Name: {node.name}\n"
+                        f"Type: {node_info['label']}\n"
+                        f"Description: {node.description or 'No explicit description provided.'}\n"
+                        f"Original Context: {source_text[:300]}..."
+                    )
                     
                     metadata = {
                         "global_id": str(node_info['id']),
@@ -233,11 +239,11 @@ class GraphIngestionService:
                         "project_name": project_name,
                         "source_tier": tool_config.ingestion_confidence_tier.value,
                         "tool_used": tool_name,
-                        "llm_confidence": components.overall_confidence
+                        "llm_confidence": components.overall_confidence,
+                        "chunk_type": "entity_summary" # 🌟 Tag allowing RAG to filter these out if needed
                     }
                     node_id = str(node_info['id'])
                     
-                    # Add the un-awaited task to our list
                     tasks.append(_embed_single_node(node.name, text_to_embed, metadata, node_id))
             
             # 2. Execute all tasks in parallel!

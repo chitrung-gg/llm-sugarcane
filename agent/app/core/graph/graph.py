@@ -117,7 +117,7 @@ async def _build_agent_graph(
     )
     workflow.add_node(
         AgentGraphNode.ENRICHMENT,
-        make_enrichment_node(graph_ingestion_service, KNOWLEDGE_GRAPH_TOOL_REGISTRY)
+        make_enrichment_node(KNOWLEDGE_GRAPH_TOOL_REGISTRY)
     )
     workflow.add_node(
         AgentGraphNode.SYNTHESIZER,

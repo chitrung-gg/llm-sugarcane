@@ -5,18 +5,16 @@ import gzip
 import shutil
 from pathlib import Path
 from typing import List, Dict, Any, Optional, AsyncContextManager, cast
-from anyio import to_thread
 import aiofiles
 from fastapi import UploadFile, HTTPException
 from loguru import logger
 import aioboto3
 from types_aiobotocore_s3 import S3Client
 
+from app.utils.pipelines.airflow_client import trigger_airflow_dag
 from app.configs.settings.settings import get_settings
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.core.vector_store.vector_store import VectorStoreType
-from app.core.workers.celery import celery
-from app.configs.storage.databases import userdata_connection_pool
 from app.utils.files.files_classifier import is_genomic_file, is_knowledge_file, get_genomic_file_type
 from app.utils.files.files_validator import validate_genomic_file, validate_knowledge_file
 from app.services.workspace.workspace_service import WorkspaceService
@@ -143,28 +141,43 @@ class KnowledgeService:
 
                     # 6. Trigger Celery Task for Knowledge Documents
                     logger.info(f"Dispatching ingestion task for {target_uri}")
-                    task = celery.send_task(
-                        "llm.tasks.process_document_ingestion",
-                        args=[
-                            target_uri,
-                            {
-                                "original_filename": original_filename,
-                                "source_type": source_type.value,
-                                "vector_store": vector_store.value,
-                                "owner_id": str(user_id),
-                                "project_id": str(project_id) if project_id else None,
-                                "dataset_id": str(dataset_id) if dataset_id else None
-                            }
-                        ],
-                        queue="ingest_knowledge_queue"
-                    )
-
-                    dispatched_tasks.append({
-                        "task_id": task.id, 
-                        "status": "queued", 
-                        "file": original_filename,
-                        "target_store": vector_store.value
-                    })
+                    # Build the exact conf payload Airflow expects
+                    conf_payload = {
+                        "target_uri": target_uri,
+                        "metadata": {
+                            "original_filename": original_filename,
+                            "source_type": source_type.value,
+                            "vector_store": vector_store.value,
+                            "owner_id": str(user_id),
+                            "project_id": str(project_id) if project_id else None,
+                            "dataset_id": str(dataset_id) if dataset_id else None
+                        }
+                    }
+                    
+                    try:
+                        # Fire the API call safely on a background thread
+                        airflow_response = await asyncio.to_thread(
+                            trigger_airflow_dag,
+                            conf_payload=conf_payload,
+                            dag_id="knowledge_ingestion_pipeline"
+                        )
+                        
+                        # Airflow 2/3 returns the `dag_run_id` in the JSON response
+                        dag_run_id = airflow_response.get("dag_run_id", "unknown_run_id")
+                        
+                        dispatched_tasks.append({
+                            "task_id": dag_run_id, 
+                            "status": "queued_in_airflow", 
+                            "file": original_filename,
+                            "target_store": vector_store.value
+                        })
+                    except Exception as e:
+                        logger.error(f"Airflow dispatch failed for {original_filename}: {e}")
+                        dispatched_tasks.append({
+                            "file": original_filename,
+                            "status": "failed",
+                            "error": str(e)
+                        })
 
                 except Exception as e:
                     logger.error(f"Failed to process {original_filename}: {str(e)}")
