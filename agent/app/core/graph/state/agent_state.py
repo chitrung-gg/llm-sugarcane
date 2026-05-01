@@ -6,6 +6,7 @@ from langgraph.graph import add_messages
 from langchain_core.messages import BaseMessage
 from langchain_core.documents import Document
 
+from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.common.constants import (
     AgentIntent,
     ToolExecutionStatus,
@@ -71,7 +72,7 @@ class AgentState(TypedDict):
 
     # Routing
     intent: AgentIntent
-    required_tools: List[str]
+    required_tools: List[ToolCallRequest]
 
     # Execution tracking
     rag_results: Annotated[List[RAGResult], operator.add]

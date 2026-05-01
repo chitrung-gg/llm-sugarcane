@@ -50,6 +50,26 @@ async def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
     return project
 
+@router.patch("/projects/{project_id}")
+async def update_project(
+    project_id: uuid.UUID,
+    name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Update project details."""
+    success = await workspace_service.update_project(project_id, name, description)
+    return {"success": success}
+
+@router.delete("/projects/{project_id}")
+async def delete_project(
+    project_id: uuid.UUID,
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Delete a project."""
+    success = await workspace_service.delete_project(project_id)
+    return {"success": success}
+
 # --- Dataset (Cultivar) Endpoints ---
 
 @router.post("/projects/{project_id}/datasets", response_model=UserDataset, status_code=status.HTTP_201_CREATED)
@@ -70,6 +90,26 @@ async def create_dataset(
 
     return await workspace_service.create_dataset(project_id, name, description, parsed_metadata)
 
+@router.patch("/datasets/{dataset_id}")
+async def update_dataset(
+    dataset_id: uuid.UUID,
+    name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Update dataset details."""
+    success = await workspace_service.update_dataset(dataset_id, name, description)
+    return {"success": success}
+
+@router.delete("/datasets/{dataset_id}")
+async def delete_dataset(
+    dataset_id: uuid.UUID,
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Delete a dataset."""
+    success = await workspace_service.delete_dataset(dataset_id)
+    return {"success": success}
+
 @router.get("/projects/{project_id}/datasets", response_model=List[UserDataset])
 async def list_project_datasets(
     project_id: uuid.UUID,
@@ -85,6 +125,15 @@ async def list_dataset_files(
 ):
     """List all files associated with a specific dataset (Cultivar)."""
     return await workspace_service.get_dataset_files(dataset_id)
+
+@router.delete("/datasets/files/{file_record_id}")
+async def delete_dataset_file(
+    file_record_id: uuid.UUID,
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Delete a specific file record from a dataset."""
+    success = await workspace_service.delete_dataset_file(file_record_id)
+    return {"success": success}
 
 @router.post("/datasets/{dataset_id}/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_dataset_files(

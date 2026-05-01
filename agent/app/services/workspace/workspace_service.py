@@ -35,6 +35,37 @@ class WorkspaceService:
             )
             return UserProject(id=project_id, owner_id=owner_id, name=name, description=description, dataset_metadata=metadata)
 
+    async def update_project(
+        self,
+        project_id: uuid.UUID,
+        name: Optional[str] = None,
+        description: Optional[str] = None
+    ) -> bool:
+        async with userdata_connection_pool.connection() as conn:
+            updates = []
+            params = []
+            if name:
+                updates.append("name = %s")
+                params.append(name)
+            if description is not None:
+                updates.append("description = %s")
+                params.append(description)
+            
+            if not updates:
+                return False
+            
+            params.append(project_id)
+            await conn.execute(
+                f"UPDATE user_projects SET {', '.join(updates)} WHERE id = %s",
+                tuple(params)
+            )
+            return True
+
+    async def delete_project(self, project_id: uuid.UUID) -> bool:
+        async with userdata_connection_pool.connection() as conn:
+            await conn.execute("DELETE FROM user_projects WHERE id = %s", (project_id,))
+            return True
+
     async def get_projects(self) -> List[UserProject]:
         async with userdata_connection_pool.connection() as conn:
             cursor = await conn.execute("SELECT id, name, description, dataset_metadata, created_at FROM user_projects")
@@ -77,6 +108,37 @@ class WorkspaceService:
                 id=dataset_id, project_id=project_id, name=name, 
                 description=description, dataset_metadata=dataset_metadata
             )
+
+    async def update_dataset(
+        self,
+        dataset_id: uuid.UUID,
+        name: Optional[str] = None,
+        description: Optional[str] = None
+    ) -> bool:
+        async with userdata_connection_pool.connection() as conn:
+            updates = []
+            params = []
+            if name:
+                updates.append("name = %s")
+                params.append(name)
+            if description is not None:
+                updates.append("description = %s")
+                params.append(description)
+            
+            if not updates:
+                return False
+            
+            params.append(dataset_id)
+            await conn.execute(
+                f"UPDATE user_datasets SET {', '.join(updates)} WHERE id = %s",
+                tuple(params)
+            )
+            return True
+
+    async def delete_dataset(self, dataset_id: uuid.UUID) -> bool:
+        async with userdata_connection_pool.connection() as conn:
+            await conn.execute("DELETE FROM user_datasets WHERE id = %s", (dataset_id,))
+            return True
 
     async def get_project_datasets(self, project_id: uuid.UUID) -> List[UserDataset]:
         """Returns metadata overviews for all datasets in a project."""
@@ -183,6 +245,17 @@ class WorkspaceService:
                 file_name=file_name, file_type=file_type, rustfs_uri=rustfs_uri,
                 file_metadata=file_metadata
             )
+
+    async def delete_dataset_file(self, file_record_id: uuid.UUID) -> bool:
+        """Deletes a file record. Does NOT delete the physical file in RustFS (S3) yet."""
+        async with userdata_connection_pool.connection() as conn:
+            # Check docs table
+            await conn.execute("DELETE FROM user_dataset_files WHERE id = %s", (file_record_id,))
+            
+        async with genome_connection_pool.connection() as conn:
+            # Check genomes table
+            await conn.execute("DELETE FROM genomes WHERE global_id = %s", (file_record_id,))
+        return True
 
     # --- Thread Logic ---
     async def get_project_threads(self, project_id: uuid.UUID) -> List[Dict[str, Any]]:
