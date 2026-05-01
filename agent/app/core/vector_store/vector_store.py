@@ -1,12 +1,12 @@
 from enum import StrEnum
 import os
-from typing import Any
+from typing import Any, List
 
 from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
 from pydantic import BaseModel, Field, PrivateAttr
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from qdrant_client.http.models import Distance, VectorParams, SparseVectorParams
+from qdrant_client.http.models import Condition, Distance, VectorParams, SparseVectorParams
 
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 
@@ -58,4 +58,35 @@ class VectorStore(BaseModel):
             vector_name="dense",
             sparse_vector_name="sparse"
         )
-    
+
+def build_metadata_filter(metadata: dict, prefix: str = "metadata.") -> models.Filter:
+    """
+    Builds a validated Qdrant Filter object from a metadata dictionary.
+    Supports single values (AND logic) and lists of values (OR logic).
+    """
+    must_conditions = []
+
+    for key, value in metadata.items():
+        actual_key = f"{prefix}{key}" if prefix else key
+        
+        # If the value is a list, we need a 'should' (OR) condition for this specific key
+        if isinstance(value, list):
+            should_conditions: List[Condition] = [
+                models.FieldCondition(
+                    key=actual_key,
+                    match=models.MatchValue(value=str(v))
+                ) for v in value
+            ]
+            # Wrap the OR conditions inside a nested Filter and add to the main MUST list
+            must_conditions.append(models.Filter(should=should_conditions))
+            
+        # If it's a single value, just do standard 'must' (AND) matching
+        else:
+            must_conditions.append(
+                models.FieldCondition(
+                    key=actual_key,
+                    match=models.MatchValue(value=str(value))
+                )
+            )
+            
+    return models.Filter(must=must_conditions)

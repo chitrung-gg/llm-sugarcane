@@ -120,7 +120,7 @@ class Settings(BaseSettings):
 
     # --- LLM Service ---
     llm_max_retries: int = 3
-    llm_timeout: int = 1000
+    llm_timeout: int = 20
 
     # --- Log ---
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")

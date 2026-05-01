@@ -3,12 +3,17 @@ from enum import StrEnum
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.store.postgres.aio import AsyncPostgresStore
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy
 from langchain_core.tools import BaseTool
 from loguru import logger
 
 
+from app.core.graph.nodes.components.executor_node import make_executor_node
+from app.core.graph.nodes.components.planner_node import make_planner_node
+from app.core.graph.nodes.components.replanner_node import make_replanner_node
+from app.core.graph.nodes.agent_planner import PlanExecuteState
 from app.core.tools.registry.registry_tool import KNOWLEDGE_GRAPH_TOOL_REGISTRY
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.nodes.components.summarizer_node import make_summarizer_node
@@ -27,7 +32,56 @@ from app.configs.storage.databases import langgraph_connection_pool
 
 from app.services.ingestion.graph_ingestion_service import GraphIngestionService
 
-async def build_agent_graph(
+async def build_super_agent_graph(
+    llm_service: LLMService,
+    vector_store_solid: QdrantVectorStore,
+    vector_store_volatile: QdrantVectorStore,
+    searx_wrapper: SearxSearchWrapper,
+    document_processor: DocumentProcessor, 
+    graph_ingestion_service: GraphIngestionService,
+    available_tools: dict[str, BaseTool]
+):
+    # 1. Build the INNER ReAct Graph exactly as it is today
+    inner_react_graph = await _build_agent_graph(
+        llm_service=llm_service,
+        vector_store_solid=vector_store_solid,
+        vector_store_volatile=vector_store_volatile,
+        searx_wrapper=searx_wrapper,
+        document_processor=document_processor,
+        graph_ingestion_service=graph_ingestion_service,
+        available_tools=available_tools
+    )
+
+    # 2. Initialize the OUTER Plan-and-Execute Graph
+    workflow = StateGraph(PlanExecuteState)
+
+    # 3. Add the 3 Outer Nodes using the StrEnum
+    workflow.add_node(AgentGraphNode.PLANNER, make_planner_node(llm_service))
+    workflow.add_node(AgentGraphNode.EXECUTOR, make_executor_node(inner_react_graph))
+    workflow.add_node(AgentGraphNode.REPLANNER, make_replanner_node(llm_service))
+
+    # 4. Define the simple entry point
+    workflow.add_edge(AgentGraphNode.START_NODE, AgentGraphNode.PLANNER)
+    
+    # NOTE: The nodes handle all other routing internally using Command(goto=...)!
+
+    # 5. Attach Checkpointer (Short-term Memory)
+    checkpointer = AsyncPostgresSaver(langgraph_connection_pool)
+    await checkpointer.setup()
+
+    # 6. Attach Store (Long-term Memory)
+    store = AsyncPostgresStore(langgraph_connection_pool)
+    await store.setup()
+
+    graph = workflow.compile(
+        checkpointer=checkpointer,
+        store=store
+    )
+    logger.debug("\n" + graph.get_graph().draw_mermaid())
+    
+    return graph
+
+async def _build_agent_graph(
     llm_service: LLMService,
     vector_store_solid: QdrantVectorStore,
     vector_store_volatile: QdrantVectorStore,
@@ -115,12 +169,13 @@ async def build_agent_graph(
     #     }
     # )
 
-    # Utilize Checkpoint to save State
-    checkpointer = AsyncPostgresSaver(langgraph_connection_pool)
-    await checkpointer.setup()
+    # # Utilize Checkpoint to save State
+    # checkpointer = AsyncPostgresSaver(langgraph_connection_pool)
+    # await checkpointer.setup()
 
-    graph = workflow.compile(
-        checkpointer=checkpointer
-    )
-    logger.debug(graph.get_graph().draw_ascii())
+    # graph = workflow.compile(
+    #     checkpointer=checkpointer
+    # )
+    graph = workflow.compile()
+    logger.debug("\n" + graph.get_graph().draw_mermaid())
     return graph

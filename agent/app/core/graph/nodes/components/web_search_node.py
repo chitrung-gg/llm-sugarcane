@@ -23,7 +23,7 @@ class OptimizedSearchQuery(BaseModel):
     search_query: str = Field(
         description="A standalone, keyword-rich search query optimized for search engines. Omit conversational filler."
     )
-    
+
 def make_web_search_node(
     searx_wrapper: SearxSearchWrapper,
     llm_service: LLMService
@@ -38,46 +38,52 @@ def make_web_search_node(
         logger.debug("--- 🌐 TRIGGERING SEARXNG WEB SEARCH ---")
         start_time = time.time()
 
-        original_query = state["query"]
+        # Check if the Router provided a specific search query
+        required_tools = state.get("required_tools", [])
+        suggested_query = None
+        for tool_call in required_tools:
+            if tool_call.name == "web_search" and "query" in tool_call.args:
+                suggested_query = tool_call.args["query"]
+                break
 
-        search_timeout = getattr(settings, 'web_search_timeout_sec', 15.0)
-        num_results_to_fetch = getattr(settings, 'web_search_num_results', 10)
-        max_query_length = getattr(settings, 'web_search_max_query_length', 150)
+        if suggested_query:
+            logger.info(f"[Web Search] 💡 Using targeted query from Router: '{suggested_query}'")
+            optimized_query = suggested_query
+        else:
+            original_query = state["query"]
+            search_timeout = getattr(settings, 'web_search_timeout_sec', 15.0)
+            max_query_length = getattr(settings, 'web_search_max_query_length', 150)
 
-        # 1. Query Optimization
-        system_prompt = WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT.format(
-            conversation_summary=state.get("summary", "No prior context.")
-        )
-
-        messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
-        if state["messages"]:
-            messages.extend(state["messages"])
-        messages.append(HumanMessage(content=f"Latest Query: {original_query}"))
-
-        try:
-            # Use your fastest/cheapest model here (e.g., secondary or tertiary)
-            rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedSearchQuery)
-            
-            rewritten_result = await asyncio.wait_for(
-                rewriter_llm.ainvoke(messages), 
-                timeout=search_timeout
+            # 1. Query Optimization
+            system_prompt = WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT.format(
+                conversation_summary=state.get("summary", "No prior context.")
             )
-            
-            # Note: with_structured_output already returns the Pydantic object (or a dict)
-            optimized_query = rewritten_result.search_query
 
-            if len(optimized_query) > max_query_length:
-                logger.warning(f"[Web Search] ⚠️ LLM hallucinated query too long ({len(optimized_query)} chars). Using original.")
+            messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
+            if state["messages"]:
+                messages.extend(state["messages"])
+            messages.append(HumanMessage(content=f"Latest Query: {original_query}"))
+
+            try:
+                rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedSearchQuery)
+                rewritten_result = await asyncio.wait_for(
+                    rewriter_llm.ainvoke(messages), 
+                    timeout=search_timeout
+                )
+                optimized_query = rewritten_result.search_query
+
+                if len(optimized_query) > max_query_length:
+                    logger.warning(f"[Web Search] ⚠️ LLM hallucinated query too long ({len(optimized_query)} chars). Using original.")
+                    optimized_query = original_query
+                else:
+                    logger.info(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+            except Exception as e:
+                logger.warning(f"[Web Search] Query optimization failed: {e}. Falling back to original query.")
                 optimized_query = original_query
-            else:
-                logger.info(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
 
-        except Exception as e:
-            logger.warning(f"[Web Search] Query optimization failed: {e}. Falling back to original query.")
-            optimized_query = original_query
-        
         # 2. Execute search
         new_web_results = []
+        num_results_to_fetch = getattr(settings, 'web_search_num_results', 10)
 
         try:
             raw_results = await asyncio.to_thread(
@@ -85,7 +91,7 @@ def make_web_search_node(
                 optimized_query, 
                 num_results=num_results_to_fetch
             )
-            
+
             for res in raw_results:
                 web_item = WebResult(
                     snippet=res.get("snippet", "No snippet available"),
@@ -95,7 +101,7 @@ def make_web_search_node(
                     category=res.get("category", "general")
                 )
                 new_web_results.append(web_item)
-                
+
         except Exception as e:
             logger.error("SearXNG search failed: {error}", error=str(e))
             new_web_results.append(
@@ -107,7 +113,7 @@ def make_web_search_node(
                     category="error"
                 )
             )
-        
+
         execution_time = int((time.time() - start_time) * 1000)
         logger.debug(
             "[Web Search] ✅ Completed in {execution_time} ms | Found {count} items", 
@@ -118,5 +124,5 @@ def make_web_search_node(
             goto=AgentGraphNode.SYNTHESIZER,
             update={"web_results": new_web_results}
         )
-    
+
     return web_search

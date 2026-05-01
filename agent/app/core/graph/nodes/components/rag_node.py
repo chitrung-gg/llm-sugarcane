@@ -9,6 +9,7 @@ from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
+from app.core.vector_store.vector_store import build_metadata_filter
 from app.common.constants import ObservationType
 from app.utils.observability.tracing import tracing
 from app.services.llm.llm_service import LLMService
@@ -72,7 +73,7 @@ def make_rag_node(
                 logger.warning(f"[RAG] ⚠️ LLM hallucinated a repeating query. Triggering fallback.")
                 optimized_query = original_query
             else:
-                logger.info(f"[RAG] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+                logger.debug(f"[RAG] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
         except Exception as e:
             logger.warning(f"[RAG] Query optimization failed: {e}. Falling back to original query.")
             optimized_query = original_query
@@ -81,7 +82,8 @@ def make_rag_node(
         logger.debug(f"Executing Qdrant search with query: {optimized_query}")
 
         combined_results = []
-        project_name = state.get("active_project_name")
+        active_datasets = state.get("active_datasets", [])
+        dataset_ids = [ds.get("dataset_id") for ds in active_datasets if ds.get("dataset_id")]
 
         # Fetch from both stores
         solid_results = await vector_store_solid.asimilarity_search_with_score(query=optimized_query, k=solid_k)
@@ -90,9 +92,8 @@ def make_rag_node(
             doc.metadata["source_tier"] = "CURATED"
 
         volatile_filter = None
-        if project_name:
-            # Assumes your ingestion service now tags chunks with 'project_name'
-            volatile_filter = {"project_name": project_name}
+        if dataset_ids:
+            volatile_filter = build_metadata_filter({"dataset_id": dataset_ids})
         
         volatile_results = await vector_store_volatile.asimilarity_search_with_score(
             query=optimized_query, 

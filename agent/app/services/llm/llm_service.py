@@ -40,7 +40,6 @@ class LLMService(BaseModel):
             google_exceptions.Unknown,
         )
 
-        # 🌟 Stability configuration
         common_config = {
             "google_api_key": api_key,
             "temperature": 0.0,
@@ -50,8 +49,13 @@ class LLMService(BaseModel):
         
         self._retry_config = {
             "retry_if_exception_type": transient_errors,
-            "wait_exponential_jitter": True,
-            "stop_after_attempt": settings.llm_max_retries
+            "wait_exponential_jitter": True, 
+            "stop_after_attempt": settings.llm_max_retries, 
+            "exponential_jitter_params": {
+                "initial": 0.5,
+                "max": 2.0,
+                "jitter": 0.5
+            }
         }
 
         self._primary_model = ChatGoogleGenerativeAI(

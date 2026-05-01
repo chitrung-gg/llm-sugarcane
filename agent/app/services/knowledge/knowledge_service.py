@@ -96,7 +96,13 @@ class KnowledgeService:
                         continue
 
                     # 3. Compress and Upload to S3
-                    target_uri, final_filename = await self._compress_and_upload(s3_client, temp_path, original_filename, file_id)
+                    target_uri, final_filename = await self._compress_and_upload(
+                        s3_client, 
+                        temp_path, 
+                        original_filename,
+                        file_id,
+                        source_type
+                    )
 
                     # 4. Record in Database if dataset-scoped
                     if dataset_id:
@@ -176,16 +182,31 @@ class KnowledgeService:
 
         return {"results": dispatched_tasks}
 
-    async def _compress_and_upload(self, s3_client: S3Client, temp_path: Path, original_filename: str, file_id: str) -> tuple[str, str]:
+    async def _compress_and_upload(
+        self,
+        s3_client: S3Client,
+        temp_path: Path, 
+        original_filename: str, 
+        file_id: str,
+        source_type: IngestionSourceType
+    ) -> tuple[str, str]:
         bucket_name = self.settings.rustfs_users_bucket
-        is_gz = original_filename.endswith(".gz")
-        final_filename = original_filename if is_gz else f"{original_filename}.gz"
+        is_already_gz = original_filename.endswith(".gz")
+        
+        # Only compress if it's a genomic file AND it isn't already compressed
+        needs_compression = False
+        if source_type in [IngestionSourceType.USER_PRIVATE_GENOME, IngestionSourceType.SYSTEM_REFERENCE_GENOME]:
+            if not is_already_gz:
+                needs_compression = True
+
+        final_filename = f"{original_filename}.gz" if needs_compression else original_filename
         safe_filename = f"{file_id}_{final_filename}"
         
         target_uri = f"s3://{bucket_name}/{safe_filename}"
         upload_path = temp_path
 
-        if not is_gz:
+        if needs_compression:
+            logger.info(f"Compressing genomic file {original_filename} before S3 upload.")
             compressed_temp_path = temp_path.with_suffix(temp_path.suffix + '.gz')
             
             def _sync_compress(in_path: Path, out_path: Path):
@@ -206,7 +227,7 @@ class KnowledgeService:
         await s3_client.upload_file(str(upload_path), bucket_name, safe_filename)
         
         # Cleanup compressed file if created
-        if not is_gz and upload_path.exists():
+        if needs_compression and upload_path.exists():
             try: os.unlink(upload_path)
             except Exception: pass
 

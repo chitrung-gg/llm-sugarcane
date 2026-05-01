@@ -5,11 +5,11 @@ from langgraph.graph import END, START
 
 class AgentGraphNode(StrEnum):
     START_NODE = START
+    END_NODE = END
 
+    # --- Inner Graph Nodes (ReAct Loop) ---
     INPUT_ANALYZER = "input_analyzer"
-    PLANNER = "planner" 
-    REPLANNER = "replanner"
-    ROUTER = "router"             # (Now acts as a Step Dispatcher)
+    ROUTER = "router"
     RAG = "rag"
     WEB_SEARCH = "web_search"
     TOOL = "tool"
@@ -17,4 +17,7 @@ class AgentGraphNode(StrEnum):
     SYNTHESIZER = "synthesizer"
     SUMMARIZER = "summarizer"
 
-    END_NODE = END
+    # --- Outer Graph Nodes (Plan & Execute Loop) ---
+    PLANNER = "planner"
+    EXECUTOR = "executor"
+    REPLANNER = "replanner"

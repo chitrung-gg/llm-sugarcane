@@ -61,3 +61,5 @@ class UserDatasetFile(SQLModel, table=True):
 
     # 🌟 SQLAlchemy Relationship
     dataset: Optional[UserDataset] = Relationship(back_populates="files")
+
+    model_config = {"use_enum_values": True}

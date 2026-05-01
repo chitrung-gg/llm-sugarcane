@@ -11,11 +11,11 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 from types_aiobotocore_s3 import S3Client
 
+from app.core.graph.graph import build_super_agent_graph
 from app.core.tools.registry.registry_tool import get_agent_tools, register_agent_tool
 from app.services.knowledge.knowledge_service import KnowledgeService
 from app.services.agent.agent_service import AgentService
 from app.core.tools.ncbi_eutils_tool import get_gene_metadata_by_symbol, search_literature_for_traits, search_ncbi_genome
-from app.core.graph.graph import build_agent_graph
 from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
 from app.utils.document_processor import DocumentProcessor
@@ -219,7 +219,7 @@ class AppContainer:
         # for t in self.ncbi_tools:
         #     register_agent_tool(t)
 
-        self._agent_graph = await build_agent_graph(
+        self._agent_graph = await build_super_agent_graph(
             llm_service=self.llm_service,
             graph_ingestion_service=self.graph_ingestion_service,
             vector_store_solid=self.vector_store_solid,
