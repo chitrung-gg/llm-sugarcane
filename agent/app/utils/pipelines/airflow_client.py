@@ -17,14 +17,20 @@ def get_airflow_jwt_token(force_refresh: bool = False) -> str:
     if not force_refresh and _jwt_cache["token"]:
         return _jwt_cache["token"]
 
+    if not settings.AIRFLOW_BASE_URL:
+        raise ValueError("AIRFLOW_BASE_URL is not configured in the environment.")
+    if not settings.AIRFLOW_API_AUTH_USERNAME:
+        raise ValueError("AIRFLOW_API_AUTH_USERNAME is not configured in the environment.")
+    if not settings.AIRFLOW_API_AUTH_PASSWORD:
+        raise ValueError("AIRFLOW_API_AUTH_PASSWORD is not configured in the environment.")
+
     auth_url = f"{settings.AIRFLOW_BASE_URL}/auth/token"
-    
     try:
         response = requests.post(
             auth_url,
             json={
                 "username": settings.AIRFLOW_API_AUTH_USERNAME,
-                "password": settings.AIRFLOW_API_AUTH_PASSWORD
+                "password": settings.AIRFLOW_API_AUTH_PASSWORD.get_secret_value()
             },
             timeout=5
         )

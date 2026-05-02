@@ -1,5 +1,6 @@
+import itertools
 from functools import lru_cache
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Type, Union
 from langchain_google_genai import ChatGoogleGenerativeAI
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, PrivateAttr
@@ -13,8 +14,8 @@ from app.configs.settings.settings import get_settings
 
 class LLMService(BaseModel):
     """
-    A streamlined LLM service focused on a single, robust primary model.
-    Includes a robust retry strategy for transient errors using LangChain's native with_retry.
+    A robust LLM service that supports multi-API key rotation.
+    Rotates through a model of API keys for each request to maximize quota and avoid rate limits.
     """
     
     _primary_model: Any = PrivateAttr()
@@ -26,10 +27,19 @@ class LLMService(BaseModel):
     
     def model_post_init(self, _context: Any):
         settings = get_settings()
-        api_key = settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None
+        primary_google_api_key = settings.PRIMARY_GOOGLE_API_KEY.get_secret_value() if settings.PRIMARY_GOOGLE_API_KEY else None
+        secondary_google_api_key = settings.SECONDARY_GOOGLE_API_KEY.get_secret_value() if settings.SECONDARY_GOOGLE_API_KEY else None
+        tertiary_google_api_key = settings.TERTIARY_GOOGLE_API_KEY.get_secret_value() if settings.TERTIARY_GOOGLE_API_KEY else None
+        quaternary_google_api_key = settings.QUATERNARY_GOOGLE_API_KEY.get_secret_value() if settings.QUATERNARY_GOOGLE_API_KEY else None
 
-        if not api_key:
-            raise ValueError("Google API Key not found!")
+        if not primary_google_api_key:
+            raise ValueError("No Google API Keys found! Please set GOOGLE_API_KEY in .env (comma-separated for multiple).")
+        if not secondary_google_api_key:
+            raise ValueError("No Google API Keys found! Please set GOOGLE_API_KEY in .env (comma-separated for multiple).")
+        if not tertiary_google_api_key:
+            raise ValueError("No Google API Keys found! Please set GOOGLE_API_KEY in .env (comma-separated for multiple).")
+        if not quaternary_google_api_key:
+            raise ValueError("No Google API Keys found! Please set GOOGLE_API_KEY in .env (comma-separated for multiple).")
 
         # Define transient errors to retry
         transient_errors = (
@@ -38,49 +48,53 @@ class LLMService(BaseModel):
             google_exceptions.InternalServerError,
             google_exceptions.Aborted,
             google_exceptions.Unknown,
+            google_exceptions.ResourceExhausted, # Added for quota issues
         )
 
-        common_config = {
-            "google_api_key": api_key,
-            "temperature": 0.0,
-            # "max_retries": settings.llm_max_retries,  # We'll use LangChain's with_retry instead of the basic provider retry
-            "timeout": settings.LLM_TIMEOUT,  
-        }
-        
         self._retry_config = {
             "retry_if_exception_type": transient_errors,
             "wait_exponential_jitter": True, 
             "stop_after_attempt": settings.LLM_MAX_RETRIES, 
             "exponential_jitter_params": {
-                "initial": 0.5,
-                "max": 2.0,
-                "jitter": 0.5
+                "initial": 0.1,
+                "max": 1.0,
+                "jitter": 0.25
             }
         }
 
+        # Initialize models for each model tier
         self._primary_model = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_PRIMARY_MODEL, 
-            **common_config
+            model=settings.GEMINI_PRIMARY_MODEL,
+            api_key=primary_google_api_key,
+            temperature=0.0,
+            timeout=settings.LLM_TIMEOUT
         )
+        
         self._secondary_model = ChatGoogleGenerativeAI(
             model=settings.GEMINI_SECONDARY_MODEL,
-            **common_config
-        )
+            api_key=secondary_google_api_key,
+            temperature=0.0,
+            timeout=settings.LLM_TIMEOUT
+        ) 
+        
         self._tertiary_model = ChatGoogleGenerativeAI(
             model=settings.GEMINI_TERTIARY_MODEL,
-            **common_config
+            api_key=tertiary_google_api_key,
+            temperature=0.0,
+            timeout=settings.LLM_TIMEOUT
         )
+        
         self._quaternary_model = ChatGoogleGenerativeAI(
             model=settings.GEMINI_QUATERNARY_MODEL,
-            **common_config
+            api_key=quaternary_google_api_key,
+            temperature=0.0,
+            timeout=settings.LLM_TIMEOUT
         )
 
         logger.info(f"""
-            LLMService ready with Native Retry Strategy |
+            LLMService ready |
             Primary: {settings.GEMINI_PRIMARY_MODEL} |
             Secondary: {settings.GEMINI_SECONDARY_MODEL} |
-            Tertiary: {settings.GEMINI_TERTIARY_MODEL} |
-            Quaternary: {settings.GEMINI_QUATERNARY_MODEL}
             Max Attempts: {settings.LLM_MAX_RETRIES} | Timeout: {settings.LLM_TIMEOUT}s
         """)
 

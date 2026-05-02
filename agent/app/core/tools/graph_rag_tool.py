@@ -46,7 +46,16 @@ def make_graph_rag_tool(
             for doc, score, tier in top_results:
                 if "global_id" in doc.metadata:
                     entity_ids.add(doc.metadata["global_id"])
-                fallback_docs.append(f"[{tier} | Score: {score:.2f}] {doc.page_content}")
+                
+                # Extract and clean filename if available
+                source_info = ""
+                raw_filename = doc.metadata.get("original_filename") or doc.metadata.get("source_filename") or doc.metadata.get("source")
+                if raw_filename:
+                    import re
+                    clean_filename = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', str(raw_filename))
+                    source_info = f" | File: {clean_filename}"
+
+                fallback_docs.append(f"[{tier}{source_info} | Score: {score:.2f}] {doc.page_content}")
                 logger.debug(f"[GraphRAG] Kept entity from {tier} with score {score:.2f}")
 
             if not entity_ids:

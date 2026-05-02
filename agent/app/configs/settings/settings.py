@@ -15,7 +15,27 @@ class Settings(BaseSettings):
     )
 
     # --- Gemini ---
-    GOOGLE_API_KEY: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
+    PRIMARY_GOOGLE_API_KEY: SecretStr | None = Field(
+        default=None, 
+        validation_alias="PRIMARY_GOOGLE_API_KEY"
+    )
+    SECONDARY_GOOGLE_API_KEY: SecretStr | None = Field(
+        default=None, 
+        validation_alias="SECONDARY_GOOGLE_API_KEY"
+    )
+    TERTIARY_GOOGLE_API_KEY: SecretStr | None = Field(
+        default=None, 
+        validation_alias="TERTIARY_GOOGLE_API_KEY"
+    )
+    QUATERNARY_GOOGLE_API_KEY: SecretStr | None = Field(
+        default=None, 
+        validation_alias="QUATERNARY_GOOGLE_API_KEY"
+    )
+    EMBEDDING_GOOGLE_API_KEY: SecretStr | None = Field(
+        default=None, 
+        validation_alias="EMBEDDING_GOOGLE_API_KEY"
+    )
+
     # GEMINI_PRIMARY_MODEL: str = Field(
     #     default="gemma-4-31b-it", 
     #     validation_alias="GEMINI_PRIMARY_MODEL"
@@ -72,6 +92,8 @@ class Settings(BaseSettings):
     QDRANT_FINAL_TOP_K: int = 5
     QDRANT_MAX_QUERY_LENGTH: int = 200
 
+    QDRANT_BATCH_SIZE: int = 16
+
     # --- Neo4j ---
     NEO4J_URI: str = Field(
         default="neo4j://localhost:7687",
@@ -123,8 +145,8 @@ class Settings(BaseSettings):
     SEARXNG_HOST: SecretStr | None = Field(default=None, validation_alias="SEARXNG_HOST")  
 
     # --- LLM Service ---
-    LLM_MAX_RETRIES: int = 3
-    LLM_TIMEOUT: int = 20
+    LLM_MAX_RETRIES: int = 5
+    LLM_TIMEOUT: float = 75.0
 
     # --- Log ---
     LOG_LEVEL: str = Field(default="INFO", validation_alias="LOG_LEVEL")
@@ -195,7 +217,9 @@ class Settings(BaseSettings):
         validation_alias="AIRFLOW_API_AUTH_PASSWORD"
     )
 
-
+    # Pipelines
+    INGESTION_BATCH_SIZE: int = 15
+    INGESTION_DELAY_BETWEEN_BATCHES: int = 5
 
     # Graph Nodes
     REPLANNER_MAX_PLANNER_ITERATION: int = 10

@@ -14,6 +14,7 @@ from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 from app.core.prompts.summarizer_prompts import SUMMARIZER_SYSTEM_PROMPT
+from app.utils.pipelines.airflow_client import trigger_airflow_dag
 
 class SummaryOutput(BaseModel):
     """
@@ -40,6 +41,20 @@ def make_summarizer_node(llm_service: LLMService):
         max_messages = settings.SUMMARIZER_SUMMARY_TRIGGER_THRESHOLD
         keep_messages = settings.SUMMARIZER_SUMMARY_KEEP_LAST_N
         timeout_sec = settings.SUMMARIZER_SUMMARY_TIMEOUT_SEC
+
+        # 1. Final Ingestion Dispatch
+        pending_knowledge = state.get("extracted_knowledge", [])
+        if pending_knowledge:
+            logger.info(f"[Summarizer] Dispatching {len(pending_knowledge)} accumulated items to Airflow.")
+            try:
+                # We use asyncio.to_thread to prevent blocking the event loop
+                await asyncio.to_thread(
+                    trigger_airflow_dag,
+                    conf_payload={"batch": pending_knowledge},
+                    dag_id="knowledge_ingestion_pipeline"
+                )
+            except Exception as e:
+                logger.error(f"[Summarizer] Failed to dispatch deferred ingestion: {e}")
 
         # Only summarize if we have a significant number of messages (e.g., > 10)
         # to avoid summarizing every single turn which is expensive.

@@ -117,7 +117,13 @@ def make_rag_node(
 
         # Process the combined results
         for idx, (doc, score) in enumerate(top_semantic_results):
-            source_name = doc.metadata.get("source", "unknown")
+            # Prioritize original_filename (clean) over source (might have UUID)
+            raw_filename = doc.metadata.get("original_filename") or doc.metadata.get("source_filename") or doc.metadata.get("source", "unknown")
+            
+            # Clean up UUID prefix if it exists (e.g., "uuid_filename.pdf" -> "filename.pdf")
+            import re
+            source_name = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', str(raw_filename))
+
             source_tier = doc.metadata.get("source_tier", "unknown_tier")
 
             logger.debug(
@@ -166,9 +172,13 @@ def make_rag_node(
                 # This guarantees ordinal ranking without a hardcoded threshold.
                 dynamic_score = round(max(0.5, 1.0 - (idx * 0.05)), 2)
 
+                raw_filename = doc.metadata.get("original_filename") or doc.metadata.get("source_filename") or doc.metadata.get("source", "uploaded_file")
+                import re
+                source_name = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', str(raw_filename))
+
                 rag_item = RAGResult(
                     content=doc.page_content,
-                    source_file=doc.metadata.get("source", "uploaded_file"),
+                    source_file=source_name,
                     page_number=doc.metadata.get("alignment_info", None),
                     relevance_score=dynamic_score, 
                 )
@@ -176,7 +186,7 @@ def make_rag_node(
                 
                 new_sources.append({
                     "document_id": f"ephemeral_chunk_{idx}",
-                    "source_file": doc.metadata.get("source", "uploaded_file"),
+                    "source_file": source_name,
                     "score": dynamic_score,
                     "chunk_index": idx
                 })

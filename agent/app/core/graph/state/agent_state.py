@@ -78,7 +78,7 @@ class AgentState(TypedDict):
     rag_results: Annotated[List[RAGResult], operator.add]
     tool_results: Annotated[List[ToolResult], operator.add] 
     web_results: Annotated[List[WebResult], operator.add]
-    extracted_knowledge: Annotated[List[Dict[str, Any]], operator.add]
+    extracted_knowledge: List[Dict[str, Any]]
     iteration_count: int
     max_iterations: int         # Circuit breaker
     last_intent: str

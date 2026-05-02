@@ -37,13 +37,14 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
         )
 
         # 3. Create a fresh INNER state for your ReAct Agent
+        # We use the clean step description as the query to reduce noise for RAG/Router
         inner_state_input = {
-            "query": inner_query,
+            "query": current_step.description,
             "messages": [HumanMessage(content=inner_query)],
             "iteration_count": 0,
             # Inject global variables your inner graph needs
-            "active_project_name": "Default", 
-            "active_datasets": []
+            "active_project_name": state.get("active_project_name", "Default"), 
+            "active_datasets": state.get("active_datasets", [])
         }
 
         # 4. Await your existing Inner Graph

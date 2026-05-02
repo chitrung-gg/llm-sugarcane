@@ -76,7 +76,7 @@ def make_web_search_node(
                     logger.warning(f"[Web Search] ⚠️ LLM hallucinated query too long ({len(optimized_query)} chars). Using original.")
                     optimized_query = original_query
                 else:
-                    logger.info(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+                    logger.debug(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
             except Exception as e:
                 logger.warning(f"[Web Search] Query optimization failed: {e}. Falling back to original query.")
                 optimized_query = original_query

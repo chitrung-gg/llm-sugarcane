@@ -52,3 +52,9 @@ class KnowledgeGraphComponents(BaseModel):
     )
     nodes: List[KnowledgeGraphNode] = Field(description="List of entities extracted from the text.")
     relationships: List[KnowledgeGraphRelationship] = Field(description="List of relationships between entities.")
+
+
+class BatchKnowledgeGraphComponents(BaseModel):
+    results: List[KnowledgeGraphComponents] = Field(
+        description="A list of extraction results, one for each provided text chunk in the exact same order."
+    )
