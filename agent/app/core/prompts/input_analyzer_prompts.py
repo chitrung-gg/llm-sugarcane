@@ -1,23 +1,34 @@
 from langchain_core.prompts import PromptTemplate
 
-INPUT_ANALYZER_GENOMIC_FILE_NOTE = PromptTemplate.from_template(
-    """
-    [SYSTEM NOTE: The user uploaded a heavy bioinformatics dataset '{file_name}'.
-    S3 URI: {rustfs_uri}
-    Description: {description}
+INPUT_ANALYZER_GENOMIC_FILE_NOTE = PromptTemplate.from_template("""
+<system_injected_context type="genomic_dataset_attachment">
+  <file_metadata>
+    <filename>{file_name}</filename>
+    <s3_uri>{rustfs_uri}</s3_uri>
+    <description>{description}</description>
+  </file_metadata>
+  <strict_execution_rules>
+    1. DIRECT ACCESS DENIED: You cannot read the raw contents of this file directly into your context window.
+    2. TOOL USAGE REQUIRED: To analyze this dataset, you MUST pass the exact S3 URI (`{rustfs_uri}`) as an argument to a compatible backend tool (e.g., `run_blast`).
+    3. NO HALLUCINATION: If the user requests metrics (e.g., N50, GC content) and you lack a specific tool to compute them from the S3 URI, you MUST explicitly state that you lack the capability. Do not invent, estimate, or infer statistics.
+  </strict_execution_rules>
+</system_injected_context>
+""")
 
-    CRITICAL: You CANNOT read this file directly. To process this file, you MUST pass this exact S3 URI (`{rustfs_uri}`) into the arguments of a compatible backend tool (e.g., `run_blast`). If the user asks for statistics (like N50 or GC content) and you do not have a specific tool to calculate them from an S3 URI, you MUST inform the user that you lack the required tool. DO NOT hallucinate stats.]
-    """
-)
+INPUT_ANALYZER_MASSIVE_FILE_NOTE = PromptTemplate.from_template("""
+<system_injected_context type="massive_file_alert">
+  <file_status>
+    <filename>{file_name}</filename>
+    <state>Archived in vector memory. File exceeds instant-read context limits.</state>
+  </file_status>
+  <routing_directive>
+    MANDATORY ACTION: You MUST route the upcoming execution to either the 'rag_only' or 'all' pathways. Standard processing will fail.
+  </routing_directive>
+</system_injected_context>
+""")
 
-INPUT_ANALYZER_MASSIVE_FILE_NOTE = PromptTemplate.from_template(
-    """
-    [SYSTEM NOTE: The uploaded file '{file_name}' was too large to read instantly. It is stored in temporary memory. You MUST route to 'rag_only' or 'all' to augment it.]
-    """
-)
-
-INPUT_ANALYZER_FILE_CONTEXT_HEADER = PromptTemplate.from_template(
-    """
-    The user has uploaded the following files for context. Use this information to answer their query:\n\n
-    """
-)
+INPUT_ANALYZER_FILE_CONTEXT_HEADER = PromptTemplate.from_template("""
+<uploaded_file_context>
+INSTRUCTION: The user has explicitly attached the following file data. Treat this data as the primary ground-truth context for fulfilling their query.
+---
+""")
