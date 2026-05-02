@@ -31,6 +31,10 @@ class Settings(BaseSettings):
         default=None, 
         validation_alias="QUATERNARY_GOOGLE_API_KEY"
     )
+    QUINARY_GOOGLE_API_KEY: SecretStr | None = Field(
+        default=None, 
+        validation_alias="QUINARY_GOOGLE_API_KEY"
+    )
     EMBEDDING_GOOGLE_API_KEY: SecretStr | None = Field(
         default=None, 
         validation_alias="EMBEDDING_GOOGLE_API_KEY"
@@ -49,16 +53,20 @@ class Settings(BaseSettings):
     #     validation_alias="GEMINI_SECONDARY_MODEL"
     # )
     GEMINI_SECONDARY_MODEL: str = Field(
-        default="gemini-2.5-flash", 
+        default="gemini-2.5-flash1", 
         validation_alias="GEMINI_SECONDARY_MODEL"
     )
     GEMINI_TERTIARY_MODEL: str = Field(
-        default="gemini-2.5-flash-lite", 
+        default="gemini-3.1-flash-lite-preview", 
         validation_alias="GEMINI_TERTIARY_MODEL"
     )
     GEMINI_QUATERNARY_MODEL: str = Field(
-        default="gemma-4-26b-a4b-it", 
+        default="gemma-4-31b-it", 
         validation_alias="GEMINI_QUATERNARY_MODEL"
+    )
+    GEMINI_QUINARY_MODEL: str = Field(
+        default="gemma-4-26b-a4b-it", 
+        validation_alias="GEMINI_QUINARY_MODEL"
     )
 
     GEMINI_EMBEDDING_MODEL: str = Field(

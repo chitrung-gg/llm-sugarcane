@@ -102,3 +102,33 @@ class ObservationType(StrEnum):
     RETRIEVER = "retriever"
     EVALUATOR = "evaluator"
     GUARDRAIL = "guardrail"
+
+
+# --- 9. STREAMING EVENTS ---
+class StreamEventType(StrEnum):
+    THOUGHT = "thought"
+    TOOL_START = "tool_start"
+    TOOL_END = "tool_end"
+    RAG_RESULT = "rag_result"
+    ANSWER = "answer"
+    INTERRUPT = "interrupt"
+    ERROR = "error"
+    DONE = "done"
+
+
+# --- 10. INTERRUPTS & FEEDBACK ---
+class InterruptAction(StrEnum):
+    APPROVE_PLAN = "APPROVE_PLAN"
+    MODIFY_PLAN = "MODIFY_PLAN"
+
+class UserFeedbackAction(StrEnum):
+    APPROVE = "APPROVE"
+    MODIFY = "MODIFY"
+
+# --- 11. LANGGRAPH EVENT KINDS ---
+class EventKind(StrEnum):
+    CHAIN_START = "on_chain_start"
+    CHAIN_END = "on_chain_end"
+    TOOL_START = "on_tool_start"
+    TOOL_END = "on_tool_end"
+    CHAT_MODEL_STREAM = "on_chat_model_stream"

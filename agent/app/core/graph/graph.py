@@ -60,11 +60,13 @@ async def build_super_agent_graph(
     workflow.add_node(AgentGraphNode.EXECUTOR, make_executor_node(inner_react_graph))
     workflow.add_node(AgentGraphNode.REPLANNER, make_replanner_node(llm_service))
 
-    # 4. Define the simple entry point
-    workflow.add_edge(AgentGraphNode.START_NODE, AgentGraphNode.PLANNER)
+    # 4. Define Architectural Blueprint Edges
+    workflow.add_edge(START, AgentGraphNode.PLANNER)
+    # workflow.add_edge(AgentGraphNode.PLANNER, AgentGraphNode.EXECUTOR) - Using Command
+    # workflow.add_edge(AgentGraphNode.EXECUTOR, AgentGraphNode.REPLANNER) - Using Command
+    # workflow.add_edge(AgentGraphNode.REPLANNER, AgentGraphNode.EXECUTOR) - Using Command # Loop for more steps
+    # workflow.add_edge(AgentGraphNode.REPLANNER, END) - Using Command # Finish conversation
     
-    # NOTE: The nodes handle all other routing internally using Command(goto=...)!
-
     # 5. Attach Checkpointer (Short-term Memory)
     checkpointer = AsyncPostgresSaver(langgraph_connection_pool)
     await checkpointer.setup()
@@ -96,7 +98,7 @@ async def _build_agent_graph(
     # Add nodes
     workflow.add_node(
         AgentGraphNode.INPUT_ANALYZER,
-        make_input_analyzer_node(document_processor),
+        make_input_analyzer_node(document_processor, llm_service),
         retry_policy=RetryPolicy(max_attempts=3, initial_interval=1.0)
     )
     workflow.add_node(
@@ -128,54 +130,32 @@ async def _build_agent_graph(
         make_summarizer_node(llm_service)
     )
 
-    # Define flows
+    # --- DEFINE FLOWS (ARCHITECTURAL BLUEPRINT) ---
+    
+    # 1. Entry Point
     workflow.add_edge(START, AgentGraphNode.INPUT_ANALYZER)
-    # workflow.add_edge("input_analyzer", "router")
+    workflow.add_edge(AgentGraphNode.INPUT_ANALYZER, AgentGraphNode.ROUTER)
+    
+    # 2. Router Fan-out (Allowed destinations)
+    workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.RAG)
+    workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.TOOL)
+    workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.WEB_SEARCH)
+    workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.SYNTHESIZER)
+    
+    # 3. Execution Branches converge on Synthesizer (Fan-in pattern)
+    # Note: TOOL results flow through ENRICHMENT before synthesis
+    workflow.add_edge(AgentGraphNode.RAG, AgentGraphNode.SYNTHESIZER)
+    workflow.add_edge(AgentGraphNode.TOOL, AgentGraphNode.ENRICHMENT)
+    workflow.add_edge(AgentGraphNode.ENRICHMENT, AgentGraphNode.SYNTHESIZER)
+    workflow.add_edge(AgentGraphNode.WEB_SEARCH, AgentGraphNode.SYNTHESIZER)
+    
+    # 4. Synthesis and Feedback Loop
+    workflow.add_edge(AgentGraphNode.SYNTHESIZER, AgentGraphNode.SUMMARIZER)
+    workflow.add_edge(AgentGraphNode.SYNTHESIZER, AgentGraphNode.ROUTER) # Loop-back for incomplete answers
+    
+    # 5. Exit Path
+    workflow.add_edge(AgentGraphNode.SUMMARIZER, AgentGraphNode.END_NODE)
 
-    # Conditional Routing
-    # workflow.add_conditional_edges(
-    #     "router",
-    #     route_action,
-    #     {
-    #         # Name returned by route_action : Name of next node to visit 
-    #         "rag_execution": "rag_execution",
-    #         "tool_execution": "tool_execution",
-    #         "web_search": "web_search",
-    #         "synthesizer": "synthesizer"
-    #     }
-    # )
-
-    # workflow.add_conditional_edges(
-    #     "rag_execution",
-    #     check_rag_fallback,
-    #     {
-    #         # Name returned by route_action : Name of next node to visit
-    #         "web_search": "web_search",
-    #         "synthesizer": "synthesizer"
-    #     }
-    # )
-
-    # Merge results
-    # workflow.add_edge("tool_execution", "synthesizer")
-    # workflow.add_edge("web_search", "synthesizer")
-
-    # Check if answer appropriate
-    # workflow.add_conditional_edges(
-    #     "synthesizer",
-    #     check_if_resolved,
-    #     {
-    #         END: END,
-    #         "router": "router"
-    #     }
-    # )
-
-    # # Utilize Checkpoint to save State
-    # checkpointer = AsyncPostgresSaver(langgraph_connection_pool)
-    # await checkpointer.setup()
-
-    # graph = workflow.compile(
-    #     checkpointer=checkpointer
-    # )
     graph = workflow.compile()
     logger.debug("\n" + graph.get_graph().draw_mermaid())
     return graph

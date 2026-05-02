@@ -22,6 +22,7 @@ class LLMService(BaseModel):
     _secondary_model: Any = PrivateAttr()
     _tertiary_model: Any = PrivateAttr()
     _quaternary_model: Any = PrivateAttr()
+    _quinary_model: Any = PrivateAttr()
 
     _retry_config: Dict[str, Any] = PrivateAttr()
     
@@ -31,6 +32,7 @@ class LLMService(BaseModel):
         secondary_google_api_key = settings.SECONDARY_GOOGLE_API_KEY.get_secret_value() if settings.SECONDARY_GOOGLE_API_KEY else None
         tertiary_google_api_key = settings.TERTIARY_GOOGLE_API_KEY.get_secret_value() if settings.TERTIARY_GOOGLE_API_KEY else None
         quaternary_google_api_key = settings.QUATERNARY_GOOGLE_API_KEY.get_secret_value() if settings.QUATERNARY_GOOGLE_API_KEY else None
+        quinary_google_api_key = settings.QUINARY_GOOGLE_API_KEY.get_secret_value() if settings.QUINARY_GOOGLE_API_KEY else None
 
         if not primary_google_api_key:
             raise ValueError("No Google API Keys found! Please set GOOGLE_API_KEY in .env (comma-separated for multiple).")
@@ -39,6 +41,8 @@ class LLMService(BaseModel):
         if not tertiary_google_api_key:
             raise ValueError("No Google API Keys found! Please set GOOGLE_API_KEY in .env (comma-separated for multiple).")
         if not quaternary_google_api_key:
+            raise ValueError("No Google API Keys found! Please set GOOGLE_API_KEY in .env (comma-separated for multiple).")
+        if not quinary_google_api_key:
             raise ValueError("No Google API Keys found! Please set GOOGLE_API_KEY in .env (comma-separated for multiple).")
 
         # Define transient errors to retry
@@ -91,6 +95,13 @@ class LLMService(BaseModel):
             timeout=settings.LLM_TIMEOUT
         )
 
+        self._quinary_model = ChatGoogleGenerativeAI(
+            model=settings.GEMINI_QUINARY_MODEL,
+            api_key=quinary_google_api_key,
+            temperature=0.0,
+            timeout=settings.LLM_TIMEOUT
+        )
+
         logger.info(f"""
             LLMService ready |
             Primary: {settings.GEMINI_PRIMARY_MODEL} |
@@ -99,16 +110,24 @@ class LLMService(BaseModel):
         """)
 
     def get_primary_model(self) -> BaseChatModel:
-        return self._primary_model
+        """Returns the raw primary model with retry logic."""
+        return self._primary_model.with_retry(**self._retry_config)
     
     def get_secondary_model(self) -> BaseChatModel:
-        return self._secondary_model
+        """Returns the raw secondary model with retry logic."""
+        return self._secondary_model.with_retry(**self._retry_config)
     
     def get_tertiary_model(self) -> BaseChatModel:
-        return self._tertiary_model
+        """Returns the raw tertiary model with retry logic."""
+        return self._tertiary_model.with_retry(**self._retry_config)
     
     def get_quaternary_model(self) -> BaseChatModel:
-        return self._quaternary_model
+        """Returns the raw quaternary model with retry logic."""
+        return self._quaternary_model.with_retry(**self._retry_config)
+    
+    def get_quinary_model(self) -> BaseChatModel:
+        """Returns the raw quinary model with retry logic."""
+        return self._quinary_model.with_retry(**self._retry_config)
 
     def get_structured_primary_model(self, schema: Type[BaseModel]) -> Runnable:
         """Returns a primary model configured with structured output AND retry logic."""
@@ -125,5 +144,9 @@ class LLMService(BaseModel):
     def get_structured_quaternary_model(self, schema: Type[BaseModel]) -> Runnable:
         """Returns a primary model configured with structured output AND retry logic."""
         return self._quaternary_model.with_structured_output(schema).with_retry(**self._retry_config)
+    
+    def get_structured_quinary_model(self, schema: Type[BaseModel]) -> Runnable:
+        """Returns a primary model configured with structured output AND retry logic."""
+        return self._quinary_model.with_structured_output(schema).with_retry(**self._retry_config)
     
     
