@@ -1,5 +1,5 @@
-import asyncio
 import time
+import re
 from typing import List, Literal, TypeAlias, cast
 from langfuse import observe
 from loguru import logger
@@ -46,64 +46,67 @@ def make_rag_node(
         start_time = time.time()
         
         original_query = state["query"]
+        optimized_query = state.get("rag_query")
 
         solid_k = settings.QDRANT_SOLID_TOP_K
         volatile_k = settings.QDRANT_VOLATILE_TOP_K
         final_top_k = settings.QDRANT_FINAL_TOP_K
         max_query_length = settings.QDRANT_MAX_QUERY_LENGTH
                                    
-        # 1. Query Optimization
-        system_prompt = RAG_QUERY_OPTIMIZATION_PROMPT.format(
-            conversation_summary=state.get("summary", "No prior context."),
-            user_question=original_query
-        )
+        # 1. Query Optimization (Skip if Router already provided one)
+        if not optimized_query:
+            logger.info("[RAG] No pre-optimized query found. Rewriting...")
+            system_prompt = RAG_QUERY_OPTIMIZATION_PROMPT.format(
+                conversation_summary=state.get("summary", "No prior context."),
+                user_question=original_query
+            )
 
-        messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
-        if state["messages"]:
-            messages.extend(state["messages"])        
-        messages.append(HumanMessage(content=f"Latest Query: {original_query}"))
+            messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
+            if state["messages"]:
+                messages.extend(state["messages"])        
+            messages.append(HumanMessage(content=f"Latest Query: {original_query}"))
 
-        try:
-            rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedRagQuery)
-            rewritten_result: OptimizedRagQuery = await rewriter_llm.ainvoke(messages)
-            optimized_query = rewritten_result.search_query
+            try:
+                rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedRagQuery)
+                rewritten_result: OptimizedRagQuery = await rewriter_llm.ainvoke(messages)
+                optimized_query = rewritten_result.search_query
 
-            # Circuit breaker to prevent runaway repetition
-            if len(optimized_query) > max_query_length:
-                logger.warning(f"[RAG] ⚠️ LLM hallucinated a repeating query. Triggering fallback.")
+                # Circuit breaker to prevent runaway repetition
+                if len(optimized_query) > max_query_length:
+                    logger.warning(f"[RAG] ⚠️ LLM hallucinated a repeating query. Triggering fallback.")
+                    optimized_query = original_query
+                else:
+                    logger.debug(f"[RAG] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+            except Exception as e:
+                logger.warning(f"[RAG] Query optimization failed: {e}. Falling back to original query.")
                 optimized_query = original_query
-            else:
-                logger.debug(f"[RAG] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
-        except Exception as e:
-            logger.warning(f"[RAG] Query optimization failed: {e}. Falling back to original query.")
-            optimized_query = original_query
+        else:
+            logger.info(f"[RAG] Using pre-optimized query from Router: '{optimized_query}'")
 
-        # 2. Dense Vector Search
-        logger.debug(f"Executing Qdrant search with query: {optimized_query}")
-
-        combined_results = []
-        active_datasets = state.get("active_datasets", [])
+        # 2. Extract active context
+        active_datasets = state.get("active_datasets") or []
         dataset_ids = [ds.get("dataset_id") for ds in active_datasets if ds.get("dataset_id")]
 
-        # Fetch from both stores
+        # 3. Qdrant Hybrid Search (Dense + SPLADE handled natively by LangChain)
+        logger.debug(f"Executing Qdrant search with query: {optimized_query}")
+        
         solid_results = await vector_store_solid.asimilarity_search_with_score(query=optimized_query, k=solid_k)
         for doc, score in solid_results:
             doc.page_content = f"[SOURCE TIER: CURATED (High Trust)] {doc.page_content}"
             doc.metadata["source_tier"] = "CURATED"
 
-        volatile_filter = None
+        volatile_results = []
         if dataset_ids:
             volatile_filter = build_metadata_filter({"dataset_id": dataset_ids})
-        
-        volatile_results = await vector_store_volatile.asimilarity_search_with_score(
-            query=optimized_query, 
-            k=volatile_k,
-            filter=volatile_filter
-        )
+            volatile_results = await vector_store_volatile.asimilarity_search_with_score(
+                query=optimized_query, 
+                k=volatile_k,
+                filter=volatile_filter
+            )
 
-        for doc, score in volatile_results:
-            doc.page_content = f"[SOURCE TIER: INFERRED/PROVISIONAL (Agent Discovery)] {doc.page_content}"
-            doc.metadata["source_tier"] = "INFERRED"
+            for doc, score in volatile_results:
+                doc.page_content = f"[SOURCE TIER: INFERRED/PROVISIONAL (Agent Discovery)] {doc.page_content}"
+                doc.metadata["source_tier"] = "INFERRED"
 
         # Combine, sort by hybrid score descending, and take the absolute Top 5 overall
         combined_results = solid_results + volatile_results
@@ -117,21 +120,10 @@ def make_rag_node(
 
         # Process the combined results
         for idx, (doc, score) in enumerate(top_semantic_results):
-            # Prioritize original_filename (clean) over source (might have UUID)
             raw_filename = doc.metadata.get("original_filename") or doc.metadata.get("source_filename") or doc.metadata.get("source", "unknown")
-            
-            # Clean up UUID prefix if it exists (e.g., "uuid_filename.pdf" -> "filename.pdf")
-            import re
             source_name = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', str(raw_filename))
-
             source_tier = doc.metadata.get("source_tier", "unknown_tier")
 
-            logger.debug(
-                "[RAG] Doc {idx} | tier={tier} | source={source_name} | score={score}",
-                idx=idx, tier=source_tier, source_name=source_name, score=score
-            )
-
-            # Package into custom schema
             rag_item = RAGResult(
                 content=doc.page_content,
                 source_file=source_name,
@@ -140,70 +132,63 @@ def make_rag_node(
             )
             new_rag_results.append(rag_item)
 
-            source_item = {
+            new_sources.append({
                 "document_id": doc.metadata.get("_id", f"doc_{idx}"),
                 "source_file": source_name,
                 "chunk_index": idx,
                 "score": score,
                 "source_tier": source_tier
-            }
-            new_sources.append(source_item)
+            })
 
-        # 3. Sparse Keyword Search (BM25 - Uploaded files)
-        ephemeral_chunks = state.get("uploaded_chunks", [])
+        # 4. In-Memory Search for Ephemeral Files
+        # ephemeral_chunks = state.get("uploaded_chunks", [])
 
-        if ephemeral_chunks:
-            logger.debug("[RAG] 🧬 Running BM25 Keyword Search on {count} uploaded chunks...", count=len(ephemeral_chunks))
+        # if ephemeral_chunks:
+        #     logger.debug("[RAG] 🧬 Running BM25 Keyword Search on {count} uploaded chunks...", count=len(ephemeral_chunks))
 
-            # Build BM25 matrix in a background thread to prevent async loop blocking
-            def _build_bm25():
-                return BM25Retriever.from_documents(
-                    ephemeral_chunks,
-                    k=settings.RAG_INMEMORY_RETRIEVER_TOP_K,
-                    bm25_variant="plus",
-                )
+        #     # Build BM25 matrix in a background thread to prevent async loop blocking
+        #     def _build_bm25():
+        #         return BM25Retriever.from_documents(
+        #             ephemeral_chunks,
+        #             k=settings.RAG_INMEMORY_RETRIEVER_TOP_K,
+        #             bm25_variant="plus",
+        #         )
             
-            bm25_retriever = await asyncio.to_thread(_build_bm25)
+        #     bm25_retriever = await asyncio.to_thread(_build_bm25)
 
-            local_results = await bm25_retriever.ainvoke(optimized_query)
+        #     local_results = await bm25_retriever.ainvoke(optimized_query)
 
-            for idx, doc in enumerate(local_results):
-                # Dynamic Pseudo-Scoring: 1.0 for the best match, decaying by 0.05 for each subsequent match.
-                # This guarantees ordinal ranking without a hardcoded threshold.
-                dynamic_score = round(max(0.5, 1.0 - (idx * 0.05)), 2)
+        #     for idx, doc in enumerate(local_results):
+        #         # Dynamic Pseudo-Scoring: 1.0 for the best match, decaying by 0.05 for each subsequent match.
+        #         # This guarantees ordinal ranking without a hardcoded threshold.
+        #         dynamic_score = round(max(0.5, 1.0 - (idx * 0.05)), 2)
 
-                raw_filename = doc.metadata.get("original_filename") or doc.metadata.get("source_filename") or doc.metadata.get("source", "uploaded_file")
-                import re
-                source_name = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', str(raw_filename))
+        #         raw_filename = doc.metadata.get("original_filename") or doc.metadata.get("source_filename") or doc.metadata.get("source", "uploaded_file")
+        #         import re
+        #         source_name = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', str(raw_filename))
 
-                rag_item = RAGResult(
-                    content=doc.page_content,
-                    source_file=source_name,
-                    page_number=doc.metadata.get("alignment_info", None),
-                    relevance_score=dynamic_score, 
-                )
-                new_rag_results.append(rag_item)
+        #         rag_item = RAGResult(
+        #             content=doc.page_content,
+        #             source_file=source_name,
+        #             page_number=doc.metadata.get("alignment_info", None),
+        #             relevance_score=dynamic_score, 
+        #         )
+        #         new_rag_results.append(rag_item)
                 
-                new_sources.append({
-                    "document_id": f"ephemeral_chunk_{idx}",
-                    "source_file": source_name,
-                    "score": dynamic_score,
-                    "chunk_index": idx
-                })
+        #         new_sources.append({
+        #             "document_id": f"ephemeral_chunk_{idx}",
+        #             "source_file": source_name,
+        #             "score": dynamic_score,
+        #             "chunk_index": idx
+        #         })
                 
-            logger.debug(f"[RAG] ✅ Found {len(local_results)} matches in uploaded files.")
+        #     logger.debug(f"[RAG] ✅ Found {len(local_results)} matches in uploaded files.")
         elapsed = int((time.time() - start_time) * 1000)
 
         logger.debug(
             "[RAG] ✅ Search completed in {elapsed} ms | valid chunks kept={count}",
             elapsed=elapsed, count=len(new_rag_results)
         )
-
-        # Because rag_results uses operator.add, returning a list appends it to state
-        updates = {
-            "rag_results": new_rag_results,
-            "sources_used": new_sources,
-        }
 
         # Cast to use the AgentState already defined
         # preview_state = cast(AgentState, {**state, **updates})
@@ -216,7 +201,10 @@ def make_rag_node(
         # Return to Router node as following the ReAct pattern (Reasoning Loop)
         return Command(
             goto=AgentGraphNode.SYNTHESIZER,
-            update=updates
+            update={
+                "rag_results": new_rag_results,
+                "sources_used": new_sources,
+            }
         )
 
     return rag

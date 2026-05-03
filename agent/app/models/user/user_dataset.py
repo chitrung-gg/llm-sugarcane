@@ -28,7 +28,7 @@ class UserDataset(SQLModel, table=True):
         default=None,
         sa_column=Column(JSONB)
     )
-    
+    is_public: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=datetime.now)
 
     # 🌟 SQLAlchemy Relationships
@@ -58,7 +58,7 @@ class UserDatasetFile(SQLModel, table=True):
     )
     
     created_at: datetime = Field(default_factory=datetime.now)
-
+    is_public: bool = Field(default=False, index=True)
     # 🌟 SQLAlchemy Relationship
     dataset: Optional[UserDataset] = Relationship(back_populates="files")
 

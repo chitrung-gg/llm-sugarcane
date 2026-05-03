@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     #     validation_alias="GEMINI_SECONDARY_MODEL"
     # )
     GEMINI_SECONDARY_MODEL: str = Field(
-        default="gemini-2.5-flash1", 
+        default="gemini-2.5-flash", 
         validation_alias="GEMINI_SECONDARY_MODEL"
     )
     GEMINI_TERTIARY_MODEL: str = Field(

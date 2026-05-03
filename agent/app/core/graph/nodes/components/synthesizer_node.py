@@ -35,7 +35,7 @@ class SynthesizerOutput(BaseModel):
 def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
     @tracing(observation_type=ObservationType.CHAIN)
     async def synthesizer(state: AgentState) -> Command[
-        Literal[AgentGraphNode.SUMMARIZER, AgentGraphNode.ROUTER]
+        Literal[AgentGraphNode.END_NODE, AgentGraphNode.ROUTER]
     ]:
         logger.debug("[Synthesizer] ✍️ Generating final response")
         
@@ -47,19 +47,28 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         query = state["query"]
         messages = state.get("messages", [])
 
-        is_final_attempt = current_iteration >= max_iterations
+        # 1. Rebuild Workspace Context from New State
+        active_project = state.get("active_project")
+        active_datasets = state.get("active_datasets", [])
+        
+        p_name = active_project.get("project_name", "Default Project") if active_project else "Default Project"
+        workspace_str = f"ACTIVE PROJECT: {p_name}\n"
+        
+        if active_datasets:
+            workspace_str += "ACTIVE DATASETS:\n"
+            for ds in active_datasets:
+                workspace_str += f"- {ds.get('dataset_name')} (ID: {ds.get('dataset_id')})\n"
+        else:
+            workspace_str += "No specific datasets active.\n"
 
-        #  Use file_context directly from state
-        file_context = state.get("file_context", "")
-
-        # Format context
+        # 2. Format execution context
         rag_context = "\n".join([f"- [Doc: {r.get('source_file')}] {r.get('content')}" for r in state.get("rag_results", [])])
         web_context = "\n".join([f"- [{r.get('title')}] ({r.get('link')}): {r.get('snippet')}" for r in state.get("web_results", [])])
         tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')}" for r in state.get("tool_results", [])])
 
         context_string = f"""
             --- ACTIVE WORKSPACE/FILE CONTEXT ---
-            {file_context if file_context else "No active context."}
+            {workspace_str }
             
             --- RAG KNOWLEDGE ---
             {rag_context if rag_context else "No RAG data found."}
@@ -82,6 +91,8 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         
         # Dynamically add instructions if the agent is about to give up
         final_warning = ""
+
+        is_final_attempt = current_iteration >= max_iterations
         if is_final_attempt:
             final_warning = SYNTHESIZER_FINAL_WARNING
         
@@ -94,7 +105,8 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             final_warning=final_warning
         )
 
-        llm = llm_service.get_structured_secondary_model(SynthesizerOutput)
+        # Tier 1 for best quality synthesis
+        llm = llm_service.get_structured_primary_model(SynthesizerOutput)
 
         messages_to_send: List[BaseMessage] = [
             SystemMessage(content=system_prompt)
@@ -104,14 +116,15 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             messages_to_send.extend(messages)
 
         try:
-            result = await asyncio.wait_for(
-                llm.ainvoke(messages_to_send),
-                timeout=synthesizer_timeout
-            )
+            result = await llm.ainvoke(messages_to_send)
+            # result = await asyncio.wait_for(
+            #     llm.ainvoke(messages_to_send),
+            #     timeout=synthesizer_timeout
+            # )
         except asyncio.TimeoutError:
             logger.error(f"[Synthesizer] ❌ LLM generation timed out after {synthesizer_timeout} seconds.")
             return Command(
-                goto=AgentGraphNode.SUMMARIZER,
+                goto=AgentGraphNode.END_NODE,
                 update={
                     "final_answer": "I apologize, but synthesizing this massive amount of data took too long and timed out. Could you please narrow down your question?",
                     "is_complete": True
@@ -120,7 +133,7 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         except Exception as e:
             logger.error(f"[Synthesizer] ❌ LLM Generation failed: {e}")
             return Command(
-                goto=AgentGraphNode.SUMMARIZER,
+                goto=AgentGraphNode.END_NODE,
                 update={
                     "final_answer": "I apologize, but I encountered an error while formatting the synthesized information.",
                     "is_complete": True
@@ -146,7 +159,7 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         
         # Determine destination
         if is_final_attempt or result.is_complete or state.get("last_intent") == "direct_answer":
-            destination = AgentGraphNode.SUMMARIZER
+            destination = AgentGraphNode.END_NODE
         else:
             logger.warning("⚠️ Answer incomplete. Sending back to ROUTER.")
             updates["messages"] = [
@@ -164,6 +177,5 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             goto=destination,
             update=updates
         )
-
 
     return synthesizer

@@ -6,6 +6,7 @@ from typing import Final, Set
 
 # --- 0. GLOBAL IDS ---
 SYSTEM_OWNER_ID: Final[uuid.UUID] = uuid.UUID("00000000-0000-0000-0000-000000000000")
+DEFAULT_USER_ID: Final[uuid.UUID] = uuid.UUID("11111111-1111-1111-1111-111111111111")
 
 # Langgraph
 LANGGRAPH_STATE_MAX_ITERATIONS = 3
@@ -127,6 +128,7 @@ class UserFeedbackAction(StrEnum):
 
 # --- 11. LANGGRAPH EVENT KINDS ---
 class EventKind(StrEnum):
+    # https://reference.langchain.com/python/langchain-core/runnables/schema/BaseStreamEvent/event
     CHAIN_START = "on_chain_start"
     CHAIN_END = "on_chain_end"
     TOOL_START = "on_tool_start"

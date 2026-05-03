@@ -8,7 +8,6 @@ Your objective is to analyze the user's intent and context to select the most ef
 
 <system_context>
   <workspace_state>{workspace_context}</workspace_state>
-  <uploaded_files>{file_context}</uploaded_files>
   <conversation_summary>{conversation_summary}</conversation_summary>
   <available_bioinformatics_tools>{tool_list_str}</available_bioinformatics_tools>
 </system_context>

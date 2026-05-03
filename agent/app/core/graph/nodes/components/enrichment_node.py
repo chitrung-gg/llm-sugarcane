@@ -16,6 +16,7 @@ def make_enrichment_node(
         Literal[AgentGraphNode.SYNTHESIZER]
     ]:
         logger.debug("[Enrichment] Analyzing tool results for knowledge graph ingestion...")
+
         tool_results = state.get("tool_results", [])
         required_tools = state.get("required_tools", [])
         
@@ -30,6 +31,10 @@ def make_enrichment_node(
         new_results = tool_results[-num_new:] if num_new > 0 else []
 
         batch_payloads = []
+
+        active_project = state.get("active_project") or {}
+        project_name = active_project.get("project_name", "Default Workspace")
+        project_id = active_project.get("project_id", "unknown")
         
         for result in new_results:
             tool_name = result.get("tool_name", "")
@@ -44,7 +49,8 @@ def make_enrichment_node(
                     "source_text": output,
                     "source_metadata": {
                         "tool": tool_name,
-                        "project_name": state.get("active_project_name")
+                        "project_name": project_name,
+                        "project_id": project_id
                     }
                 })
 

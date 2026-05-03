@@ -25,6 +25,8 @@ class UserProject(SQLModel, table=True):
         sa_column=Column(JSONB)
     )
 
+    is_public: bool = Field(default=False, index=True)
+
     # SQLAlchemy Relationship: A project has many datasets
     datasets: List["UserDataset"] = Relationship(
         back_populates="project",

@@ -3,12 +3,14 @@ import os
 import time
 from typing import Any, Dict, List, Optional, AsyncContextManager, cast
 import uuid
+from warnings import deprecated
 
 import aioboto3
 from fastapi import HTTPException
 from langfuse import Langfuse, propagate_attributes
 from langfuse.types import TraceContext
 from langgraph.graph.state import CompiledStateGraph, RunnableConfig
+from langgraph.types import Command
 from langgraph.errors import GraphInterrupt
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from langfuse.langchain import CallbackHandler
@@ -17,7 +19,9 @@ from opentelemetry import trace
 import json
 
 from pydantic import BaseModel
+from sympy import Q
 
+from app.utils.files.files_classifier import is_genomic_file
 from app.utils.observability.tracing import tracing
 from app.services.workspace.workspace_service import WorkspaceService
 from app.common.constants import (
@@ -49,6 +53,7 @@ class AgentService:
         self.langfuse_client = langfuse_client
 
     @tracing(observation_type=ObservationType.AGENT)
+    @deprecated("Use 'process_langgraph_chat_stream()' instead")
     async def process_langgraph_chat(
         self,
         thread_id: uuid.UUID,
@@ -248,10 +253,12 @@ class AgentService:
                 
                 raise # Re-raise to let the controller handle the HTTP response
 
+    @tracing(observation_type=ObservationType.AGENT)
     async def process_langgraph_chat_stream(
         self,
         thread_id: uuid.UUID,
         query: str,
+        resume_payload: Optional[Dict[str, Any]] = None, # Receives the translated dict
         project_id: Optional[uuid.UUID] = None,
         dataset_ids: Optional[List[uuid.UUID]] = None
     ):
@@ -279,17 +286,85 @@ class AgentService:
             await self._save_chat_message(thread_id=thread_id, role="user", content=query, execution_id=execution_id)
 
             # Yield an initial thought to let the UI know we started
-            yield f"data: {StreamChunk(event=StreamEventType.THOUGHT, data={'node': 'system', 'content': '🧠 Analyzing your biological research query...'}).model_dump_json()}\n\n"
+            initial_chunk = StreamChunk(
+                event=StreamEventType.THOUGHT, 
+                data={
+                    'node': 'system', 
+                    'content': '🧠 Analyzing your request...' if resume_payload else '🧠 Analyzing your biological research query...'
+                }
+            )
+            yield f"data: {initial_chunk.model_dump_json()}\n\n"
 
+            state = await self.graph.aget_state(config)
 
             # 1. Check if we should resume or start fresh
-            state = await self.graph.aget_state(config)
             if state.next:
-                logger.info(f'Thread {thread_id} is suspended at {state.next}. Resuming execution.')
-                input_state = None 
+                logger.info(f'Thread {thread_id} is suspended at {state.next}.')
+                
+                if resume_payload:
+                    logger.info(f"Resuming graph with payload: {resume_payload}")
+                    input_state = Command(resume=resume_payload)
+                elif query:
+                    # If user sent a new query while suspended, treat it as feedback to modify the plan
+                    logger.info(f"Resuming graph with query as feedback: {query}")
+                    input_state = Command(
+                        resume={
+                            "action": UserFeedbackAction.MODIFY,
+                            "feedback": query
+                        }
+                    )
+                else:
+                    logger.warning("Graph is suspended, but no human_feedback was provided. Cannot resume.")
+                    input_state = None
+            
             else:
                 logger.info(f'Thread {thread_id} has no active suspension. Starting fresh.')
-                # Build initial state - CLEAR TURN-BASED STATE
+                active_project = None
+                if project_id:
+                    project_db = await self.workspace_service.get_project(project_id)
+                    if project_db:
+                        active_project = {
+                            "project_id": str(project_db.id),
+                            "project_name": project_db.name,
+                            "description": project_db.description,
+                            "metadata": project_db.dataset_metadata
+                        }
+
+                active_datasets = []
+                if dataset_ids:
+                    datasets_db = await self.workspace_service.get_datasets_by_ids(dataset_ids)
+                    
+                    for ds in datasets_db:
+                        genomic_files = []
+                        knowledge_files = []
+                        
+                        for f in ds.files:
+                            # Categorize the file so the LLM knows what to do with it
+                            # Adjust this list based on your actual IngestionSourceType enums
+                            is_genomic = is_genomic_file(f.file_name)
+                            
+                            agent_file = {
+                                "file_id": str(f.file_id),
+                                "file_name": f.file_name,
+                                "file_category": "GENOMIC" if is_genomic else "KNOWLEDGE",
+                                "file_type": str(f.file_type),
+                                "rustfs_uri": f.rustfs_uri,
+                                "local_content": None
+                            }
+                            
+                            if is_genomic:
+                                genomic_files.append(agent_file)
+                            else:
+                                knowledge_files.append(agent_file)
+                                
+                        active_datasets.append({
+                            "dataset_id": str(ds.id),
+                            "dataset_name": ds.name,
+                            "source": "SYSTEM_LIBRARY" if getattr(ds.project, "is_public", True) else "USER_WORKSPACE",
+                            "genomic_files": genomic_files,
+                            "knowledge_files": knowledge_files
+                        })
+                # Build initial state
                 input_state = {
                     "query": query,
                     "messages": [HumanMessage(content=query)],
@@ -298,9 +373,10 @@ class AgentService:
                     "start_time": time.time(),
                     "plan": [],            
                     "past_steps": [],      
-                    "final_answer": ""     
+                    "final_answer": "",
+                    "active_project": active_project, 
+                    "active_datasets": active_datasets
                 }
-
 
             # Filter for specific nodes we want to stream thoughts from
             REASONING_NODES = {
@@ -322,19 +398,37 @@ class AgentService:
                             break
                 
                 if interrupt_data:
-                    yield f"data: {StreamChunk(event=StreamEventType.THOUGHT, data={'node': 'planner', 'content': 'I have drafted a research plan. Please review it below to proceed.'}).model_dump_json()}\n\n"
-                    yield f"data: {StreamChunk(
+                    thought_chunk = StreamChunk(
+                        event=StreamEventType.THOUGHT, 
+                        data={
+                            'node': 'planner', 
+                            'content': 'I have drafted a research plan. Please review it below to proceed.'
+                        }
+                    )
+                    yield f"data: {thought_chunk.model_dump_json()}\n\n"
+                    
+                    interrupt_chunk = StreamChunk(
                         event=StreamEventType.INTERRUPT, 
                         data={
                             'next_nodes': state.next, 
                             'interrupt_payload': interrupt_data
                         }
-                    ).model_dump_json()}\n\n"
+                    )
+                    yield f"data: {interrupt_chunk.model_dump_json()}\n\n"
+                    
                     status_flag["interrupted"] = True
                     return 
                 
                 if state.next:
-                    yield f"data: {StreamChunk(event=StreamEventType.INTERRUPT, data={'next_nodes': state.next, 'interrupt_payload': {}}).model_dump_json()}\n\n"
+                    empty_interrupt_chunk = StreamChunk(
+                        event=StreamEventType.INTERRUPT, 
+                        data={
+                            'next_nodes': state.next, 
+                            'interrupt_payload': {}
+                        }
+                    )
+                    yield f"data: {empty_interrupt_chunk.model_dump_json()}\n\n"
+                    
                     status_flag["interrupted"] = True
                     return
 
@@ -342,69 +436,96 @@ class AgentService:
                 return
 
             try:
-                async for event in self.graph.astream_events(input_state, config, version="v2"):
-                    kind = event["event"]
-                    name = event["name"]
+                if input_state is not None:
+                    async for event in self.graph.astream_events(input_state, config, version="v2"):
+                        kind = event["event"]
+                        name = event["name"]
 
-                    # 0. Show progress as we enter nodes
-                    if kind == EventKind.CHAIN_START and name in REASONING_NODES:
-                         yield f"data: {StreamChunk(event=StreamEventType.THOUGHT, data={'node': name, 'content': f'Entering {name} node...'}).model_dump_json()}\n\n"
-
-                    # 1. Thoughts & Node Transitions
-                    if kind == EventKind.CHAIN_END and name in REASONING_NODES:
-                        output = event["data"].get("output")
-                        if output:
-                            content = None
-
-                            # Case A: It's a LangGraph Command object
-                            if hasattr(output, "update") and isinstance(output.update, dict):
-                                content = (
-                                    output.update.get("final_answer") or 
-                                    (output.update.get("messages", [{}])[-1].content if output.update.get("messages") else None)
-                                )
-
-                            # Case B: It's a standard dictionary
-                            elif isinstance(output, dict):
-                                content = output.get("final_answer") or output.get("content")
-
-                            # Case C: It's a LangChain Message object
-                            elif hasattr(output, "content"):
-                                content = output.content
-
-                            if content:
-                                yield f"data: {StreamChunk(event=StreamEventType.THOUGHT, data={'node': name, 'content': str(content)}).model_dump_json()}\n\n"
-
-                    # 2. Tool Executions
-                    elif kind == EventKind.TOOL_START:
-                        yield f"data: {StreamChunk(event=StreamEventType.TOOL_START, data={'tool': name, 'inputs': event['data'].get('input')}).model_dump_json()}\n\n"
-                    elif kind == EventKind.TOOL_END:
-                        tool_output = event["data"].get("output")
-                        # Stringify output safely for SSE stream
-                        safe_output = str(tool_output)[:1000] if tool_output is not None else "No output."
-                        yield f"data: {StreamChunk(event=StreamEventType.TOOL_END, data={'tool': name, 'output': safe_output}).model_dump_json()}\n\n"
-
-                    # 3. Final Answer (from Synthesizer)
-                    if kind == EventKind.CHAIN_END and name == AgentGraphNode.SYNTHESIZER:
-                        output = event["data"].get("output")
-                        final_answer = None
-                        
-                        if isinstance(output, BaseModel):
-                            final_answer = getattr(output, "final_answer", None)
-                        elif isinstance(getattr(output, "update", None), dict):
-                            final_answer = getattr(output, "update").get("final_answer")
-                        elif isinstance(output, dict):
-                            final_answer = output.get("final_answer")
-
-                        if final_answer:
-                            yield f"data: {StreamChunk(event=StreamEventType.ANSWER, data=final_answer).model_dump_json()}\n\n"
-                            # Persist final answer
-                            await self._save_chat_message(
-                                thread_id=thread_id,
-                                role="assistant",
-                                content=final_answer,
-                                type="answer",
-                                execution_id=execution_id
+                        # 0. Show progress as we enter nodes
+                        if kind == EventKind.CHAIN_START and name in REASONING_NODES:
+                            chunk = StreamChunk(
+                                event=StreamEventType.THOUGHT, 
+                                data={
+                                    'node': name, 
+                                    'content': f'Entering {name} node...'
+                                }
                             )
+                            yield f"data: {chunk.model_dump_json()}\n\n"
+
+                        # 1. Thoughts & Node Transitions
+                        if kind == EventKind.CHAIN_END and name in REASONING_NODES:
+                            output = event["data"].get("output")
+                            if output:
+                                content = None
+
+                                # Case A: It's a LangGraph Command object
+                                if hasattr(output, "update") and isinstance(output.update, dict):
+                                    content = (
+                                        output.update.get("final_answer") or 
+                                        (output.update.get("messages", [{}])[-1].content if output.update.get("messages") else None)
+                                    )
+
+                                # Case B: It's a standard dictionary
+                                elif isinstance(output, dict):
+                                    content = output.get("final_answer") or output.get("content")
+
+                                # Case C: It's a LangChain Message object
+                                elif hasattr(output, "content"):
+                                    content = output.content
+
+                                if content:
+                                    chunk = StreamChunk(
+                                        event=StreamEventType.THOUGHT, 
+                                        data={
+                                            'node': name, 
+                                            'content': str(content)
+                                        }
+                                    )
+                                    yield f"data: {chunk.model_dump_json()}\n\n"
+
+                        # 2. Tool Executions
+                        elif kind == EventKind.TOOL_START:
+                            chunk = StreamChunk(
+                                event=StreamEventType.TOOL_START, 
+                                data={
+                                    'tool': name, 
+                                    'inputs': event['data'].get('input')
+                                }
+                            )
+                            yield f"data: {chunk.model_dump_json()}\n\n"
+                            
+                        elif kind == EventKind.TOOL_END:
+                            tool_output = event["data"].get("output")
+                            # Stringify output safely for SSE stream
+                            safe_output = str(tool_output)[:1000] if tool_output is not None else "No output."
+                            
+                            chunk = StreamChunk(
+                                event=StreamEventType.TOOL_END, 
+                                data={
+                                    'tool': name, 
+                                    'output': safe_output
+                                }
+                            )
+                            yield f"data: {chunk.model_dump_json()}\n\n"
+
+                        # 3. Final Answer (from Synthesizer)
+                        if kind == EventKind.CHAIN_END and name == AgentGraphNode.SYNTHESIZER:
+                            output = event["data"].get("output")
+                            final_answer = None
+                            
+                            if isinstance(output, BaseModel):
+                                final_answer = getattr(output, "final_answer", None)
+                            elif isinstance(getattr(output, "update", None), dict):
+                                final_answer = getattr(output, "update").get("final_answer")
+                            elif isinstance(output, dict):
+                                final_answer = output.get("final_answer")
+
+                            if final_answer:
+                                chunk = StreamChunk(
+                                    event=StreamEventType.ANSWER, 
+                                    data=final_answer
+                                )
+                                yield f"data: {chunk.model_dump_json()}\n\n"
 
                 # 1. Initialize the status dictionary
                 interrupt_status = {"interrupted": False}
@@ -416,37 +537,54 @@ class AgentService:
                 # 3. Check the flag we just set inside the helper
                 if not interrupt_status["interrupted"]:
                     # Standard completion: Only send DONE if we didn't hit an interrupt
-                    yield f"data: {StreamChunk(event=StreamEventType.DONE, data={}).model_dump_json()}\n\n"
-
-            except Exception as e:
-                # Catch anything that looks like an interrupt
-                if "Interrupt" in type(e).__name__ or "GraphInterrupt" in type(e).__name__:
-                    logger.info(f"Graph suspended (caught {type(e).__name__}). Yielding interrupt payload.")
+                    final_state = await self.graph.aget_state(config)
+                    absolute_final_answer = final_state.values.get("final_answer")
                     
-                    # We still need the dict and the loop here
-                    exc_status = {"interrupted": False}
-                    async for chunk in _yield_interrupt_payload(exc_status):
-                        yield chunk
-                else:
-                    logger.error(f"Streaming Error: {e}")
-                    yield f"data: {StreamChunk(event=StreamEventType.ERROR, data=str(e)).model_dump_json()}\n\n"
-    async def resume_graph(self, thread_id: uuid.UUID, feedback: Any):
-        """Resumes a suspended graph execution with user feedback."""
-        config: RunnableConfig = {"configurable": {"thread_id": str(thread_id)}}
+                    if absolute_final_answer:
+                        await self._save_chat_message(
+                            thread_id=thread_id,
+                            role="assistant",
+                            content=absolute_final_answer,
+                            type="answer",
+                            execution_id=execution_id
+                        )
+            
+                    chunk = StreamChunk(
+                        event=StreamEventType.DONE, 
+                        data={}
+                    )
+                    yield f"data: {chunk.model_dump_json()}\n\n"
+
+            except GraphInterrupt as e:
+                # Catch actual LangGraph suspensions cleanly!
+                logger.info(f"Graph suspended natively. Yielding interrupt payload.")
+                
+                exc_status = {"interrupted": False}
+                async for chunk in _yield_interrupt_payload(exc_status):
+                    yield chunk
+                    
+            except Exception as e:
+                # Catch REAL errors (e.g., API keys missing, DB connection dropped, etc.)
+                logger.error(f"Streaming Error: {e}")
+                chunk = StreamChunk(event=StreamEventType.ERROR, data=str(e))
+                yield f"data: {chunk.model_dump_json()}\n\n"
+    
+    # async def resume_graph(self, thread_id: uuid.UUID, feedback: Any):
+    #     """Resumes a suspended graph execution by saving feedback to state."""
+    #     config: RunnableConfig = {"configurable": {"thread_id": str(thread_id)}}
         
-        try:
-            # 1. Inspect state to confirm where we are suspended
-            state = await self.graph.aget_state(config)
-            logger.info(f"[Resume] Thread {thread_id} suspended at {state.next}. Tasks: {len(state.tasks) if state.tasks else 0}")
+    #     try:
+    #         # 1. Inspect state to confirm where we are suspended
+    #         state = await self.graph.aget_state(config)
+    #         logger.info(f"[Resume] Thread {thread_id} suspended at {state.next}. Tasks: {len(state.tasks) if state.tasks else 0}")
             
-            # 2. Update state targeting the planner node (where the interrupt occurred)
-            # This ensures feedback is correctly routed to the interrupted task.
-            await self.graph.aupdate_state(config, feedback, as_node=AgentGraphNode.PLANNER)
+    #         # 2. Update state with the feedback so the next stream can use it to resume
+    #         await self.graph.aupdate_state(config, {"_resume_value": feedback})
             
-            return {"status": "resumed", "thread_id": thread_id}
-        except Exception as e:
-            logger.error(f"[Resume] Failed for thread {thread_id}: {e}")
-            raise e
+    #         return {"status": "resumed", "thread_id": thread_id}
+    #     except Exception as e:
+    #         logger.error(f"[Resume] Failed for thread {thread_id}: {e}")
+    #         raise e
 
     async def get_conversation_history(self, thread_id: uuid.UUID) -> dict:
         """Retrieves the conversation history from the chat_messages table."""

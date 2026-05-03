@@ -34,10 +34,11 @@ async def create_project(
 
 @router.get("/projects", response_model=List[UserProject])
 async def list_projects(
+    user_id: Optional[uuid.UUID] = None,
     workspace_service: WorkspaceService = Depends(get_workspace_service)
 ):
-    """List all available projects."""
-    return await workspace_service.get_projects()
+    """List all available projects, optionally filtered by owner."""
+    return await workspace_service.get_projects(user_id)
 
 @router.get("/projects/{project_id}", response_model=UserProject)
 async def get_project(
@@ -124,7 +125,7 @@ async def list_dataset_files(
     workspace_service: WorkspaceService = Depends(get_workspace_service)
 ):
     """List all files associated with a specific dataset (Cultivar)."""
-    return await workspace_service.get_dataset_files(dataset_id)
+    return await workspace_service.get_dataset(dataset_id)
 
 @router.delete("/datasets/files/{file_record_id}")
 async def delete_dataset_file(

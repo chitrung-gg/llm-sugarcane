@@ -40,21 +40,21 @@ def make_summarizer_node(llm_service: LLMService):
 
         max_messages = settings.SUMMARIZER_SUMMARY_TRIGGER_THRESHOLD
         keep_messages = settings.SUMMARIZER_SUMMARY_KEEP_LAST_N
-        timeout_sec = settings.SUMMARIZER_SUMMARY_TIMEOUT_SEC
+        # timeout_sec = settings.SUMMARIZER_SUMMARY_TIMEOUT_SEC
 
         # 1. Final Ingestion Dispatch
-        pending_knowledge = state.get("extracted_knowledge", [])
-        if pending_knowledge:
-            logger.info(f"[Summarizer] Dispatching {len(pending_knowledge)} accumulated items to Airflow.")
-            try:
-                # We use asyncio.to_thread to prevent blocking the event loop
-                await asyncio.to_thread(
-                    trigger_airflow_dag,
-                    conf_payload={"batch": pending_knowledge},
-                    dag_id="knowledge_ingestion_pipeline"
-                )
-            except Exception as e:
-                logger.error(f"[Summarizer] Failed to dispatch deferred ingestion: {e}")
+        # pending_knowledge = state.get("extracted_knowledge", [])
+        # if pending_knowledge:
+        #     logger.info(f"[Summarizer] Dispatching {len(pending_knowledge)} accumulated items to Airflow.")
+        #     try:
+        #         # We use asyncio.to_thread to prevent blocking the event loop
+        #         await asyncio.to_thread(
+        #             trigger_airflow_dag,
+        #             conf_payload={"batch": pending_knowledge},
+        #             dag_id="knowledge_ingestion_pipeline"
+        #         )
+        #     except Exception as e:
+        #         logger.error(f"[Summarizer] Failed to dispatch deferred ingestion: {e}")
 
         # Only summarize if we have a significant number of messages (e.g., > 10)
         # to avoid summarizing every single turn which is expensive.
@@ -80,14 +80,17 @@ def make_summarizer_node(llm_service: LLMService):
         messages_to_summarize = messages[:-keep_messages]
         
         try:
-            # Prepare the prompt for the summarizer
+            # Tier 3 (Tertiary - Flash Lite) for high-speed summarization
             llm = llm_service.get_structured_tertiary_model(SummaryOutput)
             
-            response = await asyncio.wait_for(
-                llm.ainvoke([SystemMessage(content=system_prompt)] + messages_to_summarize),
-                timeout=timeout_sec
+            # response = await asyncio.wait_for(
+            #     llm.ainvoke([SystemMessage(content=system_prompt)] + messages_to_summarize),
+            #     timeout=timeout_sec
+            # )
+            response = await llm.ainvoke(
+                [SystemMessage(content=system_prompt)] + messages_to_summarize
             )
-
+                
             new_summary = response.new_summary
 
             # Create RemoveMessage instructions to delete the messages we just summarized

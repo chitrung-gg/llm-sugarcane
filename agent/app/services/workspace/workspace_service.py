@@ -41,20 +41,20 @@ class WorkspaceService:
         name: Optional[str] = None,
         description: Optional[str] = None
     ) -> bool:
+        updates = []
+        params = []
+        if name:
+            updates.append("name = %s")
+            params.append(name)
+        if description is not None:
+            updates.append("description = %s")
+            params.append(description)
+        
+        if not updates:
+            return False
+        
+        params.append(project_id)
         async with userdata_connection_pool.connection() as conn:
-            updates = []
-            params = []
-            if name:
-                updates.append("name = %s")
-                params.append(name)
-            if description is not None:
-                updates.append("description = %s")
-                params.append(description)
-            
-            if not updates:
-                return False
-            
-            params.append(project_id)
             await conn.execute(
                 f"UPDATE user_projects SET {', '.join(updates)} WHERE id = %s",
                 tuple(params)
@@ -66,9 +66,15 @@ class WorkspaceService:
             await conn.execute("DELETE FROM user_projects WHERE id = %s", (project_id,))
             return True
 
-    async def get_projects(self) -> List[UserProject]:
+    async def get_projects(self, owner_id: Optional[uuid.UUID] = None) -> List[UserProject]:
         async with userdata_connection_pool.connection() as conn:
-            cursor = await conn.execute("SELECT id, name, description, dataset_metadata, created_at FROM user_projects")
+            query = "SELECT id, owner_id, name, description, dataset_metadata, created_at FROM user_projects"
+            params = []
+            if owner_id:
+                query += " WHERE owner_id = %s"
+                params.append(owner_id)
+            
+            cursor = await conn.execute(query, tuple(params))
             rows = await cursor.fetchall()
             return [UserProject(**row) for row in rows]
 
@@ -115,20 +121,20 @@ class WorkspaceService:
         name: Optional[str] = None,
         description: Optional[str] = None
     ) -> bool:
+        updates = []
+        params = []
+        if name:
+            updates.append("name = %s")
+            params.append(name)
+        if description is not None:
+            updates.append("description = %s")
+            params.append(description)
+        
+        if not updates:
+            return False
+        
+        params.append(dataset_id)
         async with userdata_connection_pool.connection() as conn:
-            updates = []
-            params = []
-            if name:
-                updates.append("name = %s")
-                params.append(name)
-            if description is not None:
-                updates.append("description = %s")
-                params.append(description)
-            
-            if not updates:
-                return False
-            
-            params.append(dataset_id)
             await conn.execute(
                 f"UPDATE user_datasets SET {', '.join(updates)} WHERE id = %s",
                 tuple(params)
@@ -151,70 +157,81 @@ class WorkspaceService:
             return [UserDataset(**row) for row in dataset_rows]
 
     async def get_dataset(self, dataset_id: uuid.UUID) -> Optional[UserDataset]:
-        async with userdata_connection_pool.connection() as conn:
-            # 1. Fetch the dataset container
-            cursor = await conn.execute(
-                "SELECT id, project_id, name, description, dataset_metadata, created_at FROM user_datasets WHERE id = %s",
-                (dataset_id,)
-            )
-            row = await cursor.fetchone()
-            if not row:
-                return None
-            
-            dataset = UserDataset(**row)
-            # 2. Fetch its files from both sources
-            dataset.files = await self.get_dataset_files(dataset_id)
-            return dataset
+        datasets = await self.get_datasets_by_ids([dataset_id])
+        return datasets[0] if datasets else None
 
-    async def get_dataset_files(self, dataset_id: uuid.UUID) -> List[UserDatasetFile]:
-        """Aggregates files from both user_dataset_files and genomes tables."""
-        all_files = []
+    async def get_datasets_by_ids(self, dataset_ids: List[uuid.UUID]) -> List[UserDataset]:
+        """Fetches multiple datasets and ALL their files in exactly 3 queries."""
+        if not dataset_ids:
+            return []
         
-        # 1. Fetch from user_dataset_files (Knowledge/Documents)
+        datasets_map: Dict[uuid.UUID, UserDataset] = {}
+        
+        # 1. Fetch Dataset Containers (Query 1)
         async with userdata_connection_pool.connection() as conn:
             cursor = await conn.execute(
-                "SELECT id, dataset_id, file_id, file_name, file_type, rustfs_uri, file_metadata, created_at FROM user_dataset_files WHERE dataset_id = %s",
-                (dataset_id,)
+                "SELECT id, project_id, name, description, dataset_metadata, created_at FROM user_datasets WHERE id = ANY(%s)",
+                (dataset_ids,)
             )
             rows = await cursor.fetchall()
-            all_files.extend([UserDatasetFile(**row) for row in rows])
+            for row in rows:
+                r_dict = dict(row)
+                dataset = UserDataset(**r_dict)
+                dataset.files = []  # Initialize empty list to avoid NoneType errors later
+                datasets_map[dataset.id] = dataset
+
+        if not datasets_map:
+            return []
+
+        # 2. Fetch ALL Files for these Datasets (Queries 2 & 3)
+        all_files = await self._get_bulk_dataset_files(list(datasets_map.keys()))
+
+        # 3. Map Files back to their Parent Datasets in memory
+        for file in all_files:
+            if file.dataset_id in datasets_map:
+                datasets_map[file.dataset_id].files.append(file)
+
+        return list(datasets_map.values())
+
+    async def _get_bulk_dataset_files(self, dataset_ids: List[uuid.UUID]) -> List[UserDatasetFile]:
+        """Aggregates files from both databases in bulk."""
+        all_files = []
+        
+        # Query 2: Fetch all matching files from user_dataset_files
+        async with userdata_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT id, dataset_id, file_id, file_name, file_type, rustfs_uri, file_metadata, created_at FROM user_dataset_files WHERE dataset_id = ANY(%s)",
+                (dataset_ids,)
+            )
+            rows = await cursor.fetchall()
+            all_files.extend([UserDatasetFile(**dict(row)) for row in rows])
             
-        # 2. Fetch from genomes (Genomic Data)
+        # Query 3: Fetch all matching files from genomes
         async with genome_connection_pool.connection() as conn:
             cursor = await conn.execute(
                 """
                 SELECT global_id as id, dataset_id, global_id as file_id, name as file_name, 
                        'user_private_genome' as file_type, genome_path as rustfs_uri, 
                        genome_metadata as file_metadata, created_at 
-                FROM genomes WHERE dataset_id = %s
+                FROM genomes WHERE dataset_id = ANY(%s)
                 """,
-                (dataset_id,)
+                (dataset_ids,)
             )
             rows = await cursor.fetchall()
             for row in rows:
-                # Map genome record to UserDatasetFile format for frontend consistency
+                r_dict = dict(row)
                 all_files.append(UserDatasetFile(
-                    id=row["id"],
-                    dataset_id=row["dataset_id"],
-                    file_id=row["file_id"],
-                    file_name=row["file_name"],
+                    id=r_dict["id"],
+                    dataset_id=r_dict["dataset_id"],
+                    file_id=r_dict["file_id"],
+                    file_name=r_dict["file_name"],
                     file_type=IngestionSourceType.USER_PRIVATE_GENOME,
-                    rustfs_uri=row["rustfs_uri"] or "No primary path",
-                    file_metadata=row["file_metadata"],
-                    created_at=row["created_at"]
+                    rustfs_uri=r_dict["rustfs_uri"] or "No primary path",
+                    file_metadata=r_dict["file_metadata"],
+                    created_at=r_dict["created_at"]
                 ))
+                
         return all_files
-
-    async def get_datasets_by_ids(self, dataset_ids: List[uuid.UUID]) -> List[UserDataset]:
-        if not dataset_ids:
-            return []
-        
-        datasets = []
-        for d_id in dataset_ids:
-            ds = await self.get_dataset(d_id)
-            if ds:
-                datasets.append(ds)
-        return datasets
 
     # --- Dataset File Logic ---
     async def register_dataset_file(

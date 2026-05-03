@@ -39,22 +39,24 @@ def make_web_search_node(
         start_time = time.time()
 
         # Check if the Router provided a specific search query
-        required_tools = state.get("required_tools", [])
-        suggested_query = None
-        for tool_call in required_tools:
-            if tool_call.name == "web_search" and "query" in tool_call.args:
-                suggested_query = tool_call.args["query"]
-                break
+        optimized_query = state.get("web_query")
+        
+        if not optimized_query:
+            # Fallback check for tool calls if web_query is missing
+            required_tools = state.get("required_tools", [])
+            for tool_call in required_tools:
+                if tool_call.name == "web_search" and "query" in tool_call.args:
+                    optimized_query = tool_call.args["query"]
+                    break
 
-        if suggested_query:
-            logger.info(f"[Web Search] 💡 Using targeted query from Router: '{suggested_query}'")
-            optimized_query = suggested_query
+        if optimized_query:
+            logger.info(f"[Web Search] 💡 Using pre-optimized query: '{optimized_query}'")
         else:
             original_query = state["query"]
-            search_timeout = settings.WEB_SEARCH_TIMEOUT_SEC
             max_query_length = settings.WEB_SEARCH_MAX_QUERY_LENGTH
 
-            # 1. Query Optimization
+            # 1. Query Optimization (Skip if already provided)
+            logger.info("[Web Search] No pre-optimized query found. Rewriting...")
             system_prompt = WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT.format(
                 conversation_summary=state.get("summary", "No prior context.")
             )
@@ -66,10 +68,11 @@ def make_web_search_node(
 
             try:
                 rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedSearchQuery)
-                rewritten_result = await asyncio.wait_for(
-                    rewriter_llm.ainvoke(messages), 
-                    timeout=search_timeout
-                )
+                rewritten_result = await rewriter_llm.ainvoke(messages)
+                # rewritten_result = await asyncio.wait_for(
+                #     rewriter_llm.ainvoke(messages), 
+                #     timeout=settings.WEB_SEARCH_TIMEOUT_SEC
+                # )
                 optimized_query = rewritten_result.search_query
 
                 if len(optimized_query) > max_query_length:
@@ -77,6 +80,9 @@ def make_web_search_node(
                     optimized_query = original_query
                 else:
                     logger.debug(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+            except asyncio.TimeoutError:
+                logger.warning("[Web Search] Query optimization timed out. Falling back to original query.")
+                optimized_query = original_query
             except Exception as e:
                 logger.warning(f"[Web Search] Query optimization failed: {e}. Falling back to original query.")
                 optimized_query = original_query
@@ -101,7 +107,15 @@ def make_web_search_node(
                     category=res.get("category", "general")
                 )
                 new_web_results.append(web_item)
-
+        except asyncio.TimeoutError:
+            logger.error(f"SearXNG search timed out after {settings.WEB_SEARCH_TIMEOUT_SEC} seconds.")
+            new_web_results.append(
+                WebResult(
+                    snippet="Web search failed: The search engine took too long to respond.",
+                    title="Search Timeout",
+                    link="", engines=[], category="error"
+                )
+            )
         except Exception as e:
             logger.error("SearXNG search failed: {error}", error=str(e))
             new_web_results.append(

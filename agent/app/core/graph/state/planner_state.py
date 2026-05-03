@@ -1,8 +1,13 @@
+import operator
+import uuid
 from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 from pydantic import BaseModel, Field
-import operator
+from langchain_core.messages import BaseMessage
+from langgraph.graph import add_messages
 
 from app.common.constants import PlanStatus
+# Import the unified TypedDicts we created earlier
+from app.core.graph.state.agent_state import AgentProject, AgentDataset 
 
 class AgentStepPlan(BaseModel):
     """Represents a single deterministic step in the research plan."""
@@ -28,7 +33,21 @@ class AgentStepObservation(BaseModel):
     )
 
 class PlanExecuteState(TypedDict):
+    # Core turn data
     query: str
+    messages: Annotated[List[BaseMessage], add_messages] # Macro conversation history
+    summary: str
+
+    execution_id: Optional[uuid.UUID]
+    start_time: float # Epoch time when the request started
+
+    # Recycled Unified Context
+    active_project: Optional[AgentProject]
+    active_datasets: List[AgentDataset]
+
+    # Plan state
     plan: List[AgentStepPlan] 
     past_steps: Annotated[List[AgentStepObservation], operator.add]
+
+    # Iteration & results
     final_answer: str

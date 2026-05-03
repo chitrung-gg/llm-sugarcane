@@ -48,7 +48,7 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
 
             logger.debug("[Tools] Executing tool: {tool_name}", tool_name=tool_name)
 
-            # 2. Check if tool exists
+            # 1. Check if tool exists
             if tool_name not in available_tools:
                 error_msg = f"Tool '{tool_name}' is not recognized."
                 logger.error(error_msg)
@@ -60,16 +60,25 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
                     execution_time_ms=int((time.time() - tool_start) * 1000)
                 )
 
-            # 3. Execute Tool
+            # 2. Execute Tool
             try:
                 tool_instance = available_tools[tool_name]
                 raw_output = await tool_instance.ainvoke(tool_args)
 
                 # Format safely
-                output_text = json.dumps(raw_output) if isinstance(raw_output, (dict, list)) else str(raw_output)
+                try:
+                    if isinstance(raw_output, (dict, list)):
+                        # default=str handles datetimes, UUIDs, and custom objects gracefully
+                        output_text = json.dumps(raw_output, default=str) 
+                    else:
+                        output_text = str(raw_output)
+                except Exception as parse_err:
+                    logger.warning(f"[Tools] JSON serialization failed for {tool_name}, falling back to str(): {parse_err}")
+                    output_text = str(raw_output)
+
                 status = ToolExecutionStatus.SUCCESS
 
-                # TRUNCATION: Protect the LLM Context Window
+                # Protect the LLM Context Window
                 if len(output_text) > max_output_length:
                     logger.warning(f"[Tools] Truncating output for {tool_name} from {len(output_text)} to {max_output_length} chars.")
                     output_text = output_text[:max_output_length] + f"\n\n[TRUNCATED: Result exceeded {max_output_length} characters]"
@@ -82,7 +91,7 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
 
             except Exception as e:
                 elapsed = int((time.time() - tool_start) * 1000)
-                output_text = f"Tool execution failed: {str(e)}"
+                output_text = f"Tool execution failed: {type(e).__name__} - {str(e)}"
                 status = ToolExecutionStatus.ERROR
 
                 logger.error(
@@ -109,7 +118,6 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
             total_tools=len(new_tool_results), total_latency=total_elapsed
         )
 
-        # Return Command to route exactly to the enrichment_node
         return Command(
             goto=AgentGraphNode.ENRICHMENT,
             update={"tool_results": new_tool_results}

@@ -12,8 +12,8 @@ from loguru import logger
 
 from app.core.graph.nodes.components.executor_node import make_executor_node
 from app.core.graph.nodes.components.planner_node import make_planner_node
-from app.core.graph.nodes.components.replanner_node import make_replanner_node
-from app.core.graph.nodes.agent_planner import PlanExecuteState
+# from app.core.graph.nodes.components.replanner_node import make_replanner_node
+from app.core.graph.state.planner_state import PlanExecuteState
 from app.core.tools.registry.registry_tool import KNOWLEDGE_GRAPH_TOOL_REGISTRY
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.nodes.components.summarizer_node import make_summarizer_node
@@ -58,7 +58,8 @@ async def build_super_agent_graph(
     # 3. Add the 3 Outer Nodes using the StrEnum
     workflow.add_node(AgentGraphNode.PLANNER, make_planner_node(llm_service))
     workflow.add_node(AgentGraphNode.EXECUTOR, make_executor_node(inner_react_graph))
-    workflow.add_node(AgentGraphNode.REPLANNER, make_replanner_node(llm_service))
+    # workflow.add_node(AgentGraphNode.REPLANNER, make_replanner_node(llm_service))
+    workflow.add_node(AgentGraphNode.SUMMARIZER,make_summarizer_node(llm_service))
 
     # 4. Define Architectural Blueprint Edges
     workflow.add_edge(START, AgentGraphNode.PLANNER)
@@ -125,36 +126,29 @@ async def _build_agent_graph(
         AgentGraphNode.SYNTHESIZER,
         make_synthesizer_node(llm_service, available_tools)
     )
-    workflow.add_node(
-        AgentGraphNode.SUMMARIZER,
-        make_summarizer_node(llm_service)
-    )
-
-    # --- DEFINE FLOWS (ARCHITECTURAL BLUEPRINT) ---
     
     # 1. Entry Point
     workflow.add_edge(START, AgentGraphNode.INPUT_ANALYZER)
-    workflow.add_edge(AgentGraphNode.INPUT_ANALYZER, AgentGraphNode.ROUTER)
+    # workflow.add_edge(AgentGraphNode.INPUT_ANALYZER, AgentGraphNode.ROUTER)
     
-    # 2. Router Fan-out (Allowed destinations)
-    workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.RAG)
-    workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.TOOL)
-    workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.WEB_SEARCH)
-    workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.SYNTHESIZER)
+    # # 2. Router Fan-out (Allowed destinations)
+    # workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.RAG)
+    # workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.TOOL)
+    # workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.WEB_SEARCH)
+    # workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.SYNTHESIZER)
     
-    # 3. Execution Branches converge on Synthesizer (Fan-in pattern)
-    # Note: TOOL results flow through ENRICHMENT before synthesis
-    workflow.add_edge(AgentGraphNode.RAG, AgentGraphNode.SYNTHESIZER)
-    workflow.add_edge(AgentGraphNode.TOOL, AgentGraphNode.ENRICHMENT)
-    workflow.add_edge(AgentGraphNode.ENRICHMENT, AgentGraphNode.SYNTHESIZER)
-    workflow.add_edge(AgentGraphNode.WEB_SEARCH, AgentGraphNode.SYNTHESIZER)
+    # # 3. Execution Branches converge on Synthesizer (Fan-in pattern)
+    # workflow.add_edge(AgentGraphNode.RAG, AgentGraphNode.SYNTHESIZER)
+    # workflow.add_edge(AgentGraphNode.TOOL, AgentGraphNode.ENRICHMENT)
+    # workflow.add_edge(AgentGraphNode.ENRICHMENT, AgentGraphNode.SYNTHESIZER)
+    # workflow.add_edge(AgentGraphNode.WEB_SEARCH, AgentGraphNode.SYNTHESIZER)
     
-    # 4. Synthesis and Feedback Loop
-    workflow.add_edge(AgentGraphNode.SYNTHESIZER, AgentGraphNode.SUMMARIZER)
-    workflow.add_edge(AgentGraphNode.SYNTHESIZER, AgentGraphNode.ROUTER) # Loop-back for incomplete answers
+    # # 4. Synthesis and Feedback Loop
+    # workflow.add_edge(AgentGraphNode.SYNTHESIZER, AgentGraphNode.SUMMARIZER)
+    # workflow.add_edge(AgentGraphNode.SYNTHESIZER, AgentGraphNode.ROUTER) # Loop-back for incomplete answers
     
-    # 5. Exit Path
-    workflow.add_edge(AgentGraphNode.SUMMARIZER, AgentGraphNode.END_NODE)
+    # # 5. Exit Path
+    # workflow.add_edge(AgentGraphNode.SUMMARIZER, AgentGraphNode.END_NODE)
 
     graph = workflow.compile()
     logger.debug("\n" + graph.get_graph().draw_mermaid())
