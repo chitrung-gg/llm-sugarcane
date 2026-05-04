@@ -125,7 +125,15 @@ async def list_dataset_files(
     workspace_service: WorkspaceService = Depends(get_workspace_service)
 ):
     """List all files associated with a specific dataset (Cultivar)."""
-    return await workspace_service.get_dataset(dataset_id)
+    # 1. Fetch the overarching dataset object
+    dataset = await workspace_service.get_dataset(dataset_id)
+    
+    # 2. Handle the case where the dataset ID is invalid
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+        
+    # 3. Return ONLY the list of files to satisfy the response_model
+    return dataset.files
 
 @router.delete("/datasets/files/{file_record_id}")
 async def delete_dataset_file(
