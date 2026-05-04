@@ -330,9 +330,21 @@ class AgentService:
                             "metadata": project_db.dataset_metadata
                         }
 
+                # 1. Fetch public dataset IDs (always included)
+                public_ids = await self.workspace_service.get_public_dataset_ids()
+                
+                # 2. Determine project dataset IDs (fallback if none selected)
+                selected_ids = dataset_ids or []
+                project_ids = []
+                if not selected_ids and project_id:
+                    project_ids = await self.workspace_service.get_project_dataset_ids(project_id)
+                
+                # 3. Combine and deduplicate
+                final_dataset_ids = list(set(public_ids + selected_ids + project_ids))
+
                 active_datasets = []
-                if dataset_ids:
-                    datasets_db = await self.workspace_service.get_datasets_by_ids(dataset_ids)
+                if final_dataset_ids:
+                    datasets_db = await self.workspace_service.get_datasets_by_ids(final_dataset_ids)
                     
                     for ds in datasets_db:
                         genomic_files = []
@@ -360,7 +372,7 @@ class AgentService:
                         active_datasets.append({
                             "dataset_id": str(ds.id),
                             "dataset_name": ds.name,
-                            "source": "SYSTEM_LIBRARY" if getattr(ds.project, "is_public", True) else "USER_WORKSPACE",
+                            "source": "SYSTEM_LIBRARY" if ds.is_public else "USER_WORKSPACE",
                             "genomic_files": genomic_files,
                             "knowledge_files": knowledge_files
                         })
@@ -541,6 +553,15 @@ class AgentService:
                     absolute_final_answer = final_state.values.get("final_answer")
                     
                     if absolute_final_answer:
+                        # Stream the answer if it was missed (e.g. from Planner bypassing Synthesizer)
+                        # We also check if we've already streamed an answer chunk to avoid duplicates
+                        # but absolute_final_answer is the definitive one.
+                        chunk = StreamChunk(
+                            event=StreamEventType.ANSWER, 
+                            data=absolute_final_answer
+                        )
+                        yield f"data: {chunk.model_dump_json()}\n\n"
+
                         await self._save_chat_message(
                             thread_id=thread_id,
                             role="assistant",
@@ -590,7 +611,7 @@ class AgentService:
         """Retrieves the conversation history from the chat_messages table."""
         async with langgraph_connection_pool.connection() as conn:
             cursor = await conn.execute(
-                "SELECT id, role, content, type, execution_id, metadata FROM chat_messages WHERE thread_id = %s ORDER BY created_at ASC",
+                "SELECT id, role, content, type, execution_id, chat_metadata FROM chat_messages WHERE thread_id = %s ORDER BY created_at ASC",
                 (thread_id,)
             )
             rows = await cursor.fetchall()
@@ -622,14 +643,14 @@ class AgentService:
                     (thread_id, SYSTEM_OWNER_ID, project_id)
                 )
 
-    async def _save_chat_message(self, thread_id: uuid.UUID, role: str, content: str, type: str = "answer", execution_id: Optional[uuid.UUID] = None, metadata: Optional[dict] = None):
+    async def _save_chat_message(self, thread_id: uuid.UUID, role: str, content: str, type: str = "answer", execution_id: Optional[uuid.UUID] = None, chat_metadata: Optional[dict] = None):
         async with langgraph_connection_pool.connection() as conn:
             await conn.execute(
                 """
-                INSERT INTO chat_messages (thread_id, role, content, type, execution_id, metadata)
+                INSERT INTO chat_messages (thread_id, role, content, type, execution_id, chat_metadata)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """,
-                (thread_id, role, content, type, execution_id, json.dumps(metadata) if metadata else None)
+                (thread_id, role, content, type, execution_id, json.dumps(chat_metadata) if chat_metadata else None)
             )
 
     async def _generate_and_update_title(self, thread_id: uuid.UUID, first_query: str):

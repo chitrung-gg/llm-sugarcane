@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 from loguru import logger
-from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, HumanMessage
 from langgraph.types import Command, interrupt
 from pydantic import BaseModel, Field
 
@@ -12,21 +12,19 @@ from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.services.llm.llm_service import LLMService
 
 class PlanOutput(BaseModel):
-    steps: List[AgentStepPlan] = Field(description="The sequential steps to execute the research plan. Maximum 5 steps.")
+    scratchpad: str = Field(description="Reasoning on validity, logic, and file availability.")
+    direct_response: Optional[str] = Field(None, description="If no steps are needed, write the direct, helpful, conversational answer to the user here.")
+    estimated_steps: int = Field(description="The total number of steps in the proposed plan.")
+    steps: List[AgentStepPlan] = Field(default_factory=list, description="The sequential steps to execute the research plan. Maximum 5 steps.")
 
 def make_planner_node(llm_service: LLMService):
     @tracing(observation_type=ObservationType.CHAIN)
     async def planner(state: PlanExecuteState) -> Command[
-        Literal[AgentGraphNode.EXECUTOR, AgentGraphNode.PLANNER]
+        Literal[AgentGraphNode.HUMAN_REVIEW, AgentGraphNode.SUMMARIZER]
     ]:
         logger.info("🧠 [Planner] Drafting research plan...")
 
-        # 1. Skip plan generation if an approved plan already exists in state
-        if state.get("plan"):
-            logger.info("✅ [Planner] Plan already exists, proceeding to executor.")
-            return Command(goto=AgentGraphNode.EXECUTOR)
-
-        # 2. Extract Rich Context from TypedDicts
+        # 1. Extract context
         query = state["query"]
         project = state.get("active_project")
         datasets = state.get("active_datasets", [])
@@ -35,7 +33,7 @@ def make_planner_node(llm_service: LLMService):
         p_name = project.get("project_name", "Default Project") if project else "Default Project"
         p_desc = project.get("description", "No description provided.") if project else ""
 
-        # Format Dataset/File hierarchy for the Prompt
+        # 2. Format Datasets
         dataset_lines = []
         for ds in datasets:
             ds_name = ds.get("dataset_name")
@@ -67,9 +65,10 @@ def make_planner_node(llm_service: LLMService):
             ))
         ]
         
-        # Add historical messages (Human/AI turns)
-        if state.get("messages"):
-            messages.extend(state["messages"])
+        # Add historical messages BUT exclude the current/latest query 
+        # (The latest query is always at the end of state["messages"])
+        if state.get("messages") and len(state["messages"]) > 1:
+            messages.extend(state["messages"][:-1])
         else:
             # Fallback if messages list is empty
             messages.append(HumanMessage(content=PLANNER_HUMAN_PROMPT.format(query=query)))
@@ -85,42 +84,29 @@ def make_planner_node(llm_service: LLMService):
                 f"[Planner] Step {i}: {step.model_dump_json(indent=2)}"
             )
 
-        # 4. Human-in-the-loop Interrupt
-        decision: Any = interrupt({
-            "action_required": InterruptAction.APPROVE_PLAN,
-            "plan": [step.model_dump() for step in result.steps],
-            "query": query
-        })
+        # 4. Handle 0-step cases (Greetings, clarification requests, etc.)
+        if not result.steps:
+            logger.info("[Planner] No steps generated. Routing directly to Summarizer.")
 
-        # 5. Handle Resumption Logic
-        if isinstance(decision, dict):
-            
-            # 5.1. User typed a prompt to modify the plan (LLM needs to replan)
-            if decision.get("action") == UserFeedbackAction.MODIFY and decision.get("feedback"):
-                logger.info("User requested LLM modification. Looping back to PLANNER.")
-                
-                feedback_msg = HumanMessage(content=f"Please modify the plan based on this feedback: {decision.get('feedback')}")
-                
-                return Command(
-                    goto=AgentGraphNode.PLANNER,
-                    update={"messages": [feedback_msg]}
-                )
-                
-            # 5.2. User manually dragged/dropped or edited the JSON in the UI
-            elif decision.get("action") == UserFeedbackAction.MODIFY and decision.get("modified_plan"):
-                logger.info("User provided a manually edited plan. Proceeding to EXECUTOR.")
-                final_steps = [AgentStepPlan(**s) if isinstance(s, dict) else s for s in decision["modified_plan"]]
-                
-                return Command(
-                    goto=AgentGraphNode.EXECUTOR,
-                    update={"plan": final_steps, "iteration_count": 0}
-                )
+            final_text = result.direct_response or "I don't think any specific research steps are needed for this. How else can I help you today?"
 
-        # 5.3 User clicked "Approve" (or default fallback)
-        logger.info("Plan approved. Proceeding to EXECUTOR.")
+            return Command(
+                goto=AgentGraphNode.SUMMARIZER,
+                update={
+                    "plan": [],
+                    "final_answer": final_text,
+                    "messages": [AIMessage(content=final_text)]
+                }
+            )
+
+        # 5. Route to Human Review (Save draft to state)
         return Command(
-            goto=AgentGraphNode.EXECUTOR,
-            update={"plan": result.steps, "iteration_count": 0}
+            goto=AgentGraphNode.HUMAN_REVIEW,
+            update={
+                "plan": result.steps, 
+                "iteration_count": 0,
+                "past_steps": [] # Reset execution history for the new plan
+            }
         )
 
     return planner

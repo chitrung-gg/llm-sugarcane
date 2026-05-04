@@ -156,6 +156,25 @@ class WorkspaceService:
             dataset_rows = await cursor.fetchall()
             return [UserDataset(**row) for row in dataset_rows]
 
+    async def get_public_dataset_ids(self) -> List[uuid.UUID]:
+        """Returns IDs of all datasets marked as public."""
+        async with userdata_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT id FROM user_datasets WHERE is_public = TRUE"
+            )
+            rows = await cursor.fetchall()
+            return [row["id"] for row in rows]
+
+    async def get_project_dataset_ids(self, project_id: uuid.UUID) -> List[uuid.UUID]:
+        """Returns IDs of all datasets belonging to a project."""
+        async with userdata_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT id FROM user_datasets WHERE project_id = %s",
+                (project_id,)
+            )
+            rows = await cursor.fetchall()
+            return [row["id"] for row in rows]
+
     async def get_dataset(self, dataset_id: uuid.UUID) -> Optional[UserDataset]:
         datasets = await self.get_datasets_by_ids([dataset_id])
         return datasets[0] if datasets else None

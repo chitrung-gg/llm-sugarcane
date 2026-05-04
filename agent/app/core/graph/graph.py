@@ -10,6 +10,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
+from app.core.graph.nodes.components.human_review_node import make_human_review_node
 from app.core.graph.nodes.components.executor_node import make_executor_node
 from app.core.graph.nodes.components.planner_node import make_planner_node
 # from app.core.graph.nodes.components.replanner_node import make_replanner_node
@@ -59,7 +60,8 @@ async def build_super_agent_graph(
     workflow.add_node(AgentGraphNode.PLANNER, make_planner_node(llm_service))
     workflow.add_node(AgentGraphNode.EXECUTOR, make_executor_node(inner_react_graph))
     # workflow.add_node(AgentGraphNode.REPLANNER, make_replanner_node(llm_service))
-    workflow.add_node(AgentGraphNode.SUMMARIZER,make_summarizer_node(llm_service))
+    workflow.add_node(AgentGraphNode.HUMAN_REVIEW, make_human_review_node())
+    workflow.add_node(AgentGraphNode.SUMMARIZER, make_summarizer_node(llm_service))
 
     # 4. Define Architectural Blueprint Edges
     workflow.add_edge(START, AgentGraphNode.PLANNER)

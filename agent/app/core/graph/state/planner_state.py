@@ -47,7 +47,7 @@ class PlanExecuteState(TypedDict):
 
     # Plan state
     plan: List[AgentStepPlan] 
-    past_steps: Annotated[List[AgentStepObservation], operator.add]
+    past_steps: List[AgentStepObservation]
 
     # Iteration & results
     final_answer: str

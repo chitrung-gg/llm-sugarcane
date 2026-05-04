@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, ClassVar, Optional
 import uuid
 from sqlmodel import Field, SQLModel
 
 class ChatThread(SQLModel, table=True):
-    __tablename__ = "chat_threads"
+    __tablename__: ClassVar[Any]  = "chat_threads"
     __table_args__ = {"schema": "langgraph"}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

@@ -19,5 +19,6 @@ class AgentGraphNode(StrEnum):
 
     # --- Outer Graph Nodes (Plan & Execute Loop) ---
     PLANNER = "planner"
+    HUMAN_REVIEW = "human_review"
     EXECUTOR = "executor"
-    REPLANNER = "replanner"
+    # REPLANNER = "replanner"
