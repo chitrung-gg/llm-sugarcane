@@ -1,6 +1,26 @@
+import json
 from langchain_core.prompts import PromptTemplate
+from app.schemas.agent.summarizer import SummaryOutput
 
-SUMMARIZER_SYSTEM_PROMPT = PromptTemplate.from_template("""
+# We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
+_SUMMARY_OUTPUT_SCHEMA = json.dumps(SummaryOutput.model_json_schema(), indent=2)
+
+# 1. Define examples as Pydantic objects (IDE-tracked, no hardcoded strings)
+_EX_SUMMARY = SummaryOutput(
+    new_summary="The user is analyzing the polyploid genome of Saccharum spontaneum var R570. They uploaded file s3://rustfs/R570_assembly.fasta and successfully ran a BLAST search for gene ScDREB2 with e-value: 1e-5. They are now investigating drought-related orthologs."
+)
+
+_JSON_OPTS = {"indent": 2, "exclude_none": True}
+_FEW_SHOTS = f"""
+<example_scenario name="high_fidelity_summary">
+  <ideal_response>
+{_EX_SUMMARY.model_dump_json(**_JSON_OPTS)}
+  </ideal_response>
+</example_scenario>
+"""
+
+SUMMARIZER_SYSTEM_PROMPT = PromptTemplate(
+    template="""
 <role>
 You are a technical Research Archivist specializing in Sugarcane Bioinformatics.
 Your task is to compress the preceding conversation into a dense, high-fidelity summary that serves as the primary context for future autonomous agents.
@@ -23,7 +43,18 @@ Your task is to compress the preceding conversation into a dense, high-fidelity 
 4. CONCISION VS. UTILITY: Prioritize technical utility over narrative flow. Use bullet points for entity lists to maximize scannability.
 </strict_preservation_rules>
 
-<output_format>
-Provide the summary wrapped in <conversation_summary> tags.
-</output_format>
-""")
+<few_shot_scenarios>
+{few_shots}
+</few_shot_scenarios>
+
+<output_directive>
+You must respond with a JSON object that strictly follows this schema:
+{summary_output_schema}
+</output_directive>
+""",
+    input_variables=["summary_message"],
+    partial_variables={
+        "summary_output_schema": _SUMMARY_OUTPUT_SCHEMA,
+        "few_shots": _FEW_SHOTS
+    }
+)

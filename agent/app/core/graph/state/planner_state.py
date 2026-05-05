@@ -1,21 +1,19 @@
-import operator
 import uuid
-from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
+import operator
+from typing import Annotated, Any, Dict, List, Optional, TypedDict
 from pydantic import BaseModel, Field
 from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
 
 from app.common.constants import PlanStatus
-# Import the unified TypedDicts we created earlier
 from app.core.graph.state.agent_state import AgentProject, AgentDataset 
 
 class AgentStepPlan(BaseModel):
     """Represents a single deterministic step in the research plan."""
     step_id: int = Field(description="Sequential ID of the step (e.g., 1, 2, 3)")
-    description: str = Field(description="What needs to be done.")
-    expected_tool: Optional[str] = Field(description="The specific tool required for this step.")
+    description: str = Field(description="The clear, actionable objective for the downstream ReAct agent to execute.")
     
-    # --- Replanning ---
+    # --- Replanning & Internal Tracking (Ignored by Planner LLM) ---
     status: PlanStatus = Field(default=PlanStatus.PENDING)
     error_message: Optional[str] = Field(
         default=None, 
@@ -31,15 +29,14 @@ class AgentStepObservation(BaseModel):
         default_factory=dict, 
         description="Crucial variables (e.g., {'gene_id': 'ROC-123', 's3_uri': 's3://...'})"
     )
-
 class PlanExecuteState(TypedDict):
     # Core turn data
     query: str
-    messages: Annotated[List[BaseMessage], add_messages] # Macro conversation history
+    messages: Annotated[List[BaseMessage], add_messages]
     summary: str
 
     execution_id: Optional[uuid.UUID]
-    start_time: float # Epoch time when the request started
+    start_time: float 
 
     # Recycled Unified Context
     active_project: Optional[AgentProject]

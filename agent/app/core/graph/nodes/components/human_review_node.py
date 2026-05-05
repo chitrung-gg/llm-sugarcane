@@ -4,7 +4,7 @@ from langgraph.types import Command, interrupt
 from langchain_core.messages import HumanMessage
 
 from app.utils.observability.tracing import tracing
-from app.common.constants import ObservationType, InterruptAction, UserFeedbackAction
+from app.common.constants import ObservationType, InterruptAction, PlanStatus, UserFeedbackAction
 from app.core.graph.state.planner_state import PlanExecuteState, AgentStepPlan
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 
@@ -40,11 +40,27 @@ def make_human_review_node():
                     update={"messages": [feedback_msg]} 
                 )
                 
-            # SCENARIO B: User manually dragged/dropped or edited the JSON in the UI
+           # SCENARIO B: User manually dragged/dropped or edited the JSON in the UI
             elif decision.get("action") == UserFeedbackAction.MODIFY and decision.get("modified_plan"):
-                logger.info("User provided a manually edited plan. Proceeding to EXECUTOR.")
-                final_steps = [AgentStepPlan(**s) if isinstance(s, dict) else s for s in decision["modified_plan"]]
+                logger.info("User provided a manually edited plan. Re-indexing and proceeding to EXECUTOR.")
                 
+                raw_plan = decision["modified_plan"]
+                final_steps = []
+                
+                # Use enumerate to guarantee sequential step_ids starting at 1
+                for index, step_data in enumerate(raw_plan, start=1):
+                    if isinstance(step_data, dict):
+                        # Force the step_id to match the current array index
+                        step_data["step_id"] = index
+                        # Ensure status resets to pending just in case the UI sent a completed step
+                        step_data["status"] = PlanStatus.PENDING 
+                        final_steps.append(AgentStepPlan(**step_data))
+                    
+                    elif isinstance(step_data, AgentStepPlan):
+                        step_data.step_id = index
+                        step_data.status = PlanStatus.PENDING
+                        final_steps.append(step_data)
+
                 return Command(
                     goto=AgentGraphNode.EXECUTOR,
                     update={"plan": final_steps, "iteration_count": 0}

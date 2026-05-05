@@ -1,4 +1,30 @@
+import json
+import uuid
 from langchain_core.prompts import PromptTemplate
+from app.schemas.agent.pruning import PruningOutput
+
+# We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
+_PRUNING_OUTPUT_SCHEMA = json.dumps(PruningOutput.model_json_schema(), indent=2)
+
+# 1. Define examples as Pydantic objects (IDE-tracked, no hardcoded strings)
+_EX_PRUNING = PruningOutput(
+  scratchpad="The query requires a comparison between two specific sugarcane cultivars: SP80-3280 and R570. File 550e8400... (SP80 assembly) and File 671234... (R570 annotations) are direct matches. File 782345... (Arabidopsis) is unrelated and excluded.",
+  relevant_file_ids=[
+    uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
+    uuid.UUID("67123456-e29b-41d4-a716-446655440001")
+  ],
+  reasoning="Selected target cultivar assembly and comparative cultivar annotations."
+)
+
+_JSON_OPTS = {"indent": 2, "exclude_none": True}
+_FEW_SHOTS = f"""
+<example_scenario name="cultivar_comparison">
+  <user_query>Analyze drought-related genes in SP80-3280 compared to R570.</user_query>
+  <ideal_response>
+{_EX_PRUNING.model_dump_json(**_JSON_OPTS)}
+  </ideal_response>
+</example_scenario>
+"""
 
 INPUT_ANALYZER_GENOMIC_FILE_NOTE = PromptTemplate.from_template("""
 <system_injected_context type="genomic_dataset_attachment">
@@ -33,7 +59,8 @@ INSTRUCTION: The user has explicitly attached the following file data. Treat thi
 ---
 """)
 
-INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT = PromptTemplate.from_template("""
+INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT = PromptTemplate(
+    template="""
 <role>
 You are a Biological Context Pruning Specialist. Your task is to analyze a user query against a list of available genomic datasets and identify ONLY the files strictly necessary for fulfilling the request.
 </role>
@@ -46,23 +73,14 @@ You are a Biological Context Pruning Specialist. Your task is to analyze a user 
 5. CHAIN-OF-THOUGHT: Use the <scratchpad> to justify why each selected file is mandatory for the specific research goal.
 </instructions>
 
-<few_shot_examples>
-  <example>
-    <user_query>Analyze drought-related genes in SP80-3280 compared to R570.</user_query>
-    <available_files>
-      - id: 550e8400-e29b-41d4-a716-446655440000, name: "SP80-3280_assembly.fasta", desc: "Genome assembly for cultivar SP80-3280"
-      - id: 67123456-e29b-41d4-a716-446655440001, name: "R570_functional_annotation.gff3", desc: "Annotations for R570"
-      - id: 78234567-e29b-41d4-a716-446655440002, name: "Arabidopsis_thaliana_ref.fna", desc: "Reference genome for Thale Cress"
-    </available_files>
-    <ideal_response>
-      {{
-        "scratchpad": "The query requires a comparison between two specific sugarcane cultivars: SP80-3280 and R570. File 550e8400-e29b-41d4-a716-446655440000 (SP80 assembly) and File 67123456-e29b-41d4-a716-446655440001 (R570 annotations) are direct matches. File 78234567-e29b-41d4-a716-446655440002 is unrelated to sugarcane genomics and is excluded.",
-        "relevant_file_ids": ["550e8400-e29b-41d4-a716-446655440000", "67123456-e29b-41d4-a716-446655440001"],
-        "reasoning": "Selected target cultivar assembly and comparative cultivar annotations."
-      }}
-    </ideal_response>
-  </example>
-</few_shot_examples>
+<few_shot_scenarios>
+{few_shots}
+</few_shot_scenarios>
+
+<output_directive>
+You must respond with a JSON object that strictly follows this schema:
+{pruning_output_schema}
+</output_directive>
 
 <input_data>
 <user_query>
@@ -73,4 +91,10 @@ You are a Biological Context Pruning Specialist. Your task is to analyze a user 
 {file_list}
 </available_files>
 </input_data>
-""")
+""",
+    input_variables=["query", "file_list"],
+    partial_variables={
+        "pruning_output_schema": _PRUNING_OUTPUT_SCHEMA,
+        "few_shots": _FEW_SHOTS
+    }
+)

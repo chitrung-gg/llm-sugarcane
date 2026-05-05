@@ -8,14 +8,9 @@ from app.core.prompts.planner_prompts import PLANNER_HUMAN_PROMPT, PLANNER_SYSTE
 from app.utils.observability.tracing import tracing
 from app.common.constants import ObservationType, PlanStatus, InterruptAction, UserFeedbackAction
 from app.core.graph.state.planner_state import AgentStepPlan, PlanExecuteState
+from app.schemas.agent.planner import PlanOutput
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.services.llm.llm_service import LLMService
-
-class PlanOutput(BaseModel):
-    scratchpad: str = Field(description="Reasoning on validity, logic, and file availability.")
-    direct_response: Optional[str] = Field(None, description="If no steps are needed, write the direct, helpful, conversational answer to the user here.")
-    estimated_steps: int = Field(description="The total number of steps in the proposed plan.")
-    steps: List[AgentStepPlan] = Field(default_factory=list, description="The sequential steps to execute the research plan. Maximum 5 steps.")
 
 def make_planner_node(llm_service: LLMService):
     @tracing(observation_type=ObservationType.CHAIN)

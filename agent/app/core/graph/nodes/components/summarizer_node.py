@@ -7,6 +7,7 @@ from loguru import logger
 from langchain_core.messages import HumanMessage, SystemMessage, RemoveMessage
 from langgraph.types import Command
 from pydantic import BaseModel, Field
+from app.core.graph.state.planner_state import PlanExecuteState
 from app.common.constants import ObservationType
 from app.configs.settings.settings import get_settings
 from app.utils.observability.tracing import tracing
@@ -15,14 +16,7 @@ from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 from app.core.prompts.summarizer_prompts import SUMMARIZER_SYSTEM_PROMPT
 from app.utils.pipelines.airflow_client import trigger_airflow_dag
-
-class SummaryOutput(BaseModel):
-    """
-    Schema for the LLM to output a structured conversation summary.
-    """
-    new_summary: str = Field(
-        description="The comprehensive summary of the conversation to date, gracefully incorporating the new messages."
-    )
+from app.schemas.agent.summarizer import SummaryOutput
 
 def make_summarizer_node(llm_service: LLMService):
     """
@@ -30,7 +24,7 @@ def make_summarizer_node(llm_service: LLMService):
     This follows the 'Summarize-and-Delete' pattern from LangGraph.
     """
     @tracing(observation_type=ObservationType.CHAIN)
-    async def summarize_conversation(state: AgentState) -> Command[
+    async def summarize_conversation(state: PlanExecuteState) -> Command[
         Literal[AgentGraphNode.END_NODE]
     ]:
         settings = get_settings()

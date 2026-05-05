@@ -17,6 +17,7 @@ from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.configs.settings.settings import get_settings
 from app.core.graph.state.agent_state import AgentState, RAGResult
 from app.core.prompts.rag_prompts import RAG_QUERY_OPTIMIZATION_PROMPT
+from app.schemas.agent.rag import OptimizedRagQuery
 
 
 import time
@@ -24,12 +25,6 @@ from loguru import logger
 from langchain_qdrant import QdrantVectorStore
 
 from app.core.graph.state.agent_state import AgentState, RAGResult
-
-class OptimizedRagQuery(BaseModel):
-    """Schema to force the LLM to output a clean semantic search string."""
-    search_query: str = Field(
-        description="A concise, standalone query optimized for semantic search. Maximum 15 words. DO NOT repeat words."
-    )
 
 def make_rag_node(
     vector_store_solid: QdrantVectorStore,

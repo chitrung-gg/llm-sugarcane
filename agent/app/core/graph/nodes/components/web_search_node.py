@@ -17,12 +17,7 @@ from app.services.llm.llm_service import LLMService
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState, WebResult
 from app.core.prompts.web_search_prompts import WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT
-
-class OptimizedSearchQuery(BaseModel):
-    """Schema to force the LLM to output a clean search string."""
-    search_query: str = Field(
-        description="A standalone, keyword-rich search query optimized for search engines. Omit conversational filler."
-    )
+from app.schemas.agent.web_search import OptimizedSearchQuery
 
 def make_web_search_node(
     searx_wrapper: SearxSearchWrapper,

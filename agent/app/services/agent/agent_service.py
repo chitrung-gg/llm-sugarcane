@@ -181,7 +181,7 @@ class AgentService:
 
                     thoughts = []
                     for msg in final_state.get("messages", []):
-                        if msg.type == "ai" and msg.additional_kwargs.get("is_thought") and msg.additional_kwargs.get("execution_id") == str(execution_id):
+                        if msg.type == AIMessage.type and msg.additional_kwargs.get("is_thought") and msg.additional_kwargs.get("execution_id") == str(execution_id):
                             thoughts.append(msg.content)
                             # Persist thought
                             await self._save_chat_message(
@@ -283,7 +283,11 @@ class AgentService:
             
             # Persist thread and user message
             await self._ensure_thread_exists(thread_id, project_id)
-            await self._save_chat_message(thread_id=thread_id, role="user", content=query, execution_id=execution_id)
+
+            if not resume_payload and query:
+                await self._save_chat_message(thread_id=thread_id, role="user", content=query, execution_id=execution_id)
+            # elif resume_payload and resume_payload.get('action') == UserFeedbackAction.MODIFY:
+            #     await self._save_chat_message(thread_id=thread_id, role="user", content="[User Approved Plan]", execution_id=execution_id)
 
             # Yield an initial thought to let the UI know we started
             initial_chunk = StreamChunk(
@@ -539,6 +543,14 @@ class AgentService:
                                 )
                                 yield f"data: {chunk.model_dump_json()}\n\n"
 
+                                await self._save_chat_message(
+                                    thread_id=thread_id,
+                                    role="assistant",
+                                    content=final_answer,
+                                    type="answer",
+                                    execution_id=execution_id
+                                )
+
                 # 1. Initialize the status dictionary
                 interrupt_status = {"interrupted": False}
 
@@ -549,26 +561,24 @@ class AgentService:
                 # 3. Check the flag we just set inside the helper
                 if not interrupt_status["interrupted"]:
                     # Standard completion: Only send DONE if we didn't hit an interrupt
-                    final_state = await self.graph.aget_state(config)
-                    absolute_final_answer = final_state.values.get("final_answer")
+                    # final_state = await self.graph.aget_state(config)
+                    # absolute_final_answer = final_state.values.get("final_answer")
                     
-                    if absolute_final_answer:
-                        # Stream the answer if it was missed (e.g. from Planner bypassing Synthesizer)
-                        # We also check if we've already streamed an answer chunk to avoid duplicates
-                        # but absolute_final_answer is the definitive one.
-                        chunk = StreamChunk(
-                            event=StreamEventType.ANSWER, 
-                            data=absolute_final_answer
-                        )
-                        yield f"data: {chunk.model_dump_json()}\n\n"
+                    # if absolute_final_answer:
+                    #     # Stream the answer if it was missed (e.g. from Planner bypassing Synthesizer)
+                    #     chunk = StreamChunk(
+                    #         event=StreamEventType.ANSWER, 
+                    #         data=absolute_final_answer
+                    #     )
+                    #     yield f"data: {chunk.model_dump_json()}\n\n"
 
-                        await self._save_chat_message(
-                            thread_id=thread_id,
-                            role="assistant",
-                            content=absolute_final_answer,
-                            type="answer",
-                            execution_id=execution_id
-                        )
+                    #     await self._save_chat_message(
+                    #         thread_id=thread_id,
+                    #         role="assistant",
+                    #         content=absolute_final_answer,
+                    #         type="answer",
+                    #         execution_id=execution_id
+                    #     )
             
                     chunk = StreamChunk(
                         event=StreamEventType.DONE, 

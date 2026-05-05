@@ -14,23 +14,11 @@ from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 from app.core.prompts.synthesizer_prompts import SYNTHESIZER_SYSTEM_PROMPT, SYNTHESIZER_FINAL_WARNING
+from app.schemas.agent.synthesizer import SynthesizerOutput
 
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langchain_core.tools import BaseTool, render_text_description_and_args
 from langgraph.types import Command
-
-
-# Define how the LLM should output its answer
-class SynthesizerOutput(BaseModel):
-    answer: str = Field(
-        description="The detailed response to the user. If a background process was triggered (like indexing), confirm it to the user."
-    )
-    is_complete: bool = Field(
-        description="Set to True if you fully answered the query OR if you have triggered the requested action (like retriggering a pipeline). Set to False ONLY if a tool failed and you need to try a DIFFERENT approach."
-    )
-    missing_info: str = Field(
-        description="If is_complete is False, explicitly state what specific information is missing."
-    )
     
 def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
     @tracing(observation_type=ObservationType.CHAIN)

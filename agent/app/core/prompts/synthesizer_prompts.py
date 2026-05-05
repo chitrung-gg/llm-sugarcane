@@ -1,6 +1,40 @@
+import json
 from langchain_core.prompts import PromptTemplate
+from app.schemas.agent.synthesizer import SynthesizerOutput
 
-SYNTHESIZER_SYSTEM_PROMPT = PromptTemplate.from_template("""
+# We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
+_SYNTHESIZER_OUTPUT_SCHEMA = json.dumps(SynthesizerOutput.model_json_schema(), indent=2)
+
+# 1. Define examples as Pydantic objects (IDE-tracked, no hardcoded strings)
+_EX_COMPLETE = SynthesizerOutput(
+    answer="### Sugarcane ScDREB2 Orthologs\nBased on the BLAST search against the *Sorghum bicolor* reference genome, I identified 3 high-confidence orthologs for ScDREB2. The top hit (Sb01g00123) showed 85% sequence identity.",
+    is_complete=True,
+    missing_info=""
+)
+
+_EX_INCOMPLETE = SynthesizerOutput(
+    answer="I successfully retrieved the assembly statistics for R570, but I am still missing the specific GFF3 annotation file required to map gene locations.",
+    is_complete=False,
+    missing_info="R570 functional annotation file (GFF3)"
+)
+
+_JSON_OPTS = {"indent": 2, "exclude_none": True}
+_FEW_SHOTS = f"""
+<example_scenario name="complete_research">
+  <ideal_response>
+{_EX_COMPLETE.model_dump_json(**_JSON_OPTS)}
+  </ideal_response>
+</example_scenario>
+
+<example_scenario name="missing_data">
+  <ideal_response>
+{_EX_INCOMPLETE.model_dump_json(**_JSON_OPTS)}
+  </ideal_response>
+</example_scenario>
+"""
+
+SYNTHESIZER_SYSTEM_PROMPT = PromptTemplate(
+    template="""
 <role>
 You are an expert Bioinformatics Research Assistant specializing in Sugarcane Genomics. 
 Your objective is to synthesize a high-fidelity, academic-grade response based strictly on the provided research context and execution logs.
@@ -33,15 +67,21 @@ Your objective is to synthesize a high-fidelity, academic-grade response based s
 
 {final_warning}
 
-<output_format>
-Return a valid JSON object. 
-{{
-  "is_complete": boolean,
-  "final_answer": "Your academic-grade markdown response here.",
-  "missing_info": "List specific data points still required, or null if complete."
-}}
-</output_format>
-""")
+<few_shot_scenarios>
+{few_shots}
+</few_shot_scenarios>
+
+<output_directive>
+You must respond with a JSON object that strictly follows this schema:
+{synthesizer_output_schema}
+</output_directive>
+""",
+    input_variables=["query", "guidance_text", "context_string", "final_warning"],
+    partial_variables={
+        "synthesizer_output_schema": _SYNTHESIZER_OUTPUT_SCHEMA,
+        "few_shots": _FEW_SHOTS
+    }
+)
 
 SYNTHESIZER_FINAL_WARNING = PromptTemplate.from_template("""
 <critical_warning>
