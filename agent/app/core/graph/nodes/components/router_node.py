@@ -64,7 +64,7 @@ def make_router_node(
         if not web_results:
             available_intents_list.append("- 'web_search': For latest or external information.")
         if not rag_results:
-            available_intents_list.append("- 'rag_only': For simple local document keyword lookups.")
+            available_intents_list.append("- 'rag_only': For reading, extracting, analyzing, or summarizing content from local documents (e.g., PDFs) in the user's workspace.")
         
         intents_str = "\n".join(available_intents_list)
 

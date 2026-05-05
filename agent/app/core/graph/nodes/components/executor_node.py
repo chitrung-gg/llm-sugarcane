@@ -14,7 +14,9 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
     """Wraps existing ReAct Agent as a sub-graph."""
 
     @tracing(observation_type=ObservationType.CHAIN)
-    async def executor(state: PlanExecuteState) -> Command[Literal[AgentGraphNode.SUMMARIZER]]:
+    async def executor(state: PlanExecuteState) -> Command[
+        Literal[AgentGraphNode.SUMMARIZER, AgentGraphNode.EXECUTOR]
+    ]:
         plan = state.get("plan", [])
         past_steps = state.get("past_steps", [])
 
@@ -70,7 +72,7 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
             step_answer = f"Error executing step: {str(e)}"
             final_status = PlanStatus.FAILED
 
-        # 6. Save Observation and mark Step Completed
+        # 5. Save Observation and mark Step Completed
         observation = AgentStepObservation(
             step_id=current_step.step_id,
             summary=step_answer
@@ -85,10 +87,18 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
             else:
                 updated_plan.append(step)
 
-        logger.info(f"[Executor] Step {current_step.step_id} marked as {final_status}.")
+        # 6. DYNAMIC ROUTING: Check if there are any remaining pending steps
+        has_pending_steps = any(step.status == PlanStatus.PENDING for step in updated_plan)
+        
+        if has_pending_steps:
+            logger.info(f"[Executor] Step {current_step.step_id} marked as {final_status}. Looping back for next step.")
+            destination = AgentGraphNode.EXECUTOR
+        else:
+            logger.info(f"[Executor] Step {current_step.step_id} marked as {final_status}. All steps complete, routing to Summarizer.")
+            destination = AgentGraphNode.SUMMARIZER
 
         return Command(
-            goto=AgentGraphNode.SUMMARIZER,
+            goto=destination,
             update={
                 "plan": updated_plan,
                 "past_steps": [observation] # operator.add will append this

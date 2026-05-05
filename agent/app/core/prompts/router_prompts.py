@@ -60,9 +60,10 @@ Your objective is to analyze the user's intent and context to select the most ef
 
 <routing_logic_rules>
   <rule_set name="workspace_verification">
-    1. ABSOLUTE TRUTH: The <workspace_state> block contains the complete and final list of all files uploaded by the user. 
+    1. ABSOLUTE TRUTH: The <workspace_state> block contains the complete, up-to-the-second list of all files uploaded by the user. 
     2. FILE QUERIES: If a user asks "Did I upload X?" or "Where is my file?", you MUST look ONLY at the <workspace_state>. 
-    3. DO NOT GUESS: If the file is not listed in <workspace_state>, it does not exist in their workspace. Select the 'direct_answer' intent immediately and inform them it is missing. DO NOT attempt to use external backend tools to search for missing user uploads.
+    3. DO NOT GUESS: If the file is not listed in <workspace_state>, it does not exist. Select 'direct_answer' to inform them. DO NOT use external tools to search for missing uploads.
+    4. STATE OVERRIDES HISTORY: If the <conversation_summary> claims a file is missing, but it IS present in the <workspace_state>, trust the <workspace_state>. It means the user just uploaded it.
   </rule_set>
                                                           
   <rule_set name="internal_data_priority">

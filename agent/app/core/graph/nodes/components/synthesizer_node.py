@@ -7,7 +7,8 @@ from langgraph.graph import END
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.common.constants import ObservationType
+from app.core.graph.state.planner_state import AgentStepObservation
+from app.common.constants import AgentIntent, ObservationType, PlanStatus
 from app.configs.settings.settings import get_settings
 from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
@@ -146,21 +147,21 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         }
         
         # Determine destination
-        if is_final_attempt or result.is_complete or state.get("last_intent") == "direct_answer":
-            destination = AgentGraphNode.END_NODE
-        else:
+        if not result.is_complete and not is_final_attempt and state.get("last_intent") != AgentIntent.DIRECT_ANSWER:
+            # 1. Step failed or needs more info -> Loop back to ROUTER
             logger.warning("⚠️ Answer incomplete. Sending back to ROUTER.")
             updates["messages"] = [
                 AIMessage(
                     content=f"Thought: I am still missing info: {result.missing_info}",
-                    additional_kwargs={
-                        "is_thought": True,
-                        "execution_id": str(state.get("execution_id"))
-                    }
+                    additional_kwargs={"is_thought": True, "execution_id": str(state.get("execution_id"))}
                 )
             ]
             destination = AgentGraphNode.ROUTER
-
+        else:
+            # 2. Inner task is complete. We update the final_answer and exit the INNER graph.
+            # The Outer Executor will catch this answer, update past_steps, and decide what to do next.
+            logger.info("[Synthesizer] Answer complete. Exiting inner graph.")
+            destination = AgentGraphNode.END_NODE
         return Command(
             goto=destination,
             update=updates
