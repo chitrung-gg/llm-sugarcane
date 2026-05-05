@@ -7,7 +7,7 @@ from app.common.constants import AgentIntent
 # We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
 _ROUTE_DECISION_SCHEMA = json.dumps(RouteDecision.model_json_schema(), indent=2)
 
-# 1. Define examples as Pydantic objects (IDE-tracked, no hardcoded strings)
+# 1. Define examples as Pydantic objects
 _EX_STOP_LOOP = RouteDecision(
     intent=AgentIntent.DIRECT_ANSWER,
     reasoning="The 'web_search' tool failed twice to find the abstract for DOI 10.1007/s12355. I have exhausted this path and will now inform the user.",

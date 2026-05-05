@@ -6,7 +6,7 @@ from app.core.graph.state.planner_state import AgentStepPlan
 # We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
 _PLAN_OUTPUT_SCHEMA = json.dumps(PlanOutput.model_json_schema(), indent=2)
 
-# 1. Define examples as Pydantic objects (IDE-tracked, no hardcoded strings)
+# 1. Define examples as Pydantic objects
 _EX_ORTHOLOGS = PlanOutput(
     scratchpad="Valid request. Goal: Ortholog identification. User mentioned 'attached genome', which matches 'Sorghum_bicolor.fasta'. Logic: 1. Sequence retrieval -> 2. Local BLAST.",
     direct_response=None,

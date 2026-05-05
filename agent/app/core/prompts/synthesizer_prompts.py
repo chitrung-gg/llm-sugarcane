@@ -5,7 +5,7 @@ from app.schemas.agent.synthesizer import SynthesizerOutput
 # We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
 _SYNTHESIZER_OUTPUT_SCHEMA = json.dumps(SynthesizerOutput.model_json_schema(), indent=2)
 
-# 1. Define examples as Pydantic objects (IDE-tracked, no hardcoded strings)
+# 1. Define examples as Pydantic objects
 _EX_COMPLETE = SynthesizerOutput(
     answer="### Sugarcane ScDREB2 Orthologs\nBased on the BLAST search against the *Sorghum bicolor* reference genome, I identified 3 high-confidence orthologs for ScDREB2. The top hit (Sb01g00123) showed 85% sequence identity.",
     is_complete=True,

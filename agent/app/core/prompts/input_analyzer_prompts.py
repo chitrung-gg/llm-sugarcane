@@ -6,25 +6,89 @@ from app.schemas.agent.pruning import PruningOutput
 # We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
 _PRUNING_OUTPUT_SCHEMA = json.dumps(PruningOutput.model_json_schema(), indent=2)
 
-# 1. Define examples as Pydantic objects (IDE-tracked, no hardcoded strings)
-_EX_PRUNING = PruningOutput(
-  scratchpad="The query requires a comparison between two specific sugarcane cultivars: SP80-3280 and R570. File 550e8400... (SP80 assembly) and File 671234... (R570 annotations) are direct matches. File 782345... (Arabidopsis) is unrelated and excluded.",
-  relevant_file_ids=[
-    uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
-    uuid.UUID("67123456-e29b-41d4-a716-446655440001")
-  ],
-  reasoning="Selected target cultivar assembly and comparative cultivar annotations."
+# 1. Define examples as Pydantic objects
+_EX_RELEVANT_MATCH = PruningOutput(
+    scratchpad=(
+        "The user query focuses on sucrose metabolism in sugarcane, specifically comparing 'R570' and 'SP80-3280'. "
+        "Dataset 1 contains the 'R570' genome assembly and metabolic annotations. "
+        "Dataset 2 contains 'SP80-3280' genomic data. "
+        "Dataset 3 (Arabidopsis thaliana) is a model organism but not requested for this specific sugarcane comparison. "
+        "Result: Selecting Datasets 1 and 2."
+    ),
+    relevant_file_ids=[
+        uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
+        uuid.UUID("67123456-e29b-41d4-a716-446655440001")
+    ],
+    reasoning="Matched specific sugarcane cultivars (R570, SP80-3280) and their metabolic annotation files."
+)
+
+_EX_NO_MATCH = PruningOutput(
+    scratchpad=(
+        "The query 'What is the capital of Brazil?' is a general knowledge question and does not relate to "
+        "any genomic datasets or bioinformatics research intent. No files are required to answer this."
+    ),
+    relevant_file_ids=[],
+    reasoning="General query unrelated to attached genomic datasets."
 )
 
 _JSON_OPTS = {"indent": 2, "exclude_none": True}
 _FEW_SHOTS = f"""
-<example_scenario name="cultivar_comparison">
-  <user_query>Analyze drought-related genes in SP80-3280 compared to R570.</user_query>
+<example_scenario name="biological_relevance">
+  <user_query>Compare sucrose transporter genes between R570 and SP80-3280.</user_query>
   <ideal_response>
-{_EX_PRUNING.model_dump_json(**_JSON_OPTS)}
+{_EX_RELEVANT_MATCH.model_dump_json(**_JSON_OPTS)}
+  </ideal_response>
+</example_scenario>
+
+<example_scenario name="irrelevant_query">
+  <user_query>What is the capital of Brazil?</user_query>
+  <ideal_response>
+{_EX_NO_MATCH.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
 </example_scenario>
 """
+
+INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT_STR = """
+<role>
+You are a Biological Context Pruning Specialist. Your task is to analyze a user query against a list of available genomic datasets and identify ONLY the files strictly necessary for fulfilling the request.
+</role>
+
+<instructions>
+1. BIOLOGICAL VALIDITY CHECK: First, determine if the <user_query> contains valid biological entities (genes, cultivars, accessions) or research intent. If the query is gibberish or nonsensical, select ZERO files.
+2. DIRECT MATCHING: Include files that explicitly mention the cultivars (e.g., R570, SP80-3280), genes, or organisms in the query.
+3. FUNCTIONAL NECESSITY: Include reference genomes (e.g., Sorghum bicolor, Saccharum spontaneum) if the query implies a comparative analysis, alignment (BLAST), or synteny mapping.
+4. PARSIMONY PRINCIPLE: When in doubt, exclude. The goal is to maximize context space by removing low-relevance metadata.
+5. CHAIN-OF-THOUGHT: Use the <scratchpad> to justify why each selected file is mandatory for the specific research goal.
+</instructions>
+
+<few_shot_scenarios>
+{few_shots}
+</few_shot_scenarios>
+
+<output_directive>
+You must respond with a JSON object that strictly follows this schema:
+{pruning_output_schema}
+</output_directive>
+
+<input_data>
+<user_query>
+{query}
+</user_query>
+
+<available_files>
+{file_list}
+</available_files>
+</input_data>
+"""
+
+INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT = PromptTemplate(
+    template=INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT_STR,
+    input_variables=["query", "file_list"],
+    partial_variables={
+        "pruning_output_schema": _PRUNING_OUTPUT_SCHEMA,
+        "few_shots": _FEW_SHOTS
+    }
+)
 
 INPUT_ANALYZER_GENOMIC_FILE_NOTE = PromptTemplate.from_template("""
 <system_injected_context type="genomic_dataset_attachment">
@@ -58,43 +122,3 @@ INPUT_ANALYZER_FILE_CONTEXT_HEADER = PromptTemplate.from_template("""
 INSTRUCTION: The user has explicitly attached the following file data. Treat this data as the primary ground-truth context for fulfilling their query.
 ---
 """)
-
-INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT = PromptTemplate(
-    template="""
-<role>
-You are a Biological Context Pruning Specialist. Your task is to analyze a user query against a list of available genomic datasets and identify ONLY the files strictly necessary for fulfilling the request.
-</role>
-
-<instructions>
-1. BIOLOGICAL VALIDITY CHECK: First, determine if the <user_query> contains valid biological entities (genes, cultivars, accessions) or research intent. If the query is gibberish or nonsensical, select ZERO files.
-2. DIRECT MATCHING: Include files that explicitly mention the cultivars (e.g., R570, SP80-3280), genes, or organisms in the query.
-3. FUNCTIONAL NECESSITY: Include reference genomes (e.g., Sorghum bicolor, Saccharum spontaneum) if the query implies a comparative analysis, alignment (BLAST), or synteny mapping.
-4. PARSIMONY PRINCIPLE: When in doubt, exclude. The goal is to maximize context space by removing low-relevance metadata.
-5. CHAIN-OF-THOUGHT: Use the <scratchpad> to justify why each selected file is mandatory for the specific research goal.
-</instructions>
-
-<few_shot_scenarios>
-{few_shots}
-</few_shot_scenarios>
-
-<output_directive>
-You must respond with a JSON object that strictly follows this schema:
-{pruning_output_schema}
-</output_directive>
-
-<input_data>
-<user_query>
-{query}
-</user_query>
-
-<available_files>
-{file_list}
-</available_files>
-</input_data>
-""",
-    input_variables=["query", "file_list"],
-    partial_variables={
-        "pruning_output_schema": _PRUNING_OUTPUT_SCHEMA,
-        "few_shots": _FEW_SHOTS
-    }
-)

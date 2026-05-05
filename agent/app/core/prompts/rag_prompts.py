@@ -5,7 +5,7 @@ from app.schemas.agent.rag import OptimizedRagQuery
 # We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
 _RAG_OPTIMIZATION_SCHEMA = json.dumps(OptimizedRagQuery.model_json_schema(), indent=2)
 
-# 1. Define examples as Pydantic objects (IDE-tracked, no hardcoded strings)
+# 1. Define examples as Pydantic objects
 _EX_SYNTENY = OptimizedRagQuery(
     search_query="sugarcane R570 synteny gff3 data rows"
 )
