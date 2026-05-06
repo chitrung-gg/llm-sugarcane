@@ -61,6 +61,7 @@ import { useProjectThreads } from "@/hooks/use-chat"
 import { useProjectDatasets, useDatasetFiles, useDeleteDatasetFile } from "@/hooks/use-datasets"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { Thread, Dataset } from "@/lib/types"
+import { logout, getCurrentUser } from "@/lib/auth"
 
 function DatasetInfoDialog({ dataset }: { dataset: Dataset }) {
   const { data: files = [] } = useDatasetFiles(dataset.id)
@@ -206,8 +207,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: datasets = [] } = useProjectDatasets(activeProjectId || "")
   const { data: threads = [] } = useProjectThreads(activeProjectId || "")
 
+  const user = getCurrentUser()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const handleSignOut = () => {
-    router.push("/login")
+    logout()
   }
 
   const handleProjectSwitch = (projectId: string) => {
@@ -284,6 +292,41 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Admin Portal Section */}
+        {mounted && user?.role === 'admin' && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700/60">Admin Portal</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    tooltip="All Projects"
+                    className="font-bold text-emerald-700 hover:bg-emerald-50"
+                    render={
+                      <Link href="/admin/projects">
+                        <FolderKanban aria-hidden="true" className="text-emerald-700" />
+                        <span>Global Projects</span>
+                      </Link>
+                    }
+                  />
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    tooltip="System References"
+                    className="font-bold text-emerald-700 hover:bg-emerald-50"
+                    render={
+                      <Link href="/admin/references">
+                        <Dna aria-hidden="true" className="text-emerald-700" />
+                        <span>System References</span>
+                      </Link>
+                    }
+                  />
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {activeProjectId && (
           <>
             <SidebarGroup>
@@ -302,39 +345,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       }
                     />
                   </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">Threads</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      className="text-emerald-700 font-bold hover:bg-emerald-50"
-                      render={
-                        <Link href={`/projects/${activeProjectId}/chat`}>
-                          <MessageSquarePlus className="size-4" />
-                          <span>New Chat</span>
-                        </Link>
-                      }
-                    />
-                  </SidebarMenuItem>
-                  {threads.map((thread: Thread) => (
-                    <SidebarMenuItem key={thread.id}>
-                      <SidebarMenuButton
-                        tooltip={thread.title}
-                        className="text-stone-600 font-medium"
-                        render={
-                          <Link href={`/projects/${activeProjectId}/chat/${thread.id}`}>
-                            <MessageSquare className="size-4" />
-                            <span className="truncate" title={thread.title}>{thread.title}</span>
-                          </Link>
-                        }
-                      />
-                    </SidebarMenuItem>
-                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -361,11 +371,50 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">Threads</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="text-emerald-700 font-bold hover:bg-emerald-50"
+                      render={
+                        <Link href={`/projects/${activeProjectId}/chat?new=true`}>
+                          <MessageSquarePlus className="size-4" />
+                          <span>New Chat</span>
+                        </Link>
+                      }
+                    />
+                  </SidebarMenuItem>
+                  {threads.map((thread: Thread) => (
+                    <SidebarMenuItem key={thread.id}>
+                      <SidebarMenuButton
+                        tooltip={thread.title}
+                        className="text-stone-600 font-medium"
+                        render={
+                          <Link href={`/projects/${activeProjectId}/chat/${thread.id}`}>
+                            <MessageSquare className="size-4" />
+                            <span className="truncate" title={thread.title}>{thread.title}</span>
+                          </Link>
+                        }
+                      />
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           </>
         )}
       </SidebarContent>
       <SidebarFooter className="border-t border-stone-100/50">
         <SidebarMenu>
+          {mounted && user && (
+            <SidebarMenuItem className="px-4 py-2 mb-2">
+               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest leading-tight">Signed in as</p>
+               <p className="text-xs font-bold text-emerald-700 truncate">{user.email}</p>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <DropdownMenu>
                <DropdownMenuTrigger render={

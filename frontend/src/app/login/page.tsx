@@ -34,12 +34,37 @@ export default function LoginPage() {
     },
   })
 
-  async function onSubmit() {
+  async function onSubmit(values: LoginFormValues) {
     setIsLoading(true)
+    
+    // Hardcoded credentials logic
+    const HARDCODED_USER = {
+      email: "user@sugarcane.ai",
+      password: "password123",
+      uuid: "11111111-1111-1111-1111-111111111111",
+      role: "user"
+    };
+    
+    const HARDCODED_ADMIN = {
+      email: "admin@sugarcane.ai",
+      password: "admin123",
+      uuid: "00000000-0000-0000-0000-000000000000",
+      role: "admin"
+    };
+
     setTimeout(() => {
       setIsLoading(false)
-      router.push("/dashboard")
-    }, 600)
+      
+      if (values.email === HARDCODED_USER.email && values.password === HARDCODED_USER.password) {
+        localStorage.setItem("sugarcane_user", JSON.stringify(HARDCODED_USER));
+        router.push("/dashboard");
+      } else if (values.email === HARDCODED_ADMIN.email && values.password === HARDCODED_ADMIN.password) {
+        localStorage.setItem("sugarcane_user", JSON.stringify(HARDCODED_ADMIN));
+        router.push("/dashboard");
+      } else {
+        alert("Invalid credentials. Try user@sugarcane.ai / password123");
+      }
+    }, 800)
   }
 
   return (

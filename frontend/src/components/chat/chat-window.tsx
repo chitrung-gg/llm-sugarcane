@@ -1,18 +1,142 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, User, Bot, Loader2, Database, ChevronDown, ChevronRight, ExternalLink, Wrench, Brain } from "lucide-react";
+import { Send, User, Bot, Loader2, Database, ChevronDown, ChevronRight, ExternalLink, Wrench, Brain, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useProjectDatasets } from "@/hooks/use-datasets";
-import { useChatHistory, useSendMessage } from "@/hooks/use-chat";
+import { useChatHistory } from "@/hooks/use-chat";
+import { useChatStream } from "@/hooks/use-chat-stream";
+import { PlanModificationForm } from "./plan-modification-form";
 import { Message } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
+
+// Memoized Message Item Component to prevent unnecessary re-renders
+const ChatMessageItem = React.memo(({ 
+  message, 
+  expandedSources, 
+  expandedThoughts, 
+  toggleSource, 
+  toggleThoughts 
+}: { 
+  message: Message; 
+  expandedSources: Record<string, boolean>; 
+  expandedThoughts: Record<string, boolean>; 
+  toggleSource: (id: string) => void; 
+  toggleThoughts: (id: string) => void; 
+}) => {
+  return (
+    <div
+      className={cn(
+        "flex w-full gap-3",
+        message.role === "user" ? "flex-row-reverse" : "flex-row"
+      )}
+    >
+      <div className={cn(
+        "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border shadow",
+        message.role === "user" 
+          ? "bg-stone-200 text-stone-700 border-stone-300" 
+          : "bg-emerald-100 text-emerald-800 border-emerald-200"
+      )}>
+        {message.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+      </div>
+      <div className="flex flex-col gap-2 max-w-[85%]">
+        <div className={cn(
+          "rounded-lg px-4 py-2 text-sm shadow-sm",
+          message.role === "user" 
+            ? "bg-stone-100 text-stone-900 border border-stone-200" 
+            : "bg-white text-stone-800 border border-emerald-100"
+        )}>
+          <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content}
+            </ReactMarkdown>
+          </div>
+        </div>
+
+        {/* Metadata Sections (Assistant Only) */}
+        {message.role === "assistant" && (
+          <div className="space-y-2">
+            {/* Reasoning / Thoughts */}
+            {message.thoughts && message.thoughts.length > 0 && (
+              <div className="border border-stone-200 rounded-md bg-stone-50 overflow-hidden">
+                <button 
+                  onClick={() => toggleThoughts(message.id)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-3.5 w-3.5" />
+                    Thought Process
+                  </div>
+                  {expandedThoughts[message.id] ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                </button>
+                {expandedThoughts[message.id] && (
+                  <div className="p-3 bg-white text-sm text-stone-600 border-t border-stone-200 space-y-2">
+                    {message.thoughts.map((thought, idx) => (
+                      <div key={idx} className="prose prose-sm max-w-none prose-p:leading-relaxed">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {thought}
+                        </ReactMarkdown>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tool Executions */}
+            {message.tool_executions && message.tool_executions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {message.tool_executions.map((tool, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
+                    <Wrench className="h-3 w-3" />
+                    {tool.tool_name}: {tool.status}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* RAG Sources */}
+            {message.rag_sources && message.rag_sources.length > 0 && (
+              <div className="border border-emerald-100 rounded-md bg-white overflow-hidden">
+                <button 
+                  onClick={() => toggleSource(message.id)}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-widest bg-emerald-50/50 hover:bg-emerald-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Database className="h-3 w-3" />
+                    Research Sources ({message.rag_sources.length})
+                  </div>
+                  {expandedSources[message.id] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                </button>
+                {expandedSources[message.id] && (
+                  <div className="p-2 space-y-1 divide-y divide-stone-50">
+                    {message.rag_sources.map((source, idx) => (
+                      <div key={idx} className="pt-1 first:pt-0 flex items-center justify-between gap-4">
+                        <span className="text-xs font-semibold text-stone-600 truncate">{source.source_file}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] text-stone-400 font-medium">Relevance: {source.highest_score ? (source.highest_score * 100).toFixed(0) : "N/A"}%</span>
+                          <ExternalLink className="h-3 w-3 text-stone-300" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+ChatMessageItem.displayName = "ChatMessageItem";
 
 export function ChatWindow() {
   const params = useParams();
@@ -23,6 +147,9 @@ export function ChatWindow() {
   const [selectedDatasets, setSelectedDatasets] = useState<string[]>([]);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
+  const [activeThoughtsExpanded, setActiveThoughtsExpanded] = useState(true);
+  const [isModifyingPlan, setIsModifyingPlan] = useState(false);
+  const [planToModify, setPlanToModify] = useState<Message['interrupt_data'] | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: datasets, isLoading: datasetsLoading } = useProjectDatasets(projectId);
@@ -30,17 +157,18 @@ export function ChatWindow() {
   // Fetch history for this thread
   const { data: history, isLoading: historyLoading } = useChatHistory(threadId);
   
-  // Mutation for sending messages
-  const sendMessage = useSendMessage();
+  // Streaming hook
+  const { streamQuery, isStreaming, currentStream } = useChatStream();
 
-  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  // Pending user messages (optimistic UI)
+  const [pendingUserMessages, setPendingUserMessages] = useState<Message[]>([]);
 
-  // Sync history to local state
-  useEffect(() => {
+  // Derived messages from history and pending messages
+  const localMessages = useMemo(() => {
+    const formatted: Message[] = [];
+    let currentThoughts: string[] = [];
+
     if (history?.messages) {
-      const formatted: Message[] = [];
-      let currentThoughts: string[] = [];
-
       history.messages.forEach((m, idx) => {
         if (m.type === "thought") {
           currentThoughts.push(m.content);
@@ -49,7 +177,7 @@ export function ChatWindow() {
             id: m.id || m.execution_id || `hist-${idx}`,
             role: m.role,
             content: m.content,
-            type: m.type as any,
+            type: m.type as "answer" | "thought" | "error" | "interrupt",
             execution_id: m.execution_id,
             thoughts: [...currentThoughts]
           });
@@ -59,57 +187,67 @@ export function ChatWindow() {
             id: m.id || m.execution_id || `hist-${idx}`,
             role: m.role,
             content: m.content,
-            type: m.type as any,
+            type: m.type as "answer" | "thought" | "error" | "interrupt",
             execution_id: m.execution_id
           });
         }
       });
-      setLocalMessages(formatted);
     }
-  }, [history]);
+
+    // Append pending messages that aren't yet in history
+    // We only show pending messages while streaming or if they are genuinely new
+    const historyIds = new Set(formatted.map(m => m.id));
+    pendingUserMessages.forEach(pm => {
+      if (!historyIds.has(pm.id)) {
+        formatted.push(pm);
+      }
+    });
+
+    return formatted;
+  }, [history, pendingUserMessages]);
 
   const handleSend = () => {
-    if (!input.trim() || sendMessage.isPending) return;
+    if (!input.trim() || isStreaming) return;
 
     const userMessage = input.trim();
     const tempId = uuidv4();
     
-    setLocalMessages((prev) => [
+    setPendingUserMessages((prev) => [
       ...prev, 
       { id: tempId, role: "user", content: userMessage }
     ]);
     
     setInput("");
+    setActiveThoughtsExpanded(true); // Ensure expanded for new stream
     
-    sendMessage.mutate({
+    streamQuery({
       query: userMessage,
       threadId: threadId,
       projectId: projectId,
       datasetIds: selectedDatasets
-    }, {
-      onSuccess: (data) => {
-        setLocalMessages((prev) => [
-          ...prev,
-          { 
-            id: data.execution_id || uuidv4(), 
-            role: "assistant", 
-            content: data.answer,
-            type: "answer",
-            execution_id: data.execution_id,
-            thoughts: data.thoughts || [],
-            rag_sources: data.rag_sources,
-            web_results: data.web_results,
-            tool_executions: data.tool_executions
-          },
-        ]);
-      },
-      onError: () => {
-        setLocalMessages((prev) => [
-          ...prev,
-          { id: uuidv4(), role: "assistant", content: "Sorry, I encountered an error processing your request." },
-        ]);
-      }
+    }).then(() => {
+      setPendingUserMessages([]);
     });
+  };
+
+  const handleApprove = () => {
+    streamQuery({
+      threadId: threadId,
+      humanFeedback: { action: "APPROVE" },
+      projectId: projectId,
+      datasetIds: selectedDatasets
+    });
+  };
+
+  const handleModify = (feedback: string | Record<string, unknown>) => {
+    streamQuery({
+      threadId: threadId,
+      humanFeedback: feedback,
+      projectId: projectId,
+      datasetIds: selectedDatasets
+    });
+    setIsModifyingPlan(false);
+    setPlanToModify(null);
   };
 
   const toggleDataset = (id: string) => {
@@ -118,13 +256,13 @@ export function ChatWindow() {
     );
   };
 
-  const toggleSource = (msgId: string) => {
+  const toggleSource = useCallback((msgId: string) => {
     setExpandedSources(prev => ({ ...prev, [msgId]: !prev[msgId] }));
-  };
+  }, []);
 
-  const toggleThoughts = (msgId: string) => {
+  const toggleThoughts = useCallback((msgId: string) => {
     setExpandedThoughts(prev => ({ ...prev, [msgId]: !prev[msgId] }));
-  };
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -135,9 +273,36 @@ export function ChatWindow() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+      // Use "auto" behavior during streaming to avoid lag from smooth animation
+      scrollRef.current.scrollIntoView({ behavior: isStreaming ? "auto" : "smooth" });
     }
-  }, [localMessages, sendMessage.isPending]);
+  }, [localMessages, isStreaming, currentStream]);
+
+  // Derived state from current stream (memoized to prevent re-computation on every render)
+  const activeStreamThoughts = useMemo(() => 
+    currentStream
+      .filter(e => e.event === 'thought')
+      .map(e => e.data.content),
+    [currentStream]
+  );
+  
+  const activeStreamTools = useMemo(() => 
+    currentStream
+      .filter(e => e.event === 'tool_start' || e.event === 'tool_end'),
+    [currentStream]
+  );
+  
+  const activeStreamAnswer = useMemo(() => 
+    currentStream
+      .find(e => e.event === 'answer')?.data,
+    [currentStream]
+  );
+
+  const activeStreamInterrupt = useMemo(() => 
+    currentStream
+      .find(e => e.event === 'interrupt')?.data?.interrupt_payload,
+    [currentStream]
+  );
 
   return (
     <div className="flex flex-col h-full bg-stone-50/50">
@@ -173,7 +338,7 @@ export function ChatWindow() {
             <div className="flex justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-stone-300" />
             </div>
-          ) : localMessages.length === 0 && (
+          ) : localMessages.length === 0 && !isStreaming && (
             <div className="text-center py-20 text-stone-500">
               <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Bot className="h-6 w-6 text-emerald-700" />
@@ -184,127 +349,161 @@ export function ChatWindow() {
           )}
           
           {localMessages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "flex w-full gap-3",
-                message.role === "user" ? "flex-row-reverse" : "flex-row"
-              )}
-            >
-              <div className={cn(
-                "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border shadow",
-                message.role === "user" 
-                  ? "bg-stone-200 text-stone-700 border-stone-300" 
-                  : "bg-emerald-100 text-emerald-800 border-emerald-200"
-              )}>
-                {message.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-              </div>
-              <div className="flex flex-col gap-2 max-w-[85%]">
-                <div className={cn(
-                  "rounded-lg px-4 py-2 text-sm shadow-sm",
-                  message.role === "user" 
-                    ? "bg-stone-100 text-stone-900 border border-stone-200" 
-                    : "bg-white text-stone-800 border border-emerald-100"
-                )}>
-                  <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {message.content}
-                    </ReactMarkdown>
-                  </div>
-                </div>
+            <ChatMessageItem 
+              key={message.id} 
+              message={message} 
+              expandedSources={expandedSources}
+              expandedThoughts={expandedThoughts}
+              toggleSource={toggleSource}
+              toggleThoughts={toggleThoughts}
+            />
+          ))}
 
-                {/* Metadata Sections (Assistant Only) */}
-                {message.role === "assistant" && (
-                  <div className="space-y-2">
-                    {/* Reasoning / Thoughts */}
-                    {message.thoughts && message.thoughts.length > 0 && (
+          {/* Active Stream Result */}
+          {(isStreaming || (currentStream.length > 0 && !activeStreamAnswer)) && (
+            (() => {
+              // Avoid duplicate answer if it's already in history (by checking execution_id if available)
+              const streamAnswerEvent = currentStream.find(e => e.event === 'answer');
+              const streamExecutionId = streamAnswerEvent?.data?.execution_id;
+              const isDuplicate = streamExecutionId && localMessages.some(m => m.execution_id === streamExecutionId);
+              
+              if (isDuplicate) return null;
+
+              return (
+                <div className="flex w-full gap-3 flex-row">
+                  <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border shadow bg-emerald-100 text-emerald-800 border-emerald-200">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                  <div className="flex flex-col gap-2 max-w-[85%] w-full">
+                    {activeStreamAnswer ? (
+                      <div className="rounded-lg px-4 py-2 text-sm shadow-sm bg-white text-stone-800 border border-emerald-100">
+                        <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {activeStreamAnswer}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg px-4 py-3 bg-white text-stone-800 border border-emerald-100 shadow-sm flex items-center gap-3">
+                        <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                        <span className="text-xs font-bold text-stone-400 uppercase tracking-widest animate-pulse">Agent is reasoning...</span>
+                      </div>
+                    )}
+
+                    {/* Active Thoughts */}
+                    {activeStreamThoughts.length > 0 && (
                       <div className="border border-stone-200 rounded-md bg-stone-50 overflow-hidden">
                         <button 
-                          onClick={() => toggleThoughts(message.id)}
+                          onClick={() => setActiveThoughtsExpanded(!activeThoughtsExpanded)}
                           className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 transition-colors"
                         >
                           <div className="flex items-center gap-2">
                             <Brain className="h-3.5 w-3.5" />
-                            Reasoning Process
+                            Thought Process
                           </div>
-                          {expandedThoughts[message.id] ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                          {activeThoughtsExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         </button>
-                        {expandedThoughts[message.id] && (
-                          <div className="p-3 bg-white text-sm text-stone-600 border-t border-stone-200 space-y-2">
-                            {message.thoughts.map((thought, idx) => (
-                              <div key={idx} className="prose prose-sm max-w-none prose-p:leading-relaxed">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {thought}
-                                </ReactMarkdown>
-                              </div>
-                            ))}
+                        {activeThoughtsExpanded && (
+                          <div className="p-3 bg-white text-xs text-stone-600 border-t border-stone-200 space-y-2">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {activeStreamThoughts[activeStreamThoughts.length - 1]}
+                            </ReactMarkdown>
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* Tool Executions */}
-                    {message.tool_executions && message.tool_executions.length > 0 && (
+                    {/* Active Tools */}
+                    {activeStreamTools.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {message.tool_executions.map((tool, idx) => (
+                        {activeStreamTools.map((t, idx) => (
                           <div key={idx} className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
                             <Wrench className="h-3 w-3" />
-                            {tool.tool_name}: {tool.status}
+                            {t.data.tool}: {t.event === 'tool_start' ? 'Running...' : 'Complete'}
                           </div>
                         ))}
                       </div>
                     )}
-
-                    {/* RAG Sources */}
-                    {message.rag_sources && message.rag_sources.length > 0 && (
-                      <div className="border border-emerald-100 rounded-md bg-white overflow-hidden">
-                        <button 
-                          onClick={() => toggleSource(message.id)}
-                          className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-widest bg-emerald-50/50 hover:bg-emerald-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Database className="h-3 w-3" />
-                            Research Sources ({message.rag_sources.length})
-                          </div>
-                          {expandedSources[message.id] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        </button>
-                        {expandedSources[message.id] && (
-                          <div className="p-2 space-y-1 divide-y divide-stone-50">
-                            {message.rag_sources.map((source, idx) => (
-                              <div key={idx} className="pt-1 first:pt-0 flex items-center justify-between gap-4">
-                                <span className="text-xs font-semibold text-stone-600 truncate">{source.source_file}</span>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className="text-[10px] text-stone-400 font-medium">Relevance: {source.highest_score ? (source.highest_score * 100).toFixed(0) : "N/A"}%</span>
-                                  <ExternalLink className="h-3 w-3 text-stone-300" />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {sendMessage.isPending && (
-            <div className="flex w-full gap-3 flex-row">
-              <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border shadow bg-emerald-100 text-emerald-800 border-emerald-200">
-                <Bot className="h-4 w-4" />
-              </div>
-              <div className="rounded-lg px-4 py-3 bg-white text-stone-800 border border-emerald-100 shadow-sm flex items-center gap-3">
-                <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                <span className="text-xs font-bold text-stone-400 uppercase tracking-widest animate-pulse">Agent is reasoning...</span>
-              </div>
-            </div>
+                </div>
+              );
+            })()
           )}
+
+          {/* Interrupt UI */}
+          {activeStreamInterrupt && activeStreamInterrupt.action_required === "APPROVE_PLAN" && (
+              <div className="ml-11 border-2 border-emerald-200 rounded-lg p-4 bg-emerald-50/50 space-y-4 shadow-sm animate-in fade-in zoom-in duration-300">
+                  <h3 className="text-sm font-bold text-emerald-800 flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      Proposed Research Plan
+                  </h3>
+                  <div className="space-y-2">
+                    {activeStreamInterrupt.plan && activeStreamInterrupt.plan.length > 0 && activeStreamInterrupt.plan.map((step: { step_id?: string | number; description: string; expected_tool?: string }, idx: number) => (
+                      <div key={idx} className="bg-white p-3 rounded border border-emerald-100 text-xs text-stone-700 shadow-sm flex items-start gap-3">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                          {step.step_id || idx + 1}
+                        </span>
+                        <div className="flex-1">
+                          {step.description}
+                          {step.expected_tool && (
+                            <div className="mt-1 text-[10px] text-stone-400 font-bold uppercase tracking-tight flex items-center gap-1">
+                              <Wrench className="h-2.5 w-2.5" /> Requires: {step.expected_tool}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                      <Button size="sm" onClick={handleApprove} className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-md">
+                          <Check className="h-4 w-4 mr-1" /> Approve & Execute
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => {
+                          setPlanToModify(activeStreamInterrupt.plan);
+                          setIsModifyingPlan(true);
+                        }} 
+                        className="bg-white border-stone-200 text-stone-600 hover:bg-stone-50 shadow-sm"
+                      >
+                          <X className="h-4 w-4 mr-1" /> Modify Plan
+                      </Button>
+                  </div>
+              </div>
+          )}
+
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
 
       <div className="border-t bg-white p-4">
         <div className="max-w-3xl mx-auto relative">
+          {isModifyingPlan && planToModify && (
+            <div className="absolute bottom-full left-0 right-0 z-50 px-4 pb-2">
+              <div className="max-w-3xl mx-auto">
+                <PlanModificationForm 
+                  initialPlan={planToModify}
+                  onCancel={() => {
+                    setIsModifyingPlan(false);
+                    setPlanToModify(null);
+                  }}
+                  onSubmitEdits={(modifiedSteps) => {
+                    handleModify({
+                      action: "MODIFY",
+                      modified_plan: modifiedSteps
+                    });
+                  }}
+                  onSubmitFeedback={(feedback) => {
+                    handleModify({
+                      action: "MODIFY",
+                      feedback: feedback
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          )}
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -316,7 +515,7 @@ export function ChatWindow() {
           <Button
             size="icon"
             onClick={handleSend}
-            disabled={!input.trim() || sendMessage.isPending}
+            disabled={!input.trim() || isStreaming}
             className="absolute right-2 bottom-2 bg-emerald-700 hover:bg-emerald-800 text-white transition-colors"
           >
             <Send className="h-4 w-4" />

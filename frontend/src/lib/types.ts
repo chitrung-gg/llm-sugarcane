@@ -1,5 +1,6 @@
 export interface Project {
   id: string;
+  owner_id: string;
   name: string;
   description?: string;
   dataset_metadata?: Record<string, unknown>;
@@ -11,6 +12,7 @@ export interface Thread {
   project_id: string;
   title: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface Dataset {
@@ -37,12 +39,13 @@ export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  type?: "answer" | "thought" | "error";
+  type?: "answer" | "thought" | "error" | "interrupt";
   execution_id?: string;
   thoughts?: string[];
   rag_sources?: RAGSource[];
   web_results?: WebResult[];
   tool_executions?: ToolExecution[];
+  interrupt_data?: Record<string, unknown>;
 }
 
 export interface RAGSource {
@@ -72,9 +75,9 @@ export interface ChatHistory {
     type?: "answer" | "thought" | "error";
     execution_id?: string;
   }[];
-  rag_results: any[];
-  tool_results: any[];
-  web_results: any[];
+  rag_results: Record<string, unknown>[];
+  tool_results: Record<string, unknown>[];
+  web_results: WebResult[];
   summary?: string;
 }
 

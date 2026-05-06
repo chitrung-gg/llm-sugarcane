@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { Dataset, DatasetFile } from "@/lib/types";
+import { getCurrentUser } from "@/lib/auth";
 
 export function useProjectDatasets(projectId: string) {
   return useQuery({
@@ -110,9 +111,14 @@ export function useUploadDatasetFiles() {
       files: File[]; 
       sourceType: string;
     }) => {
+      const user = getCurrentUser();
       const formData = new FormData();
       data.files.forEach(file => formData.append("files", file));
       formData.append("source_type", data.sourceType);
+      
+      if (user) {
+        formData.append("user_id", user.uuid);
+      }
       
       const response = await api.post(`/workspace/datasets/${data.datasetId}/upload`, formData, {
         headers: {

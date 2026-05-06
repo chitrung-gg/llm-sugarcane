@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { Project } from "@/lib/types";
+import { getCurrentUser } from "@/lib/auth";
 
 export function useProjects() {
   return useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
-      const response = await api.get<Project[]>("/workspace/projects");
+      const user = getCurrentUser();
+      const params = user ? { user_id: user.uuid } : {};
+      const response = await api.get<Project[]>("/workspace/projects", { params });
       return response.data;
     },
   });
@@ -28,10 +31,14 @@ export function useCreateProject() {
   
   return useMutation({
     mutationFn: async (data: { name: string; description?: string }) => {
+      const user = getCurrentUser();
       const formData = new FormData();
       formData.append("name", data.name);
       if (data.description) {
         formData.append("description", data.description);
+      }
+      if (user) {
+        formData.append("user_id", user.uuid);
       }
       const response = await api.post<Project>("/workspace/projects", formData);
       return response.data;
