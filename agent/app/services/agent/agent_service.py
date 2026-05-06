@@ -394,6 +394,13 @@ class AgentService:
                     "active_datasets": active_datasets
                 }
 
+
+                # Trigger title generation if it doesn't exist yet
+                async with langgraph_connection_pool.connection() as conn:
+                    cursor = await conn.execute("SELECT title FROM chat_threads WHERE thread_id = %s", (thread_id,))
+                    row = await cursor.fetchone()
+                    if row and not row["title"]:
+                        asyncio.create_task(self._generate_and_update_title(thread_id, query))
             # Filter for specific nodes we want to stream thoughts from
             REASONING_NODES = {
                 AgentGraphNode.PLANNER, 
@@ -524,17 +531,14 @@ class AgentService:
                             )
                             yield f"data: {chunk.model_dump_json()}\n\n"
 
-                        # 3. Final Answer (from Synthesizer)
-                        if kind == EventKind.CHAIN_END and name == AgentGraphNode.SYNTHESIZER:
+                        # 3. Final Answer (From Synthesizer OR Planner)
+                        # Add AgentGraphNode.PLANNER to the condition!
+                        if kind == EventKind.CHAIN_END and name in [AgentGraphNode.SYNTHESIZER, AgentGraphNode.PLANNER]:
                             output = event["data"].get("output")
                             final_answer = None
                             
-                            if isinstance(output, BaseModel):
-                                final_answer = getattr(output, "final_answer", None)
-                            elif isinstance(getattr(output, "update", None), dict):
-                                final_answer = getattr(output, "update").get("final_answer")
-                            elif isinstance(output, dict):
-                                final_answer = output.get("final_answer")
+                            if output is not None and hasattr(output, "update") and isinstance(output.update, dict):
+                                final_answer = output.update.get("final_answer")
 
                             if final_answer:
                                 chunk = StreamChunk(
@@ -542,7 +546,8 @@ class AgentService:
                                     data=final_answer
                                 )
                                 yield f"data: {chunk.model_dump_json()}\n\n"
-
+                                
+                                # Save to DB immediately
                                 await self._save_chat_message(
                                     thread_id=thread_id,
                                     role="assistant",
@@ -550,6 +555,7 @@ class AgentService:
                                     type="answer",
                                     execution_id=execution_id
                                 )
+                                answer_saved_to_db = True
 
                 # 1. Initialize the status dictionary
                 interrupt_status = {"interrupted": False}

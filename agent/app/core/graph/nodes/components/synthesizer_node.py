@@ -54,11 +54,15 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         rag_context = "\n".join([f"- [Doc: {r.get('source_file')}] {r.get('content')}" for r in state.get("rag_results", [])])
         web_context = "\n".join([f"- [{r.get('title')}] ({r.get('link')}): {r.get('snippet')}" for r in state.get("web_results", [])])
         tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')}" for r in state.get("tool_results", [])])
+        knowledge_context = str(state.get("extracted_knowledge", []))
 
         context_string = f"""
             --- ACTIVE WORKSPACE/FILE CONTEXT ---
             {workspace_str }
             
+            --- EXTRACTED KNOWLEDGE (FACTS/METADATA) ---
+            {knowledge_context if knowledge_context != "[]" else "No structured knowledge extracted yet."}
+
             --- RAG KNOWLEDGE ---
             {rag_context if rag_context else "No RAG data found."}
 

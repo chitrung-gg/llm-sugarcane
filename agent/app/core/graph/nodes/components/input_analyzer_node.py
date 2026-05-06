@@ -12,34 +12,44 @@ from app.schemas.agent.pruning import PruningOutput
 from app.core.prompts.input_analyzer_prompts import INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT
 from langgraph.types import Command
 
-
-# Wrap in factory method
 def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service: LLMService):
     @tracing(observation_type=ObservationType.CHAIN)
     async def input_analyzer(state: AgentState) -> Command[
         Literal[AgentGraphNode.ROUTER]
     ]:
         start_time = time.time()
-
         logger.debug("========== [Input Analyzer Node] ==========")
         
         query = state.get("query", "")
+        summary = state.get("summary", "")
+        past_steps = state.get("past_steps", [])
         project = state.get("active_project")
         datasets = state.get("active_datasets") or []
 
-        # If we have multiple datasets/files, ask the fast model to filter them
         filtered_datasets = datasets
         
         if len(datasets) > 1:
             logger.info(f"[Input Analyzer] ✂️ Pruning {len(datasets)} active datasets for relevance...")
             
-            # Format file list for the LLM
+            # 1. Build an Enriched Context Query
+            # This ensures the LLM sees the big picture, not just the current sub-step.
+            step_history = "\n".join([f"- {obs.summary}" for obs in past_steps]) if past_steps else "None"
+            
+            enriched_query = (
+                f"--- OVERALL CONTEXT ---\n"
+                f"{summary}\n\n"
+                f"--- PREVIOUS STEPS COMPLETED ---\n"
+                f"{step_history}\n\n"
+                f"--- CURRENT TASK ---\n"
+                f"{query}"
+            )
+            
+            # 2. Format file list for the LLM
             file_list_str = ""
             for ds in datasets:
                 ds_name = ds.get('dataset_name', 'Unknown')
                 ds_id = ds.get('dataset_id', 'N/A')
                 
-                # Extract file names from both categories
                 g_files = [f.get("file_name") for f in ds.get("genomic_files", [])]
                 k_files = [f.get("file_name") for f in ds.get("knowledge_files", [])]
                 
@@ -55,7 +65,7 @@ def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service:
                 
                 selection: PruningOutput = await pruner.ainvoke(
                     INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT.format(
-                        query=query,
+                        query=enriched_query, # Pass the enriched context!
                         file_list=file_list_str
                     )
                 )
@@ -81,12 +91,13 @@ def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service:
         return Command(
             goto=AgentGraphNode.ROUTER,
             update={
+                # Provide the pruned list for downstream tools
                 "active_datasets": filtered_datasets, 
                 
+                # SAFEGUARD: Preserve the full original list so it isn't permanently deleted from the state
+                "original_datasets": datasets,
+                
                 # Reset execution tracking arrays for this step
-                "tool_results": [],
-                "web_results": [],
-                "rag_results": [],
                 "iteration_count": 0,
                 "required_tools": []
             }

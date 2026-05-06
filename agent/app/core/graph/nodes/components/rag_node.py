@@ -56,10 +56,10 @@ def make_rag_node(
                 user_question=original_query
             )
 
-            messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
-            if state["messages"]:
-                messages.extend(state["messages"])        
-            messages.append(HumanMessage(content=f"Latest Query: {original_query}"))
+            messages: List[BaseMessage] = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=f"Latest Query: {original_query}")
+            ]
 
             try:
                 rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedRagQuery)

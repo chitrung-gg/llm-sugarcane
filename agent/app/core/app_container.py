@@ -29,7 +29,7 @@ from app.configs.storage.databases import userdata_connection_pool
 from app.core.tools.genome_tool import (
     design_polyploid_primer, get_gene_detail,
     get_genes_list, list_genome_files, run_blast, run_crispor,
-    run_synteny_analysis, search_genes_full
+    run_synteny_haplotype_analysis, search_genes_full
 )
 from app.core.tools.index_genome_etl import index_new_genome
 from app.core.tools.graph_rag_tool import make_graph_rag_tool

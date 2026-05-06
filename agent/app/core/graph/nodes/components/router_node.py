@@ -124,18 +124,16 @@ def make_router_node(
         # Format the top-level instructions
         sys_msg_1 = ROUTER_SYSTEM_INSTRUCTIONS.format(
             workspace_context=workspace_str,
+            extracted_knowledge=str(state.get("extracted_knowledge", [])),
             tool_list_str=tool_list_str,
             conversation_summary=state.get('summary', 'No summary available yet.')
         )
 
-        messages_to_send: List[BaseMessage] = [SystemMessage(content=sys_msg_1)]
-
-        # Inject conversation history/current query
-        if state.get("messages"):
-            messages_to_send.extend(state["messages"])
-        else:
-            messages_to_send.append(HumanMessage(content=f"User Query: {query}"))
-
+        messages_to_send: List[BaseMessage] = [
+            SystemMessage(content=sys_msg_1),
+            HumanMessage(content=f"User Query: {query}")
+        ]
+        
         # Format the bottom-level enforcement constraints
         sys_msg_2 = ROUTER_FINAL_STATE_ENFORCEMENT.format(
             execution_history=execution_history,

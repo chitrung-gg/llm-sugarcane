@@ -3,6 +3,7 @@ from loguru import logger
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, HumanMessage
 from langgraph.types import Command, interrupt
 from pydantic import BaseModel, Field
+from langchain_core.tools import render_text_description_and_args, BaseTool
 
 from app.core.prompts.planner_prompts import PLANNER_HUMAN_PROMPT, PLANNER_SYSTEM_PROMPT
 from app.utils.observability.tracing import tracing
@@ -12,7 +13,7 @@ from app.schemas.agent.planner import PlanOutput
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.services.llm.llm_service import LLMService
 
-def make_planner_node(llm_service: LLMService):
+def make_planner_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
     @tracing(observation_type=ObservationType.CHAIN)
     async def planner(state: PlanExecuteState) -> Command[
         Literal[AgentGraphNode.HUMAN_REVIEW, AgentGraphNode.SUMMARIZER]
@@ -48,7 +49,10 @@ def make_planner_node(llm_service: LLMService):
         
         dataset_context = "\n".join(dataset_lines) if dataset_lines else "No datasets attached."
 
-        # 3. Prepare Messages (Including Conversation History)
+        # 3. Render Tool Descriptions for the Planner
+        tool_list_str = render_text_description_and_args(list(available_tools.values()))
+
+        # 4. Prepare Messages (Including Conversation History)
         llm = llm_service.get_structured_primary_model(PlanOutput)
 
         # We include previous messages so the Planner has full conversation context
@@ -56,17 +60,12 @@ def make_planner_node(llm_service: LLMService):
             SystemMessage(content=PLANNER_SYSTEM_PROMPT.format(
                 project_name=p_name,
                 project_description=p_desc,
-                datasets=dataset_context
-            ))
+                datasets=dataset_context,
+                tool_list_str=tool_list_str,
+                conversation_summary=state.get("summary", "No prior context.")
+            )),
+            HumanMessage(content=PLANNER_HUMAN_PROMPT.format(query=query))
         ]
-        
-        # Add historical messages BUT exclude the current/latest query 
-        # (The latest query is always at the end of state["messages"])
-        if state.get("messages") and len(state["messages"]) > 1:
-            messages.extend(state["messages"][:-1])
-        else:
-            # Fallback if messages list is empty
-            messages.append(HumanMessage(content=PLANNER_HUMAN_PROMPT.format(query=query)))
 
         try:
             result: PlanOutput = await llm.ainvoke(messages)
@@ -79,7 +78,7 @@ def make_planner_node(llm_service: LLMService):
                 f"[Planner] Step {i}: {step.model_dump_json(indent=2)}"
             )
 
-        # 4. Handle 0-step cases (Greetings, clarification requests, etc.)
+        # 5. Handle 0-step cases (Greetings, clarification requests, etc.)
         if not result.steps:
             logger.info("[Planner] No steps generated. Routing directly to Summarizer.")
 
@@ -94,7 +93,7 @@ def make_planner_node(llm_service: LLMService):
                 }
             )
 
-        # 5. Route to Human Review (Save draft to state)
+        # 6. Route to Human Review (Save draft to state)
         return Command(
             goto=AgentGraphNode.HUMAN_REVIEW,
             update={

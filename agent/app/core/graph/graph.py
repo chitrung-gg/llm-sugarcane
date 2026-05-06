@@ -57,7 +57,7 @@ async def build_super_agent_graph(
     workflow = StateGraph(PlanExecuteState)
 
     # 3. Add the 3 Outer Nodes using the StrEnum
-    workflow.add_node(AgentGraphNode.PLANNER, make_planner_node(llm_service))
+    workflow.add_node(AgentGraphNode.PLANNER, make_planner_node(llm_service, available_tools))
     workflow.add_node(AgentGraphNode.EXECUTOR, make_executor_node(inner_react_graph))
     # workflow.add_node(AgentGraphNode.REPLANNER, make_replanner_node(llm_service))
     workflow.add_node(AgentGraphNode.HUMAN_REVIEW, make_human_review_node())

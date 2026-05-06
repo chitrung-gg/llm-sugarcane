@@ -7,6 +7,11 @@ class GeneListInput(BaseModel):
     page: int = Field(1, ge=1, description="Page number (>=1)")
     limit: int = Field(20, ge=1, le=100, description="Items per page (1-100)")
 
+class GetGenomeSamplesInput(BaseModel):
+    genome_id: int = Field(..., description="The ID of the genome to fetch samples from.")
+    chrom: Optional[str] = Field(None, description="Fetch samples for a specific chromosome (e.g., 'Chr1A').")
+    subgenome: Optional[str] = Field(None, description="Fetch samples for a subgenome (e.g., 'A').")
+    limit: int = Field(5, description="Number of samples to return. Default is 5.")
 class GeneSearchInput(BaseModel):
     genome_id: Optional[int] = None
     keyword: Optional[str] = None

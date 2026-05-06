@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from app.core.tools.registry.registry_tool import register_agent_tool
 from app.services.tools.call_genome_backend import call_genome_backend
 from app.schemas.tool.genome_tool_schema import (
-    BlastInput, GeneListInput, GeneSearchInput, PrimerDesignInput, SyntenyHaplotypeInput,
+    BlastInput, GeneListInput, GeneSearchInput, GetGenomeSamplesInput, PrimerDesignInput, SyntenyHaplotypeInput,
     CompareGenomesInput, GenomeAnalysisInput, ChromosomeDetailInput, CrossVarietySearchInput,
     CompareNeighborhoodsInput, GeneAllelesInput, GeneStructureInput, GenePromoterInput,
     BatchSequencesInput, InvestigateRegionInput, RegionSequenceInput, PaginationInput
@@ -29,6 +29,32 @@ async def list_genome_files() -> Dict[str, Any]:
     - index_path, blast_db_path: auxiliary data if available
     """
     return await call_genome_backend("GET", "/api/genome/files")
+
+@register_agent_tool
+@tool(args_schema=GetGenomeSamplesInput)
+async def get_genome_samples(
+    genome_id: int, 
+    chrom: Optional[str] = None, 
+    subgenome: Optional[str] = None, 
+    limit: int = 5
+) -> Dict[str, Any]:
+    """
+    Expert Tool: Fetch a dynamic sample of gene IDs from a specific genome.
+    Use this tool to retrieve concrete examples of gene identifiers (e.g., for a specific chromosome) 
+    without overwhelming the context window with the entire metadata payload.
+    """
+    # 1. Build the query parameters, excluding None values
+    params: Dict[str, Any] = {"limit": limit}
+    if chrom:
+        params["chrom"] = chrom
+    if subgenome:
+        params["subgenome"] = subgenome
+
+    # 2. Construct the endpoint using the path parameter
+    # Adjust the base path "/api/genome" if your router prefix is different
+    endpoint = f"/api/genome/{genome_id}/samples"
+    
+    return await call_genome_backend("GET", endpoint, params=params)
 
 # @register_agent_tool 
 # @tool
@@ -301,32 +327,23 @@ async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict
 @tool(args_schema=PaginationInput)
 async def list_synteny_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
     """
-    List all synteny analysis tasks.
+    List all previously initiated synteny analysis tasks and their current statuses/IDs.
+    Use this to find a task ID if the user asks about past synteny runs.
     """
     params = {"page": page, "size": size}
     return await call_genome_backend("GET", "/api/synteny", params=params)
 
 @register_agent_tool
-@tool
-async def run_synteny_analysis(genome_a_id: int, genome_b_id: int, check_quality: bool = True) -> Dict[str, Any]:
-    """
-    Run synteny analysis between two genomes.
-    """
-    payload = {"genome_a_id": genome_a_id, "genome_b_id": genome_b_id, "check_quality": check_quality}
-    return await call_genome_backend("POST", "/api/synteny/analyze", json_data=payload)
-
-@register_agent_tool
 @tool(args_schema=SyntenyHaplotypeInput)
-async def run_haplotype_analysis(
+async def run_synteny_haplotype_analysis(
     genome_id: int,
     haplotype_set_query: str,
     haplotype_set_subject: str,
     homologous_group: Optional[int] = None
 ) -> Dict[str, Any]:
     """
-    Run synteny/haplotype analysis between two haplotype sets within a genome.
-    Use this tool when the user wants to compare genomic regions, detect collinearity,
-    or analyze conserved gene order between haplotypes.
+    Initiate a NEW synteny/haplotype analysis pipeline between two haplotype sets within a genome.
+    Use this tool ONLY to start a new analysis. If the user asks for the status, progress, or output of an existing analysis, use `get_synteny_status` instead.
 
     Requires:
     - genome_id: obtained from `list_genome_files`
@@ -354,7 +371,8 @@ async def run_haplotype_analysis(
 @tool
 async def get_synteny_status(task_id: int) -> Dict[str, Any]:
     """
-    Get status of a synteny analysis task.
+    Get the current execution status and retrieve the final results/output data of a synteny analysis task.
+    Use this tool when the user wants to check if a previously initiated synteny task is done, or to get the actual results of the completed task.
     """
     return await call_genome_backend("GET", f"/api/synteny/{task_id}")
 
@@ -371,7 +389,7 @@ async def list_crispor_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
 @tool
 async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: Optional[str] = None) -> Dict[str, Any]:
     """
-    Design CRISPR gRNA candidates and evaluate off-target effects using CRISPOR.
+    Initiate a NEW CRISPR gRNA design task and evaluate off-target effects using CRISPOR.
 
     Use this tool when the user wants to design guide RNAs for a gene or sequence.
     Requires:
@@ -404,7 +422,8 @@ async def list_primer_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
 @tool
 async def get_primer_task(task_id: int) -> Dict[str, Any]:
     """
-    Get details and results of a primer design task.
+    Get details and results of an existing primer design task.
+    Use this to check the status or retrieve the output of a previously initiated primer design task.
     """
     return await call_genome_backend("GET", f"/api/primer/{task_id}")
 
@@ -418,10 +437,9 @@ async def design_polyploid_primer(
     primer_min_gc: float = 20, primer_max_gc: float = 80, primer_opt_gc_percent: float = 50,
 ) -> Dict[str, Any]:
     """
-    Design PCR primers optimized for polyploid genomes, ensuring specificity across homologous regions.
+    Initiate a NEW PCR primer design task optimized for polyploid genomes, ensuring specificity across homologous regions.
 
-    Use this tool when the user wants to design primers for amplification (PCR/qPCR),
-    especially in complex genomes with multiple homologs (e.g., polyploid species).
+    Use this tool ONLY to start a new primer design process. If checking the status or output of an existing task, use `get_primer_task`.
 
     Requires:
     - genome_id: genome reference (must be obtained from `list_genome_files`)
