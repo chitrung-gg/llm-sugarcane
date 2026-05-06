@@ -1,18 +1,13 @@
-import json
 import uuid
 from langchain_core.prompts import PromptTemplate
 from app.schemas.agent.pruning import PruningOutput
-
-# We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
-_PRUNING_OUTPUT_SCHEMA = json.dumps(PruningOutput.model_json_schema(), indent=2)
 
 # 1. Define examples as Pydantic objects
 _EX_RELEVANT_MATCH = PruningOutput(
     scratchpad=(
         "The user query focuses on sucrose metabolism in sugarcane, specifically comparing 'R570' and 'SP80-3280'. "
-        "Dataset 1 contains the 'R570' genome assembly and metabolic annotations. "
-        "Dataset 2 contains 'SP80-3280' genomic data. "
-        "Dataset 3 (Arabidopsis thaliana) is a model organism but not requested for this specific sugarcane comparison. "
+        "Dataset 1 contains 'R570' and Dataset 2 contains 'SP80-3280'. "
+        "Dataset 3 is Arabidopsis (irrelevant here). "
         "Result: Selecting Datasets 1 and 2."
     ),
     relevant_file_ids=[
@@ -24,8 +19,8 @@ _EX_RELEVANT_MATCH = PruningOutput(
 
 _EX_NO_MATCH = PruningOutput(
     scratchpad=(
-        "The query 'What is the capital of Brazil?' is a general knowledge question and does not relate to "
-        "any genomic datasets or bioinformatics research intent. No files are required to answer this."
+        "The query 'What is the capital of Brazil?' is general knowledge and does not relate to "
+        "genomic datasets. No files are required."
     ),
     relevant_file_ids=[],
     reasoning="General query unrelated to attached genomic datasets."
@@ -33,42 +28,24 @@ _EX_NO_MATCH = PruningOutput(
 
 _JSON_OPTS = {"indent": 2, "exclude_none": True}
 _FEW_SHOTS = f"""
-<example_scenario name="biological_relevance">
+<example name="biological_relevance">
   <user_query>Compare sucrose transporter genes between R570 and SP80-3280.</user_query>
   <ideal_response>
 {_EX_RELEVANT_MATCH.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
-</example_scenario>
+</example>
 
-<example_scenario name="irrelevant_query">
+<example name="irrelevant_query">
   <user_query>What is the capital of Brazil?</user_query>
   <ideal_response>
 {_EX_NO_MATCH.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
-</example_scenario>
+</example>
 """
 
+# 2. The Loosened System Prompt
 INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT_STR = """
-<role>
-You are a Biological Context Pruning Specialist. Your task is to analyze a user query against a list of available genomic datasets and identify ONLY the files strictly necessary for fulfilling the request.
-</role>
-
-<instructions>
-1. BIOLOGICAL VALIDITY CHECK: First, determine if the <user_query> contains valid biological entities (genes, cultivars, accessions) or research intent. If the query is gibberish or nonsensical, select ZERO files.
-2. DIRECT MATCHING: Include files that explicitly mention the cultivars (e.g., R570, SP80-3280), genes, or organisms in the query.
-3. FUNCTIONAL NECESSITY: Include reference genomes (e.g., Sorghum bicolor, Saccharum spontaneum) if the query implies a comparative analysis, alignment (BLAST), or synteny mapping.
-4. PARSIMONY PRINCIPLE: When in doubt, exclude. The goal is to maximize context space by removing low-relevance metadata.
-5. CHAIN-OF-THOUGHT: Use the <scratchpad> to justify why each selected file is mandatory for the specific research goal.
-</instructions>
-
-<few_shot_scenarios>
-{few_shots}
-</few_shot_scenarios>
-
-<output_directive>
-You must respond with a JSON object that strictly follows this schema:
-{pruning_output_schema}
-</output_directive>
+You are the Biological Context Pruning Specialist. Your job is to review a user's query against a list of available genomic datasets and identify ONLY the files that are strictly necessary to fulfill the request.
 
 <input_data>
 <user_query>
@@ -79,17 +56,34 @@ You must respond with a JSON object that strictly follows this schema:
 {file_list}
 </available_files>
 </input_data>
+
+### Guidelines:
+* **Biological Validity:** If the query is just a greeting, general knowledge, or nonsensical, simply select zero files.
+* **Direct Matches:** Include files that explicitly mention the cultivars (e.g., R570, SP80-3280), genes, or organisms mentioned in the query.
+* **Functional Necessity:** Include reference genomes if the query implies a comparative analysis, alignment (BLAST), or synteny mapping.
+* **Parsimony Principle:** When in doubt, exclude the file. We want to maximize context space by removing low-relevance metadata.
+* **Think Aloud:** Use your `scratchpad` to briefly justify why each selected file is mandatory for the research goal before outputting the UUIDs.
+
+### Example Responses:
+{few_shots}
 """
 
+# Schema injection removed, LangChain's structured output will handle it natively.
 INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT = PromptTemplate(
     template=INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT_STR,
     input_variables=["query", "file_list"],
     partial_variables={
-        "pruning_output_schema": _PRUNING_OUTPUT_SCHEMA,
         "few_shots": _FEW_SHOTS
     }
 )
 
+
+# ------------------------------------------------------------------
+# Downstream System Injection Notes
+# ------------------------------------------------------------------
+
+# Softened from <strict_execution_rules> to <execution_guidelines> 
+# to prevent downstream ReAct agents from freezing up due to rigid constraints.
 INPUT_ANALYZER_GENOMIC_FILE_NOTE = PromptTemplate.from_template("""
 <system_injected_context type="genomic_dataset_attachment">
   <file_metadata>
@@ -97,11 +91,11 @@ INPUT_ANALYZER_GENOMIC_FILE_NOTE = PromptTemplate.from_template("""
     <s3_uri>{rustfs_uri}</s3_uri>
     <description>{description}</description>
   </file_metadata>
-  <strict_execution_rules>
-    1. DIRECT ACCESS DENIED: You cannot read the raw contents of this file directly into your context window.
-    2. TOOL USAGE REQUIRED: To analyze this dataset, you MUST pass the exact S3 URI (`{rustfs_uri}`) as an argument to a compatible backend tool (e.g., `run_blast`).
-    3. NO HALLUCINATION: If the user requests metrics (e.g., N50, GC content) and you lack a specific tool to compute them from the S3 URI, you MUST explicitly state that you lack the capability. Do not invent, estimate, or infer statistics.
-  </strict_execution_rules>
+  <execution_guidelines>
+    * DIRECT ACCESS LIMITATION: You cannot read the raw contents of this file directly into your context window.
+    * TOOL USAGE REQUIRED: To analyze this dataset, you must pass the exact S3 URI (`{rustfs_uri}`) as an argument to a compatible backend tool.
+    * NO HALLUCINATIONS: If asked for metrics you cannot compute with available tools, explicitly state your limitations. Do not guess or estimate statistics.
+  </execution_guidelines>
 </system_injected_context>
 """)
 
@@ -112,13 +106,13 @@ INPUT_ANALYZER_MASSIVE_FILE_NOTE = PromptTemplate.from_template("""
     <state>Archived in vector memory. File exceeds instant-read context limits.</state>
   </file_status>
   <routing_directive>
-    MANDATORY ACTION: You MUST route the upcoming execution to either the 'rag_only' or 'all' pathways. Standard processing will fail.
+    * PREFERRED PATHWAY: Route upcoming executions involving this file to the 'rag_only' or 'all' pathways to search the vector memory.
   </routing_directive>
 </system_injected_context>
 """)
 
 INPUT_ANALYZER_FILE_CONTEXT_HEADER = PromptTemplate.from_template("""
 <uploaded_file_context>
-INSTRUCTION: The user has explicitly attached the following file data. Treat this data as the primary ground-truth context for fulfilling their query.
+INSTRUCTION: The user has attached the following file data. Treat this as the primary ground-truth context for fulfilling their query.
 ---
 """)

@@ -1,10 +1,5 @@
-import json
 from langchain_core.prompts import PromptTemplate
-from app.schemas.graph.knowledge_graph_schema import KnowledgeGraphComponents, BatchKnowledgeGraphComponents, KnowledgeGraphNode, KnowledgeGraphRelationship
-
-# We generate the schema programmatically to ensure the prompt always stays in sync with the Pydantic model.
-_EXTRACTION_SCHEMA = json.dumps(KnowledgeGraphComponents.model_json_schema(), indent=2)
-_BATCH_EXTRACTION_SCHEMA = json.dumps(BatchKnowledgeGraphComponents.model_json_schema(), indent=2)
+from app.schemas.graph.knowledge_graph_schema import KnowledgeGraphComponents, KnowledgeGraphNode, KnowledgeGraphRelationship
 
 # 1. Define examples as Pydantic objects
 _EX_EXTRACTION = KnowledgeGraphComponents(
@@ -38,77 +33,59 @@ _EX_EXTRACTION = KnowledgeGraphComponents(
 
 _JSON_OPTS = {"indent": 2, "exclude_none": True}
 _FEW_SHOTS = f"""
-<example_scenario name="biological_extraction">
+<example name="biological_extraction">
   <ideal_response>
 {_EX_EXTRACTION.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
-</example_scenario>
+</example>
 """
 
+# ---------------------------------------------------------
+# Single Extraction Prompt
+# ---------------------------------------------------------
 EXTRACTION_PROMPT_STR = """
-<role>
-You are a strict Biological Data Curator for a Sugarcane Knowledge Graph.
-Your job is to evaluate text and extract precise biological relationships into a JSON format.
-</role>
-
-<rules>
-1. RELEVANCE: If the text is NOT about plant biology, sugarcane (Saccharum), or genomics, you MUST set 'is_domain_relevant' to False and return empty arrays for nodes and relationships.
-2. MISSING DATA: If the text indicates a failure, a 404 error, or missing data (e.g., "I was unable to retrieve..."), mark as not relevant.
-3. NODE LABELS: Permitted types are exactly: ["Gene", "Cultivar", "Paper", "Trait", "Disease", "Tissue", "Stress"].
-4. RELATIONSHIP TYPES: Must be UPPERCASE strings (e.g., "UPREGULATES", "CAUSES", "RESISTS").
-5. CONFIDENCE: Provide an 'overall_confidence' score between 0.0 and 1.0.
-</rules>
-
-<few_shot_scenarios>
-{few_shots}
-</few_shot_scenarios>
-
-<output_directive>
-You must respond with a JSON object that strictly follows this schema:
-{extraction_schema}
-</output_directive>
+You are the Lead Biological Data Curator for a Sugarcane Knowledge Graph. Your job is to read scientific text and extract precise biological entities and their relationships.
 
 <text_to_analyze>
 {text}
 </text_to_analyze>
+
+### Guidelines:
+* **Relevance Check:** If the text is NOT about plant biology, sugarcane (Saccharum), or genomics—or if it's an error message (like "unable to retrieve")—simply mark it as irrelevant (`is_domain_relevant=False`) and leave nodes/relationships empty.
+* **Node Categorization:** Categorize entities using standard labels like "Gene", "Cultivar", "Paper", "Trait", "Disease", "Tissue", or "Stress".
+* **Relationship Naming:** Use clear, UPPERCASE action verbs for relationships (e.g., "UPREGULATES", "CAUSES", "RESISTS", "EXPRESSED_IN").
+* **Confidence Scoring:** Assign a realistic `overall_confidence` score (0.0 to 1.0) based on how explicitly the relationships are stated in the text.
+
+### Example Response:
+{few_shots}
 """
 
 EXTRACTION_PROMPT = PromptTemplate(
     template=EXTRACTION_PROMPT_STR,
     input_variables=["text"],
     partial_variables={
-        "extraction_schema": _EXTRACTION_SCHEMA,
         "few_shots": _FEW_SHOTS
     }
 )
 
+# ---------------------------------------------------------
+# Batch Extraction Prompt
+# ---------------------------------------------------------
 BATCH_EXTRACTION_PROMPT_STR = """
-<role>
-You are a strict Biological Data Curator for a Sugarcane Knowledge Graph.
-Your job is to evaluate a list of text chunks and extract precise biological relationships for EACH chunk.
-</role>
-
-<rules>
-1. RELEVANCE: For each chunk, if it is NOT about plant biology, sugarcane, or genomics, set 'is_domain_relevant' to False for that specific result.
-2. INDEPENDENCE: Treat each chunk as a separate entity. Do not mix data between chunks.
-3. ORDER: You MUST return exactly the same number of results as input chunks, in the same order.
-4. NODE LABELS: Permitted types: ["Gene", "Cultivar", "Paper", "Trait", "Disease", "Tissue", "Stress"].
-</rules>
-
-<output_directive>
-You must respond with a JSON object that strictly follows this schema:
-{batch_extraction_schema}
-</output_directive>
+You are the Lead Biological Data Curator for a Sugarcane Knowledge Graph. Your job is to evaluate a batch of text chunks and extract precise biological relationships for EACH chunk.
 
 <chunks_to_analyze>
 {chunks}
 </chunks_to_analyze>
+
+### Guidelines:
+* **Independent Analysis:** Treat each chunk as an isolated piece of data. Do not mix relationships, context, or entities between different chunks.
+* **Strict Ordering:** You must process and return the exact same number of results as the input chunks, preserving the original array order.
+* **Relevance Check:** If a specific chunk is not about plant biology, sugarcane, or genomics, mark its specific `is_domain_relevant` flag as False and leave its nodes/relationships empty.
+* **Standardized Labels:** Use standard labels ("Gene", "Cultivar", "Trait", etc.) and UPPERCASE relationship types ("UPREGULATES", "EXPRESSED_IN", "INTERACTS_WITH").
 """
 
 BATCH_EXTRACTION_PROMPT = PromptTemplate(
     template=BATCH_EXTRACTION_PROMPT_STR,
-    input_variables=["chunks"],
-    partial_variables={
-        "batch_extraction_schema": _BATCH_EXTRACTION_SCHEMA
-    }
+    input_variables=["chunks"]
 )
