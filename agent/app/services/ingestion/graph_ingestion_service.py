@@ -159,6 +159,7 @@ class GraphIngestionService:
 
             if len(results) != len(unique_ingestable_texts):
                 logger.error(f"LLM Batch Mismatch: Expected {len(unique_ingestable_texts)} results, got {len(results)}. Using zip() which may truncate.")
+                raise ValueError("LLM hallucinatory array mismatch. Aborting batch ingestion to prevent data corruption.")
 
             # 4. Validation & Filtering
             valid_items = []
@@ -210,7 +211,6 @@ class GraphIngestionService:
             return
 
         # 2. Entity Deduplication (Keep HIGHEST overall_confidence)
-        # We also store the associated chunk text for Qdrant summaries.
         unique_nodes_registry = {} # name -> (node_obj, confidence, chunk_text)
         
         for res, text in zip(results, source_texts):
@@ -218,8 +218,18 @@ class GraphIngestionService:
                 if node.label not in self.allowed_labels:
                     continue
                 
-                if node.name not in unique_nodes_registry or res.overall_confidence > unique_nodes_registry[node.name][1]:
-                    unique_nodes_registry[node.name] = (node, res.overall_confidence, text)
+                if node.name not in unique_nodes_registry:
+                    unique_nodes_registry[node.name] = {
+                        "node": node,
+                        "confidence": res.overall_confidence,
+                        "texts": [text]
+                    }
+                else:
+                    # Append new context to existing node so Qdrant gets the full picture!
+                    unique_nodes_registry[node.name]["texts"].append(text)
+                    # Keep the highest confidence score
+                    if res.overall_confidence > unique_nodes_registry[node.name]["confidence"]:
+                        unique_nodes_registry[node.name]["confidence"] = res.overall_confidence
 
         node_registry = {} # name -> {"id": uuid, "label": str}
 
@@ -236,18 +246,33 @@ class GraphIngestionService:
                     "llm_overall_confidence": confidence
                 })
                 
-                res_pg = await conn.execute(
-                    """
-                    INSERT INTO knowledge_entities (global_id, name, entity_type, owner_id, is_public, knowledge_entities_metadata)
-                    VALUES (%s, %s, %s, %s, %s, %s::jsonb)
-                    ON CONFLICT (name, owner_id) DO UPDATE 
-                    SET entity_type = EXCLUDED.entity_type,
-                        is_public = EXCLUDED.is_public,
-                        knowledge_entities_metadata = COALESCE(knowledge_entities.knowledge_entities_metadata, '{}'::jsonb) || EXCLUDED.knowledge_entities_metadata
-                    RETURNING global_id
-                    """,
-                    (temp_id, node.name, node.label, owner_id, final_is_public, meta_payload)
-                )
+                # SCHEMA ROUTING: Papers go to knowledge_references
+                if node.label == "Paper":
+                    res_pg = await conn.execute(
+                        """
+                        INSERT INTO knowledge_references (global_id, title)
+                        VALUES (:id, :title)
+                        RETURNING global_id
+                        """,
+                        {"id": temp_id, "title": node.name}
+                    )
+                # SCHEMA ROUTING: Everything else goes to knowledge_entities
+                else:
+                    res_pg = await conn.execute(
+                        """
+                        INSERT INTO knowledge_entities (global_id, name, entity_type, owner_id, is_public, knowledge_entities_metadata)
+                        VALUES (:id, :name, :type, :owner, :public, :meta::jsonb)
+                        ON CONFLICT (name, owner_id) DO UPDATE 
+                        SET entity_type = EXCLUDED.entity_type,
+                            is_public = EXCLUDED.is_public,
+                            knowledge_entities_metadata = COALESCE(knowledge_entities.knowledge_entities_metadata, '{}'::jsonb) || EXCLUDED.knowledge_entities_metadata
+                        RETURNING global_id
+                        """,
+                        {
+                            "id": temp_id, "name": node.name, "type": node.label, 
+                            "owner": str(owner_id), "public": final_is_public, "meta": meta_payload
+                        }
+                    )
                 row = await res_pg.fetchone()
                 if row:
                     node_registry[node.name] = {"id": row["global_id"], "label": node.label}
@@ -394,8 +419,8 @@ class GraphIngestionService:
                     for single_doc, single_id in zip(batch_docs, batch_ids):
                         try:
                             await target_vector_store.aadd_documents(
-                                documents=batch_docs,
-                                ids=batch_ids
+                                documents=[single_doc],
+                                ids=[single_id]
                             )
                         except Exception as inner_e:
                             logger.error(f"Failed on specific document ID {single_id}: {inner_e}")
