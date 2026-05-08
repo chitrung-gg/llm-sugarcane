@@ -10,6 +10,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
+from app.utils.graph.context_utils import format_tools_for_prompt
 from app.core.graph.nodes.components.human_review_node import make_human_review_node
 from app.core.graph.nodes.components.executor_node import make_executor_node
 from app.core.graph.nodes.components.planner_node import make_planner_node
@@ -53,11 +54,28 @@ async def build_super_agent_graph(
         available_tools=available_tools
     )
 
+    planner_tools_str = format_tools_for_prompt(
+        available_tools, 
+        include_description=True, 
+        include_params=False
+    )
+
+    inner_agent_capabilities = [
+        "Semantic Search (RAG): Automatically search Vector Databases (Qdrant) and Knowledge Graphs (Neo4j) for literature, trait-gene associations, and general bioinformatics knowledge.",
+        "Web Search: Search the internet for current events, updated papers, or general knowledge."
+    ]
+    
+    # Only append the tool capability if tools actually exist
+    if planner_tools_str.strip():
+        inner_agent_capabilities.append(
+            f"Tool Execution: Execute specialized bioinformatics tools. The current specialized tools available are:\n{planner_tools_str}"
+        )
+
     # 2. Initialize the OUTER Plan-and-Execute Graph
     workflow = StateGraph(PlanExecuteState)
 
     # 3. Add the 3 Outer Nodes using the StrEnum
-    workflow.add_node(AgentGraphNode.PLANNER, make_planner_node(llm_service, available_tools))
+    workflow.add_node(AgentGraphNode.PLANNER, make_planner_node(llm_service, inner_agent_capabilities))
     workflow.add_node(AgentGraphNode.EXECUTOR, make_executor_node(inner_react_graph))
     # workflow.add_node(AgentGraphNode.REPLANNER, make_replanner_node(llm_service))
     workflow.add_node(AgentGraphNode.HUMAN_REVIEW, make_human_review_node())

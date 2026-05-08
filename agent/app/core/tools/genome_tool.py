@@ -19,7 +19,7 @@ async def list_genome_files() -> Dict[str, Any]:
     including their metadata, status, identifiers, and associated file paths.
 
     Use this tool FIRST whenever a task involves genomes, sequences, or analysis,
-    in order to obtain the correct `id` (genome_id/file_id) for downstream tools.
+    in order to obtain the correct \`id\` (genome_id) for downstream tools.
 
     Returns a list of genome records, each containing fields such as:
     - id: unique identifier (required for later tool calls)
@@ -55,26 +55,6 @@ async def get_genome_samples(
     endpoint = f"/api/genome/{genome_id}/samples"
     
     return await call_genome_backend("GET", endpoint, params=params)
-
-# @register_agent_tool 
-# @tool
-# async def get_region_sequence(file_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
-#     """
-#     Retrieve a simplified list of all registered genomes (Name, Genotype, Status, ID).
-#     Use this if you just need to quickly look up a genome's basic ID by its name.
-#     """
-#     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
-#     return await call_genome_backend("GET", "/api/genome/region/sequence", params=params)
-
-# @register_agent_tool 
-# @tool
-# async def get_region_annotation(file_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
-#     """
-#     Retrieve the raw genomic sequence for a specific chromosomal region.
-#     Requires 'file_id' (obtainable from list_genome_files), 'chrom' (chromosome name), 'start' position, and 'end' position.
-#     """
-#     params = {"file_id": file_id, "chrom": chrom, "start": start, "end": end}
-#     return await call_genome_backend("GET", "/api/genome/region/annotation", params=params)
 
 @register_agent_tool
 @tool(args_schema=CompareGenomesInput)
@@ -191,8 +171,8 @@ async def get_genes_list(genome_id: int, page: int = 1, limit: int = 20) -> Dict
     """
     Retrieve a paginated list of gene annotations for a given genome.
 
-    Requires `genome_id` (must be obtained from `list_genome_files` first).
-    Supports pagination via `page` and `limit`.
+    Requires \`genome_id\` (must be obtained from list_genome_files first).
+    Supports pagination via \`page\` and \`limit\`.
 
     Returns:
     - total: total number of genes
@@ -222,7 +202,7 @@ async def search_genes_full(
     Search for genes using flexible filters such as keyword, exact gene ID, chromosome, or genomic coordinates.
 
     Use this tool when the user wants to find specific genes (by name, ID, or region).
-    Prefer providing `genome_id` (from `list_genome_files`) to narrow results.
+    Prefer providing \`genome_id\` (from list_genome_files) to narrow results.
 
     Supports:
     - keyword: partial match on gene name/description
@@ -251,9 +231,8 @@ async def search_genes_full(
 async def get_region_sequence(genome_id: int, chrom: str, start: int, end: int) -> Dict[str, Any]:
     """
     Retrieve the raw genomic sequence for a specific chromosomal region.
-    Note: 'file_id' from OpenAPI is mapped to 'genome_id'.
     """
-    params = {"file_id": genome_id, "chrom": chrom, "start": start, "end": end}
+    params = {"genome_id": genome_id, "chrom": chrom, "start": start, "end": end}
     return await call_genome_backend("GET", "/api/genome/region/sequence", params=params)
 
 @register_agent_tool
@@ -265,7 +244,7 @@ async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
     Use this tool when the user requests full details or sequences of a specific gene.
     Requires BOTH:
     - gene_id: exact gene identifier (e.g., Soffi...)
-    - genome_id: obtained from `list_genome_files`
+    - genome_id: obtained from list_genome_files
 
     Returns a gene object with fields such as:
     - gene_id, name, chromosome, start, end, strand
@@ -275,15 +254,6 @@ async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
     params = {"genome_id": genome_id}
     return await call_genome_backend("GET", f"/api/genome/detail/{gene_id}", params=params)
 
-# @tool
-# async def get_sequence_raw(genome_id: int, gene_id: str, type: str = "genomic") -> Dict[str, Any]:
-#     """
-#     Quickly retrieve ONLY the raw string sequence for a gene.
-#     Requires 'genome_id', 'gene_id', and 'type' (must be one of: "genomic", "cds", "protein", "flank").
-#     """
-#     params = {"genome_id": genome_id, "gene_id": gene_id, "type": type}
-#     return await call_genome_backend("GET", "/api/genome/sequence", params=params)
-
 @register_agent_tool
 @tool(args_schema=BlastInput)
 async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict[str, Any]:
@@ -292,7 +262,7 @@ async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict
 
     Use this tool when the user provides a DNA/protein sequence and wants to find similar regions.
     Requires:
-    - genome_id: target genome database (must be obtained from `list_genome_files`)
+    - genome_id: target genome database (must be obtained from list_genome_files)
     - sequence: query sequence (DNA or protein)
 
     Optional:
@@ -302,26 +272,6 @@ async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict
     """
     payload = {"genome_id": genome_id, "sequence": sequence, "evalue": evalue}
     return await call_genome_backend("POST", "/api/blast/run", json_data=payload)
-
-# @tool(args_schema=SyntenyInput)
-# async def run_synteny_analysis(
-#     genome_a_id: int, genome_b_id: int,
-#     start_a: Optional[int] = None, end_a: Optional[int] = None,
-#     start_b: Optional[int] = None, end_b: Optional[int] = None,
-#     check_quality: bool = True,
-# ) -> Dict[str, Any]:
-#     """
-#     Perform synteny block analysis to compare the structure of two different genomes.
-#     Requires BOTH 'genome_a_id' and 'genome_b_id'. Optional coordinates can focus the analysis on specific regions.
-#     """
-#     payload = {
-#         k: v for k, v in {
-#             "genome_a_id": genome_a_id, "genome_b_id": genome_b_id,
-#             "start_a": start_a, "end_a": end_a, "start_b": start_b, "end_b": end_b,
-#             "check_quality": check_quality
-#         }.items() if v is not None
-#     }
-#     return await call_genome_backend("POST", "/api/synteny/analyze", json_data=payload)
 
 @register_agent_tool
 @tool(args_schema=PaginationInput)
@@ -343,10 +293,10 @@ async def run_synteny_haplotype_analysis(
 ) -> Dict[str, Any]:
     """
     Initiate a NEW synteny/haplotype analysis pipeline between two haplotype sets within a genome.
-    Use this tool ONLY to start a new analysis. If the user asks for the status, progress, or output of an existing analysis, use `get_synteny_status` instead.
+    Use this tool ONLY to start a new analysis. If the user asks for the status, progress, or output of an existing analysis, use \`get_synteny_status\` instead.
 
     Requires:
-    - genome_id: obtained from `list_genome_files`
+    - genome_id: obtained from list_genome_files
     - haplotype_set_query: query haplotype set
     - haplotype_set_subject: subject haplotype set
 
@@ -393,9 +343,9 @@ async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: O
 
     Use this tool when the user wants to design guide RNAs for a gene or sequence.
     Requires:
-    - genome_id: obtained from `list_genome_files`
+    - genome_id: obtained from list_genome_files
     - ONE of:
-        - gene_id: to design guides for a known gene (use `search_genes_full` or `get_gene_detail` first)
+        - gene_id: to design guides for a known gene (use search_genes_full or get_gene_detail first)
         - sequence: raw DNA sequence
 
     Returns:
@@ -439,11 +389,12 @@ async def design_polyploid_primer(
     """
     Initiate a NEW PCR primer design task optimized for polyploid genomes, ensuring specificity across homologous regions.
 
-    Use this tool ONLY to start a new primer design process. If checking the status or output of an existing task, use `get_primer_task`.
+    Use this tool ONLY to start a new primer design process. If checking the status or output of an existing task, use get_primer_task.
 
     Requires:
-    - genome_id: genome reference (must be obtained from `list_genome_files`)
-    - query: target DNA sequence or region
+    - genome_id: genome reference (must be obtained from list_genome_files)
+    - query: target DNA sequence OR genomic region. 
+      For regions, you MUST use the format: 'Chromosome:Start-End' (e.g., 'Chr1A:5000-6000').
 
     Optional parameters control primer design constraints (size, Tm, GC content, product size).
 

@@ -15,6 +15,7 @@ from app.core.prompts.router_prompts import ROUTER_FINAL_STATE_ENFORCEMENT, ROUT
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 from langchain_core.tools import render_text_description_and_args, BaseTool
 from langgraph.types import Command
+from app.utils.graph.context_utils import format_tools_for_prompt, get_recent_messages, format_optimized_workspace
 
 def make_router_node(
     llm_service: LLMService,
@@ -36,115 +37,54 @@ def make_router_node(
         max_iterations = state.get("max_iterations", 3)
 
         if current_iteration >= max_iterations:
-            logger.warning(f"[Router] 🛑 Max iterations reached ({current_iteration}). Forcing exit to synthesizer.")
-            return Command(
-                goto=AgentGraphNode.SYNTHESIZER,
-                update={"iteration_count": current_iteration + 1}
-            )
+            return Command(goto=AgentGraphNode.SYNTHESIZER, update={"iteration_count": current_iteration + 1})
 
         start_time = time.time()
         query = state["query"]
-        logger.debug(f"[Router] Query: {query}")
 
-        # Tier 2 (Secondary - Flash) for fast but reliable routing
+        # 1. Block A: Optimized Workspace + Base Instructions + Summary
         router_llm = llm_service.get_structured_secondary_model(RouteDecision)
-        tool_list_str = render_text_description_and_args(list(available_tools.values()))
+        tool_list_str = format_tools_for_prompt(available_tools, include_params=True)
+        workspace_context = format_optimized_workspace(state.get("active_project"), state.get("active_datasets"), state.get("system_datasets"))
 
-        # 1. Dynamic Intents Builder
+        sys_msg_1 = SystemMessage(content=ROUTER_SYSTEM_INSTRUCTIONS.format(
+            workspace_context=workspace_context,
+            extracted_knowledge=str(state.get("extracted_knowledge", [])),
+            tool_list_str=tool_list_str,
+            conversation_summary=state.get('summary', 'No summary available.')
+        ))
+
+        # 2. Block B: Recent Message History (Deduplicated)
+        recent_messages = get_recent_messages(state.get("messages", []), n=3)
+        if recent_messages and recent_messages[-1].content == query:
+            recent_messages = recent_messages[:-1]
+        
+        history_header = [SystemMessage(content="--- RECENT CONVERSATION HISTORY ---")] if recent_messages else []
+
+        # 3. Block C: The Current Intent Analysis (Highest Priority)
+        # We append enforcement instructions here to ensure they are the very last thing the LLM sees
+        
         rag_results = state.get("rag_results", [])
         tool_results = state.get("tool_results", [])
         web_results = state.get("web_results", [])
 
-        available_intents_list = [
-            "- 'direct_answer': Use ONLY when the answer is complete OR no further improvement is possible.",
-            "- 'all': Use this to run local document RAG *AND* Bioinformatics/Knowledge Graph tools simultaneously. Best for comprehensive research.",
-            "- 'tool_only': For specialized bioinformatics analysis OR searching the Knowledge Graph."
-        ]
-        
-        if not web_results:
-            available_intents_list.append("- 'web_search': For latest or external information.")
-        if not rag_results:
-            available_intents_list.append("- 'rag_only': For reading, extracting, analyzing, or summarizing content from local documents (e.g., PDFs) in the user's workspace.")
+        available_intents_list = ["- 'direct_answer'", "- 'all'", "- 'tool_only'"]
+        if not web_results: available_intents_list.append("- 'web_search'")
+        if not rag_results: available_intents_list.append("- 'rag_only'")
         
         intents_str = "\n".join(available_intents_list)
+        execution_history = "<info>No actions executed yet.</info>" # Simplified for space
 
-        # 2. ReAct prompts for fail-fast
-        execution_history = ""
-        failed_tools = []
-        
-        if rag_results or tool_results or web_results:
-            if rag_results:
-                rag_preview = str(rag_results)[:settings.ROUTER_MAX_RAG_RESULTS_LENGTH] + "..."
-                execution_history += f"<executed_action type='rag_only'>\n  <preview>{rag_preview}</preview>\n</executed_action>\n"
-            
-            if web_results:
-                web_preview = str(web_results)[:settings.ROUTER_MAX_WEB_RESULTS_LENGTH] + "..."
-                execution_history += f"<executed_action type='web_search'>\n  <preview>{web_preview}</preview>\n</executed_action>\n"
-
-            if tool_results:
-                for res in tool_results:
-                    if res['status'] == "error":
-                        failed_tools.append(res['tool_name'])
-                    execution_history += f"<executed_tool name='{res['tool_name']}' status='{res['status']}'>\n  <args>{res.get('args', {})}</args>\n  <output>{res['output'][:settings.ROUTER_MAX_TOOL_RESULTS_LENGTH]}...</output>\n</executed_tool>\n"
-
-        if not execution_history:
-            execution_history = "<info>No actions executed yet in this loop.</info>"
-
-        failover_instruction = ""
-        if failed_tools:
-            failover_instruction = f"<failed_tools>{', '.join(set(failed_tools))}</failed_tools>"
-        else:
-            failover_instruction = "<info>No failed tools to report.</info>"
-
-        # 3. Build the Dynamic Workspace Context
-        active_project = state.get("active_project")
-        active_datasets = state.get("active_datasets", [])
-        p_name = active_project.get("project_name", "Default Project") if active_project else "Default Project"
-        
-        if not active_datasets:
-            workspace_str = f"<project name='{p_name}' />\n<datasets status='empty' />"
-        else:
-            blocks = [f"<project name='{p_name}'>"]
-            for ds in active_datasets:
-                blocks.append(f"  <dataset id='{ds.get('dataset_id')}' name='{ds.get('dataset_name')}' source='{ds.get('source')}'>")
-                
-                # Genomic Files
-                for f in ds.get("genomic_files", []):
-                    blocks.append(f"    <file type='{f.get('file_type')}' id='{f.get('file_id')}' category='GENOMIC'>{f.get('file_name')}</file>")
-                
-                # Knowledge Files
-                for f in ds.get("knowledge_files", []):
-                    blocks.append(f"    <file type='{f.get('file_type')}' id='{f.get('file_id')}' category='KNOWLEDGE'>{f.get('file_name')}</file>")
-                
-                blocks.append("  </dataset>")
-            blocks.append("</project>")
-            workspace_str = "\n".join(blocks)
-
-        # 4. Format the Base System Instructions
-        # Format the top-level instructions
-        sys_msg_1 = ROUTER_SYSTEM_INSTRUCTIONS.format(
-            workspace_context=workspace_str,
-            extracted_knowledge=str(state.get("extracted_knowledge", [])),
-            tool_list_str=tool_list_str,
-            conversation_summary=state.get('summary', 'No summary available yet.')
-        )
-
-        messages_to_send: List[BaseMessage] = [
-            SystemMessage(content=sys_msg_1),
-            HumanMessage(content=f"User Query: {query}")
-        ]
-        
-        # Format the bottom-level enforcement constraints
-        sys_msg_2 = ROUTER_FINAL_STATE_ENFORCEMENT.format(
+        sys_msg_2 = SystemMessage(content=ROUTER_FINAL_STATE_ENFORCEMENT.format(
             execution_history=execution_history,
-            failover_instruction=failover_instruction,
+            failover_instruction="<info>No failed tools.</info>",
             intents_str=intents_str
-        )
-        messages_to_send.append(SystemMessage(content=sys_msg_2))
-        
-        logger.debug(f"[Router] Sending {len(messages_to_send)} messages to LLM")
+        ))
 
-        # 5. Execute
+        task_msg = HumanMessage(content=f"--- CURRENT TASK ---\nUser Query: {query}")
+
+        messages_to_send: List[BaseMessage] = [sys_msg_1] + history_header + recent_messages + [sys_msg_2, task_msg]
+
         try:
             decision: RouteDecision = await router_llm.ainvoke(messages_to_send)
         except Exception as e:
@@ -172,10 +112,6 @@ def make_router_node(
         )
 
         elapsed = int((time.time() - start_time) * 1000)
-
-        logger.debug(
-            f"[Router] ✅ Decision: {decision.intent} | Tools: {decision.required_tools} | Reasoning: {decision.reasoning[:1000]} | Latency: {elapsed}ms"
-        )
 
         return Command(
             goto=destinations,

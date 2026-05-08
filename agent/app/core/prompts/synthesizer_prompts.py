@@ -37,7 +37,6 @@ You are an expert Bioinformatics Research Assistant specializing in Sugarcane Ge
   <original_query>{query}</original_query>
   <strategic_guidance>{guidance_text}</strategic_guidance>
   <retrieved_evidence>{context_string}</retrieved_evidence>
-  <available_bioinformatics_tools>{tool_list_str}</available_bioinformatics_tools>
 </input_data>
 
 ### Guidelines:

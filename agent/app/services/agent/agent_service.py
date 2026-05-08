@@ -334,21 +334,24 @@ class AgentService:
                             "metadata": project_db.dataset_metadata
                         }
 
-                # 1. Fetch public dataset IDs (always included)
+                # 1. Fetch public dataset IDs (always included in system_datasets)
                 public_ids = await self.workspace_service.get_public_dataset_ids()
                 
-                # 2. Determine project dataset IDs (fallback if none selected)
+                # 2. Determine user/project dataset IDs (active_datasets)
                 selected_ids = dataset_ids or []
                 project_ids = []
                 if not selected_ids and project_id:
                     project_ids = await self.workspace_service.get_project_dataset_ids(project_id)
                 
-                # 3. Combine and deduplicate
-                final_dataset_ids = list(set(public_ids + selected_ids + project_ids))
-
+                active_dataset_ids = list(set(selected_ids + project_ids))
+                
+                # Fetch all relevant datasets
+                all_ids = list(set(public_ids + active_dataset_ids))
                 active_datasets = []
-                if final_dataset_ids:
-                    datasets_db = await self.workspace_service.get_datasets_by_ids(final_dataset_ids)
+                system_datasets = []
+                
+                if all_ids:
+                    datasets_db = await self.workspace_service.get_datasets_by_ids(all_ids)
                     
                     for ds in datasets_db:
                         genomic_files = []
@@ -356,7 +359,6 @@ class AgentService:
                         
                         for f in ds.files:
                             # Categorize the file so the LLM knows what to do with it
-                            # Adjust this list based on your actual IngestionSourceType enums
                             is_genomic = is_genomic_file(f.file_name)
                             
                             agent_file = {
@@ -372,14 +374,21 @@ class AgentService:
                                 genomic_files.append(agent_file)
                             else:
                                 knowledge_files.append(agent_file)
-                                
-                        active_datasets.append({
+                        
+                        agent_ds = {
                             "dataset_id": str(ds.id),
                             "dataset_name": ds.name,
                             "source": "SYSTEM_LIBRARY" if ds.is_public else "USER_WORKSPACE",
                             "genomic_files": genomic_files,
                             "knowledge_files": knowledge_files
-                        })
+                        }
+                        
+                        if ds.is_public:
+                            system_datasets.append(agent_ds)
+                        
+                        if str(ds.id) in [str(aid) for aid in active_dataset_ids]:
+                            active_datasets.append(agent_ds)
+
                 # Build initial state
                 input_state = {
                     "query": query,
@@ -391,7 +400,8 @@ class AgentService:
                     "past_steps": [],      
                     "final_answer": "",
                     "active_project": active_project, 
-                    "active_datasets": active_datasets
+                    "active_datasets": active_datasets,
+                    "system_datasets": system_datasets
                 }
 
 

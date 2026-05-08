@@ -17,10 +17,11 @@ from app.services.llm.llm_service import LLMService
 from app.core.prompts.synthesizer_prompts import SYNTHESIZER_SYSTEM_PROMPT, SYNTHESIZER_FINAL_WARNING
 from app.schemas.agent.synthesizer import SynthesizerOutput
 
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
-from langchain_core.tools import BaseTool, render_text_description_and_args
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.tools import BaseTool
 from langgraph.types import Command
-    
+from app.utils.graph.context_utils import get_recent_messages, format_optimized_workspace
+
 def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
     @tracing(observation_type=ObservationType.CHAIN)
     async def synthesizer(state: AgentState) -> Command[
@@ -36,40 +37,37 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         query = state["query"]
         messages = state.get("messages", [])
 
-        # 1. Rebuild Workspace Context from New State
+        # 1. Unified Workspace Context (Project + Datasets)
         active_project = state.get("active_project")
         active_datasets = state.get("active_datasets", [])
+        system_datasets = state.get("system_datasets", [])
         
-        p_name = active_project.get("project_name", "Default Project") if active_project else "Default Project"
-        workspace_str = f"ACTIVE PROJECT: {p_name}\n"
-        
-        if active_datasets:
-            workspace_str += "ACTIVE DATASETS:\n"
-            for ds in active_datasets:
-                workspace_str += f"- {ds.get('dataset_name')} (ID: {ds.get('dataset_id')})\n"
-        else:
-            workspace_str += "No specific datasets active.\n"
+        workspace_context = format_optimized_workspace(active_project, active_datasets, system_datasets)
 
-        # 2. Format execution context
-        rag_context = "\n".join([f"- [Doc: {r.get('source_file')}] {r.get('content')}" for r in state.get("rag_results", [])])
-        web_context = "\n".join([f"- [{r.get('title')}] ({r.get('link')}): {r.get('snippet')}" for r in state.get("web_results", [])])
-        tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')}" for r in state.get("tool_results", [])])
+        # 2. Format execution context (with truncation)
+        rag_results = state.get("rag_results", [])[:5]
+        web_results = state.get("web_results", [])[:5]
+        tool_results = state.get("tool_results", [])[-5:] 
+        
+        rag_context = "\n".join([f"- [Doc: {r.get('source_file')}] {r.get('content')[:1000]}..." for r in rag_results])
+        web_context = "\n".join([f"- [{r.get('title')}] ({r.get('link')}): {r.get('snippet')}" for r in web_results])
+        tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')[:2000]}..." for r in tool_results])
         knowledge_context = str(state.get("extracted_knowledge", []))
 
         context_string = f"""
-            --- ACTIVE WORKSPACE/FILE CONTEXT ---
-            {workspace_str }
+            --- UNIFIED WORKSPACE CONTEXT ---
+            {workspace_context}
             
             --- EXTRACTED KNOWLEDGE (FACTS/METADATA) ---
             {knowledge_context if knowledge_context != "[]" else "No structured knowledge extracted yet."}
 
-            --- RAG KNOWLEDGE ---
+            --- RAG KNOWLEDGE (Top 5) ---
             {rag_context if rag_context else "No RAG data found."}
 
-            --- WEB SEARCH RESULTS ---
+            --- WEB SEARCH RESULTS (Top 5) ---
             {web_context if web_context else "No web data found."}
 
-            --- TOOL OUTPUTS (Check here for successful actions) ---
+            --- TOOL OUTPUTS (Last 5 calls) ---
             {tool_context if tool_context else "No tool data found."}
         """
 
@@ -78,9 +76,6 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         guidance_text = ""
         if router_guidance:
             guidance_text = f"\nROUTER INSTRUCTIONS FOR THIS RESPONSE: {router_guidance}\n"
-
-        # Render Tool Descriptions
-        tool_list_str = render_text_description_and_args(list(available_tools.values()))
         
         # Dynamically add instructions if the agent is about to give up
         final_warning = ""
@@ -93,7 +88,6 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         system_prompt = SYNTHESIZER_SYSTEM_PROMPT.format(
             query=query,
             guidance_text=guidance_text,
-            tool_list_str=tool_list_str,
             context_string=context_string,
             final_warning=final_warning
         )
@@ -101,19 +95,17 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         # Tier 1 for best quality synthesis
         llm = llm_service.get_structured_primary_model(SynthesizerOutput)
 
-        messages_to_send: List[BaseMessage] = [
-            SystemMessage(content=system_prompt)
-        ]
+        # Include recent messages for context awareness
+        recent_messages = get_recent_messages(state.get("messages", []), n=3)
 
-        if messages:
-            messages_to_send.extend(messages)
+        messages_to_send: List[BaseMessage] = [
+            SystemMessage(content=system_prompt),
+            *recent_messages,
+            HumanMessage(content=query)
+        ]
 
         try:
             result = await llm.ainvoke(messages_to_send)
-            # result = await asyncio.wait_for(
-            #     llm.ainvoke(messages_to_send),
-            #     timeout=synthesizer_timeout
-            # )
         except asyncio.TimeoutError:
             logger.error(f"[Synthesizer] ❌ LLM generation timed out after {synthesizer_timeout} seconds.")
             return Command(

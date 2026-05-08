@@ -11,6 +11,7 @@ from app.services.llm.llm_service import LLMService
 from app.schemas.agent.pruning import PruningOutput
 from app.core.prompts.input_analyzer_prompts import INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT
 from langgraph.types import Command
+from app.utils.graph.context_utils import get_recent_messages, format_optimized_workspace
 
 def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service: LLMService):
     @tracing(observation_type=ObservationType.CHAIN)
@@ -23,8 +24,9 @@ def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service:
         query = state.get("query", "")
         summary = state.get("summary", "")
         past_steps = state.get("past_steps", [])
-        project = state.get("active_project")
+        active_project = state.get("active_project")
         datasets = state.get("active_datasets") or []
+        system_datasets = state.get("system_datasets", [])
 
         filtered_datasets = datasets
         
@@ -32,41 +34,32 @@ def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service:
             logger.info(f"[Input Analyzer] ✂️ Pruning {len(datasets)} active datasets for relevance...")
             
             # 1. Build an Enriched Context Query
-            # This ensures the LLM sees the big picture, not just the current sub-step.
-            step_history = "\n".join([f"- {obs.summary}" for obs in past_steps]) if past_steps else "None"
+            # Include recent messages and unified workspace context
+            recent_messages_text = "\n".join([f"{m.type}: {m.content}" for m in get_recent_messages(state.get("messages", []), n=3)])
+            
+            step_history = "\n".join([f"- Step {obs.step_id}: {obs.summary}" for obs in past_steps]) if past_steps else "None"
+            
+            # Use the optimized utility for the file list
+            workspace_context = format_optimized_workspace(active_project, datasets, system_datasets)
             
             enriched_query = (
-                f"--- OVERALL CONTEXT ---\n"
-                f"{summary}\n\n"
-                f"--- PREVIOUS STEPS COMPLETED ---\n"
+                f"--- CONVERSATION HISTORY ---\n"
+                f"{summary}\n"
+                f"{recent_messages_text}\n\n"
+                f"--- RESEARCH PROGRESS (PAST STEPS) ---\n"
                 f"{step_history}\n\n"
                 f"--- CURRENT TASK ---\n"
                 f"{query}"
             )
             
-            # 2. Format file list for the LLM
-            file_list_str = ""
-            for ds in datasets:
-                ds_name = ds.get('dataset_name', 'Unknown')
-                ds_id = ds.get('dataset_id', 'N/A')
-                
-                g_files = [f.get("file_name") for f in ds.get("genomic_files", [])]
-                k_files = [f.get("file_name") for f in ds.get("knowledge_files", [])]
-                
-                file_list_str += f"- Dataset ID: {ds_id} | Name: '{ds_name}'\n"
-                if g_files:
-                    file_list_str += f"  * Genomic: {', '.join(g_files)}\n"
-                if k_files:
-                    file_list_str += f"  * Knowledge: {', '.join(k_files)}\n"
-
             try:
                 # Use Tier 3 (Flash Lite) for quick selection
                 pruner = llm_service.get_structured_tertiary_model(PruningOutput)
                 
                 selection: PruningOutput = await pruner.ainvoke(
                     INPUT_ANALYZER_PRUNING_SYSTEM_PROMPT.format(
-                        query=enriched_query, # Pass the enriched context!
-                        file_list=file_list_str
+                        query=enriched_query, 
+                        file_list=workspace_context # Now uses the unified, clean XML structure
                     )
                 )
 
@@ -91,13 +84,9 @@ def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service:
         return Command(
             goto=AgentGraphNode.ROUTER,
             update={
-                # Provide the pruned list for downstream tools
                 "active_datasets": filtered_datasets, 
-                
-                # SAFEGUARD: Preserve the full original list so it isn't permanently deleted from the state
                 "original_datasets": datasets,
-                
-                # Reset execution tracking arrays for this step
+                "system_datasets": system_datasets,
                 "iteration_count": 0,
                 "required_tools": []
             }

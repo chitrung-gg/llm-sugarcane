@@ -44,8 +44,8 @@ class SyntenyHaplotypeInput(BaseModel):
     homologous_group: Optional[int] = None
 
 class PrimerDesignInput(BaseModel):
-    genome_id: int
-    query: str
+    genome_id: int = Field(..., description="Genome identifier (must be obtained from list_genome_files)")
+    query: str = Field(..., description="The target DNA sequence OR genomic region. For regions, use the format 'Chromosome:Start-End' (e.g., 'Chr1A:1000-2000').")
     primer_num_return: int = 20
     primer_product_size_range: str = "100-400"
     primer_opt_size: int = 20
@@ -100,9 +100,9 @@ class BatchSequencesInput(BaseModel):
 
 class InvestigateRegionInput(BaseModel):
     genome_id: int = Field(..., description="Genome ID")
-    chrom: str = Field(..., description="Chromosome")
-    start: int = Field(..., description="Start position")
-    end: int = Field(..., description="End position")
+    chrom: str = Field(..., description="The chromosome identifier. You MUST use the parameter name 'chrom'.")
+    start: int = Field(..., description="Start coordinate position. You MUST use the parameter name 'start'.")
+    end: int = Field(..., description="End coordinate position. You MUST use the parameter name 'end'.")
     limit: int = Field(50, description="Limit")
 
 class RegionSequenceInput(BaseModel):

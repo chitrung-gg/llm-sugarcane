@@ -12,7 +12,7 @@ class AgentStepPlan(BaseModel):
     """Represents a single deterministic step in the research plan."""
     step_id: int = Field(description="Sequential ID of the step (e.g., 1, 2, 3)")
     description: str = Field(description="The clear, actionable objective for the downstream ReAct agent to execute.")
-    
+
     # --- Replanning & Internal Tracking (Ignored by Planner LLM) ---
     status: PlanStatus = Field(default=PlanStatus.PENDING)
     error_message: Optional[str] = Field(
@@ -41,10 +41,11 @@ class PlanExecuteState(TypedDict):
     # Recycled Unified Context
     active_project: Optional[AgentProject]
     active_datasets: List[AgentDataset]
+    system_datasets: List[AgentDataset]
 
     # Plan state
     plan: List[AgentStepPlan] 
     past_steps: List[AgentStepObservation]
 
-    # Iteration & results
+    # Results
     final_answer: str

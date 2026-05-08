@@ -18,6 +18,7 @@ from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState, WebResult
 from app.core.prompts.web_search_prompts import WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT
 from app.schemas.agent.web_search import OptimizedSearchQuery
+from app.utils.graph.context_utils import get_recent_messages
 
 def make_web_search_node(
     searx_wrapper: SearxSearchWrapper,
@@ -56,18 +57,18 @@ def make_web_search_node(
                 conversation_summary=state.get("summary", "No prior context.")
             )
 
+            # Include recent messages for context
+            recent_messages = get_recent_messages(state.get("messages", []), n=3)
+
             messages: List[BaseMessage] = [
                 SystemMessage(content=system_prompt),
+                *recent_messages,
                 HumanMessage(content=f"Latest Query: {original_query}")
             ]
 
             try:
                 rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedSearchQuery)
                 rewritten_result = await rewriter_llm.ainvoke(messages)
-                # rewritten_result = await asyncio.wait_for(
-                #     rewriter_llm.ainvoke(messages), 
-                #     timeout=settings.WEB_SEARCH_TIMEOUT_SEC
-                # )
                 optimized_query = rewritten_result.search_query
 
                 if len(optimized_query) > max_query_length:
@@ -75,9 +76,6 @@ def make_web_search_node(
                     optimized_query = original_query
                 else:
                     logger.debug(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
-            except asyncio.TimeoutError:
-                logger.warning("[Web Search] Query optimization timed out. Falling back to original query.")
-                optimized_query = original_query
             except Exception as e:
                 logger.warning(f"[Web Search] Query optimization failed: {e}. Falling back to original query.")
                 optimized_query = original_query
