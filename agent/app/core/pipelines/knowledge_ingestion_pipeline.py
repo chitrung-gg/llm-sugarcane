@@ -77,7 +77,7 @@ def knowledge_ingestion_pipeline():
             owner_id = uuid.UUID(owner_id_str) if owner_id_str and owner_id_str != "SYSTEM" else SYSTEM_OWNER_ID
 
             await container.graph_ingestion_service.ingest_knowledge(
-                source_text=source_text,
+                source_texts=[source_text],
                 source_metadata=source_metadata,
                 owner_id=owner_id,
                 is_public=meta.get("is_public")
@@ -127,9 +127,9 @@ def knowledge_ingestion_pipeline():
             
             source_texts = [item.get("source_text") for item in batch]
 
-            await container.graph_ingestion_service.ingest_knowledge_batch(
+            await container.graph_ingestion_service.ingest_knowledge(
                 source_texts=source_texts,
-                source_metadata=first_meta, # Shared meta for now
+                source_metadata=first_meta,
                 owner_id=owner_id,
                 is_public=first_meta.get("is_public")
             )
@@ -238,7 +238,7 @@ def knowledge_ingestion_pipeline():
                     try:
                         texts = [chunk.page_content for _, chunk in current_batch]
                         
-                        await container.graph_ingestion_service.ingest_knowledge_batch(
+                        await container.graph_ingestion_service.ingest_knowledge(
                             source_texts=texts,
                             source_metadata={
                                 **metadata, 

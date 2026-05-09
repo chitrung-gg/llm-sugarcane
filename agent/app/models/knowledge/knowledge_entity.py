@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Any, ClassVar, Dict, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
 import uuid
 
-from sqlmodel import Column, Field, SQLModel, UniqueConstraint
+from sqlmodel import Column, Field, Relationship, SQLModel, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from app.common.constants import SYSTEM_OWNER_ID
 

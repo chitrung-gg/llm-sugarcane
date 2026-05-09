@@ -13,13 +13,13 @@ from langgraph.graph.state import CompiledStateGraph, RunnableConfig
 from langgraph.types import Command
 from langgraph.errors import GraphInterrupt
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+from langchain_core.callbacks.base import BaseCallbackHandler
 from langfuse.langchain import CallbackHandler
 from loguru import logger
 from opentelemetry import trace
 import json
 
 from pydantic import BaseModel
-from sympy import Q
 
 from app.utils.files.files_classifier import is_genomic_file
 from app.utils.observability.tracing import tracing
@@ -263,31 +263,43 @@ class AgentService:
         dataset_ids: Optional[List[uuid.UUID]] = None
     ):
         """Streams the reasoning process using SSE."""
-        execution_id = uuid.uuid4()
+
+        # 1. Prepare config and fetch state FIRST
+        config: RunnableConfig = {"configurable": {"thread_id": str(thread_id)}}
+        state = await self.graph.aget_state(config)
+
+        # 2. Consolidate the Execution ID (The core fix!)
+        if state.next:
+            # We are resuming! Grab the original execution ID from the state's memory
+            execution_id = state.values.get("execution_id")
+            if not execution_id:
+                execution_id = uuid.uuid4()
+            logger.info(f"Resuming existing execution: {execution_id}")
+        else:
+            # Starting fresh
+            execution_id = uuid.uuid4()
+            logger.info(f"Starting new execution: {execution_id}")
         
-        # 1. Grab OTel Span Context
-        current_otel_span = trace.get_current_span()
-        span_context = current_otel_span.get_span_context()
-        otel_trace_id = format(span_context.trace_id, "032x") if span_context.is_valid else None
-        trace_ctx: TraceContext | None = {"trace_id": otel_trace_id} if otel_trace_id else None
+        # 3. Force Langfuse to group everything under this specific execution ID
+        # Use .hex to remove hyphens for OpenTelemetry compatibility
+        trace_ctx: TraceContext = {"trace_id": execution_id.hex}
 
         with self.langfuse_client.start_as_current_observation(
             name=LANGFUSE_GRAPH_OBSERVATION_NAME + "_stream",
             as_type="agent",
             trace_context=trace_ctx
         ) as root_span:
-            config: RunnableConfig = {
-                "configurable": {"thread_id": str(thread_id)},
-                "callbacks": [CallbackHandler(trace_context={"trace_id": root_span.trace_id, "parent_span_id": root_span.id})]
-            }
+            config["callbacks"] = cast(List[BaseCallbackHandler], [
+                CallbackHandler(
+                    trace_context={"trace_id": root_span.trace_id, "parent_span_id": root_span.id}
+                )
+            ])
             
             # Persist thread and user message
             await self._ensure_thread_exists(thread_id, project_id)
 
             if not resume_payload and query:
                 await self._save_chat_message(thread_id=thread_id, role="user", content=query, execution_id=execution_id)
-            # elif resume_payload and resume_payload.get('action') == UserFeedbackAction.MODIFY:
-            #     await self._save_chat_message(thread_id=thread_id, role="user", content="[User Approved Plan]", execution_id=execution_id)
 
             # Yield an initial thought to let the UI know we started
             initial_chunk = StreamChunk(
@@ -301,7 +313,7 @@ class AgentService:
 
             state = await self.graph.aget_state(config)
 
-            # 1. Check if we should resume or start fresh
+            # 4. Handle the Routing (We already fetched the state, so use it!)
             if state.next:
                 logger.info(f'Thread {thread_id} is suspended at {state.next}.')
                 
@@ -361,8 +373,12 @@ class AgentService:
                             # Categorize the file so the LLM knows what to do with it
                             is_genomic = is_genomic_file(f.file_name)
                             
+                            # Filter genomic files for system datasets
+                            if ds.is_public and is_genomic and not getattr(f, "is_public", False):
+                                continue
+
                             agent_file = {
-                                "file_id": str(f.file_id),
+                                "id": str(f.id),
                                 "file_name": f.file_name,
                                 "file_category": "GENOMIC" if is_genomic else "KNOWLEDGE",
                                 "file_type": str(f.file_type),
@@ -386,7 +402,7 @@ class AgentService:
                         if ds.is_public:
                             system_datasets.append(agent_ds)
                         
-                        if str(ds.id) in [str(aid) for aid in active_dataset_ids]:
+                        elif str(ds.id) in [str(aid) for aid in active_dataset_ids]:
                             active_datasets.append(agent_ds)
 
                 # Build initial state
@@ -396,8 +412,8 @@ class AgentService:
                     "iteration_count": 0,
                     "execution_id": execution_id,
                     "start_time": time.time(),
-                    "plan": [],            
-                    "past_steps": [],      
+                    # "plan": [],            
+                    # "past_steps": [],      
                     "final_answer": "",
                     "active_project": active_project, 
                     "active_datasets": active_datasets,
@@ -686,6 +702,7 @@ class AgentService:
             prompt = f"Generate a very short, concise title (max 5 words) for a biological research conversation that starts with: '{first_query}'"
             # Use secondary model for speed
             llm = self.llm_service.get_structured_secondary_model(ThreadTitleOutput)
+            # await self.llm_service.ainvoke(prompt)
             response = await llm.ainvoke(prompt)
             title = response.title.strip().strip('"')
             

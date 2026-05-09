@@ -8,7 +8,8 @@ from sqlmodel import Column, Field, Relationship, SQLModel
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
-from app.common.constants import UploadedFileType
+
+from app.models.user.knowledge_file_link import KnowledgeFileLink
 
 if TYPE_CHECKING:
     from app.models.user.user_project import UserProject
@@ -45,7 +46,6 @@ class UserDatasetFile(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     dataset_id: uuid.UUID = Field(foreign_key="user_datasets.id", index=True)
     
-    file_id: uuid.UUID = Field(index=True) # External reference
     file_name: str
     file_type: IngestionSourceType = Field(
         sa_column=Column(Enum(IngestionSourceType, validate_strings=True))
@@ -56,10 +56,15 @@ class UserDatasetFile(SQLModel, table=True):
         default=None,
         sa_column=Column(JSONB)
     )
+
+    genome_global_id: Optional[uuid.UUID] = Field(default=None, index=True)
     
+    knowledge_links: List[KnowledgeFileLink] = Relationship(
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
     created_at: datetime = Field(default_factory=datetime.now)
-    is_public: bool = Field(default=False, index=True)
-    # 🌟 SQLAlchemy Relationship
+
     dataset: Optional[UserDataset] = Relationship(back_populates="files")
 
     model_config = {"use_enum_values": True}

@@ -1,4 +1,5 @@
 from typing import Optional, List
+import uuid
 from pydantic import BaseModel, Field
 
 
@@ -27,6 +28,21 @@ class BlastInput(BaseModel):
     sequence: str
     # program: str = "blastn" # blastn, blastp...
     evalue: float = 1e-5
+
+class BlastTaskInput(BaseModel):
+    """Schema for dispatching a new BLAST Airflow task."""
+    genome_id: int = Field(
+        ..., 
+        description="ID of the target genome database. MUST be obtained from list_genome_files first."
+    )
+    sequence: str = Field(
+        ..., 
+        description="The query sequence (DNA or protein) to align."
+    )
+    evalue: float = Field(
+        default=1e-5, 
+        description="Significance threshold (e-value) for the BLAST search. Default is 1e-5."
+    )
 
 # class SyntenyInput(BaseModel):
 #     genome_a_id: int
@@ -114,3 +130,34 @@ class RegionSequenceInput(BaseModel):
 class PaginationInput(BaseModel):
     page: int = Field(1, ge=1, description="Page number")
     size: int = Field(50, ge=1, le=100, description="Page size")
+
+class ETLTriggerInput(BaseModel):
+    """Schema for triggering the backend ETL pipeline to ingest genome files."""
+    genome_global_id: uuid.UUID = Field(
+        ..., 
+        description="UUID representing the global ID of the genome being processed."
+    )
+    genome_name: str = Field(
+        ..., 
+        description="The human-readable name of the genome."
+    )
+    s3_uri: str = Field(
+        ..., 
+        description="The S3 URI path where the uploaded file is temporarily stored."
+    )
+    file_type: str = Field(
+        ..., 
+        description="Type of the file being ingested. MUST be one of: 'genome', 'assembly', 'gff3', 'cds', 'protein', 'gene'."
+    )
+    dataset_id: uuid.UUID = Field(
+        ..., 
+        description="UUID of the workspace dataset this file belongs to."
+    )
+    is_public: bool = Field(
+        default=False, 
+        description="Whether the ingested genome should be globally accessible."
+    )
+    user_id: Optional[uuid.UUID] = Field(
+        default=None, 
+        description="UUID of the user who uploaded the file."
+    )

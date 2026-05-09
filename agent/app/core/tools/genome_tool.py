@@ -1,11 +1,12 @@
 from typing import Optional, List, Dict, Any
+import uuid
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
 from app.core.tools.registry.registry_tool import register_agent_tool
 from app.services.tools.call_genome_backend import call_genome_backend
 from app.schemas.tool.genome_tool_schema import (
-    BlastInput, GeneListInput, GeneSearchInput, GetGenomeSamplesInput, PrimerDesignInput, SyntenyHaplotypeInput,
+    BlastInput, ETLTriggerInput, GeneListInput, GeneSearchInput, GetGenomeSamplesInput, PrimerDesignInput, SyntenyHaplotypeInput,
     CompareGenomesInput, GenomeAnalysisInput, ChromosomeDetailInput, CrossVarietySearchInput,
     CompareNeighborhoodsInput, GeneAllelesInput, GeneStructureInput, GenePromoterInput,
     BatchSequencesInput, InvestigateRegionInput, RegionSequenceInput, PaginationInput
@@ -19,7 +20,7 @@ async def list_genome_files() -> Dict[str, Any]:
     including their metadata, status, identifiers, and associated file paths.
 
     Use this tool FIRST whenever a task involves genomes, sequences, or analysis,
-    in order to obtain the correct \`id\` (genome_id) for downstream tools.
+    in order to obtain the correct `id` (genome_id) for downstream tools.
 
     Returns a list of genome records, each containing fields such as:
     - id: unique identifier (required for later tool calls)
@@ -171,8 +172,8 @@ async def get_genes_list(genome_id: int, page: int = 1, limit: int = 20) -> Dict
     """
     Retrieve a paginated list of gene annotations for a given genome.
 
-    Requires \`genome_id\` (must be obtained from list_genome_files first).
-    Supports pagination via \`page\` and \`limit\`.
+    Requires `genome_id` (must be obtained from list_genome_files first).
+    Supports pagination via `page` and `limit`.
 
     Returns:
     - total: total number of genes
@@ -202,7 +203,7 @@ async def search_genes_full(
     Search for genes using flexible filters such as keyword, exact gene ID, chromosome, or genomic coordinates.
 
     Use this tool when the user wants to find specific genes (by name, ID, or region).
-    Prefer providing \`genome_id\` (from list_genome_files) to narrow results.
+    Prefer providing `genome_id` (from list_genome_files) to narrow results.
 
     Supports:
     - keyword: partial match on gene name/description
@@ -254,34 +255,53 @@ async def get_gene_detail(gene_id: str, genome_id: int) -> Dict[str, Any]:
     params = {"genome_id": genome_id}
     return await call_genome_backend("GET", f"/api/genome/detail/{gene_id}", params=params)
 
+# @register_agent_tool
+# @tool(args_schema=BlastInput)
+# async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict[str, Any]:
+#     """
+#     Run a BLAST alignment of a query sequence against a selected genome database.
+
+#     Use this tool when the user provides a DNA/protein sequence and wants to find similar regions.
+#     Requires:
+#     - genome_id: target genome database (must be obtained from list_genome_files)
+#     - sequence: query sequence (DNA or protein)
+
+#     Optional:
+#     - evalue: significance threshold (default 1e-5)
+
+#     Returns BLAST results including hits, alignments, scores, e-values, and matched regions.
+#     """
+#     payload = {"genome_id": genome_id, "sequence": sequence, "evalue": evalue}
+#     return await call_genome_backend("POST", "/api/blast/run", json_data=payload)
+
 @register_agent_tool
 @tool(args_schema=BlastInput)
-async def run_blast(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict[str, Any]:
+async def create_blast_task(genome_id: int, sequence: str, evalue: float = 1e-5) -> Dict[str, Any]:
     """
-    Run a BLAST alignment of a query sequence against a selected genome database.
-
-    Use this tool when the user provides a DNA/protein sequence and wants to find similar regions.
-    Requires:
-    - genome_id: target genome database (must be obtained from list_genome_files)
-    - sequence: query sequence (DNA or protein)
-
-    Optional:
-    - evalue: significance threshold (default 1e-5)
-
-    Returns BLAST results including hits, alignments, scores, e-values, and matched regions.
+    Dispatch an asynchronous BLAST job to Airflow.
+    Use this instead of `run_blast` for long sequences or massive databases.
+    Returns a task_id which you must poll using `get_blast_result`.
     """
     payload = {"genome_id": genome_id, "sequence": sequence, "evalue": evalue}
-    return await call_genome_backend("POST", "/api/blast/run", json_data=payload)
+    return await call_genome_backend("POST", "/api/blast/task", json_data=payload)
 
 @register_agent_tool
-@tool(args_schema=PaginationInput)
-async def list_synteny_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
+@tool
+async def get_blast_result(task_id: int) -> Dict[str, Any]:
     """
-    List all previously initiated synteny analysis tasks and their current statuses/IDs.
-    Use this to find a task ID if the user asks about past synteny runs.
+    Get the status and results of a dispatched BLAST task.
     """
-    params = {"page": page, "size": size}
-    return await call_genome_backend("GET", "/api/synteny", params=params)
+    return await call_genome_backend("GET", f"/api/blast/result/{task_id}")
+
+# @register_agent_tool
+# @tool(args_schema=PaginationInput)
+# async def list_synteny_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
+#     """
+#     List all previously initiated synteny analysis tasks and their current statuses/IDs.
+#     Use this to find a task ID if the user asks about past synteny runs.
+#     """
+#     params = {"page": page, "size": size}
+#     return await call_genome_backend("GET", "/api/synteny", params=params)
 
 @register_agent_tool
 @tool(args_schema=SyntenyHaplotypeInput)
@@ -293,7 +313,7 @@ async def run_synteny_haplotype_analysis(
 ) -> Dict[str, Any]:
     """
     Initiate a NEW synteny/haplotype analysis pipeline between two haplotype sets within a genome.
-    Use this tool ONLY to start a new analysis. If the user asks for the status, progress, or output of an existing analysis, use \`get_synteny_status\` instead.
+    Use this tool ONLY to start a new analysis. If the user asks for the status, progress, or output of an existing analysis, use `get_synteny_status` instead.
 
     Requires:
     - genome_id: obtained from list_genome_files
@@ -324,16 +344,25 @@ async def get_synteny_status(task_id: int) -> Dict[str, Any]:
     Get the current execution status and retrieve the final results/output data of a synteny analysis task.
     Use this tool when the user wants to check if a previously initiated synteny task is done, or to get the actual results of the completed task.
     """
-    return await call_genome_backend("GET", f"/api/synteny/{task_id}")
+    return await call_genome_backend("GET", f"/api/synteny/result/{task_id}")
 
 @register_agent_tool
-@tool(args_schema=PaginationInput)
-async def list_crispor_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
+@tool
+async def get_crispor_result(task_id: int) -> Dict[str, Any]:
     """
-    List all CRISPOR design tasks.
+    Get the status and results of an existing CRISPOR task.
+    Use this to fetch the final gRNA designs and off-target evaluations.
     """
-    params = {"page": page, "size": size}
-    return await call_genome_backend("GET", "/api/crispor", params=params)
+    return await call_genome_backend("GET", f"/api/crispor/result/{task_id}")
+
+# @register_agent_tool
+# @tool(args_schema=PaginationInput)
+# async def list_crispor_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
+#     """
+#     List all CRISPOR design tasks.
+#     """
+#     params = {"page": page, "size": size}
+#     return await call_genome_backend("GET", "/api/crispor", params=params)
 
 @register_agent_tool
 @tool
@@ -359,14 +388,14 @@ async def run_crispor(genome_id: int, gene_id: Optional[str] = None, sequence: O
     params = {k: v for k, v in {"genome_id": genome_id, "gene_id": gene_id, "sequence": sequence}.items() if v is not None}
     return await call_genome_backend("POST", "/api/crispor", params=params)
 
-@register_agent_tool
-@tool(args_schema=PaginationInput)
-async def list_primer_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
-    """
-    List all primer design tasks.
-    """
-    params = {"page": page, "size": size}
-    return await call_genome_backend("GET", "/api/primer", params=params)
+# @register_agent_tool
+# @tool(args_schema=PaginationInput)
+# async def list_primer_tasks(page: int = 1, size: int = 50) -> Dict[str, Any]:
+#     """
+#     List all primer design tasks.
+#     """
+#     params = {"page": page, "size": size}
+#     return await call_genome_backend("GET", "/api/primer", params=params)
 
 @register_agent_tool
 @tool
@@ -375,7 +404,7 @@ async def get_primer_task(task_id: int) -> Dict[str, Any]:
     Get details and results of an existing primer design task.
     Use this to check the status or retrieve the output of a previously initiated primer design task.
     """
-    return await call_genome_backend("GET", f"/api/primer/{task_id}")
+    return await call_genome_backend("GET", f"/api/primer/result/{task_id}")
 
 @register_agent_tool
 @tool(args_schema=PrimerDesignInput)
@@ -413,3 +442,42 @@ async def design_polyploid_primer(
         "primer_min_gc": primer_min_gc, "primer_max_gc": primer_max_gc, "primer_opt_gc_percent": primer_opt_gc_percent
     }
     return await call_genome_backend("POST", "/api/primer/design_polyploid", json_data=payload)
+
+@register_agent_tool
+@tool
+async def check_genome_indexing_status(task_id: int) -> Dict[str, Any]:
+    """
+    Check the current status of a background genome indexing (ETL) pipeline.
+    
+    Use this tool when the user asks if their uploaded genome has finished processing, 
+    or if they want to know the result of a recently triggered indexing job.
+    """
+    return await call_genome_backend("GET", f"/api/v1/etl/result/{task_id}")
+
+# 1. The pure Python function (call this from knowledge_service)
+async def execute_trigger_genome_etl(
+    genome_global_id: uuid.UUID, 
+    genome_name: str, 
+    s3_uri: str, 
+    file_type: str, 
+    dataset_id: uuid.UUID,
+    is_public: bool = False,
+    user_id: Optional[uuid.UUID] = None
+) -> Dict[str, Any]:
+    payload = {
+        "genome_global_id": genome_global_id, "genome_name": genome_name,
+        "s3_uri": s3_uri, "file_type": file_type, "dataset_id": dataset_id,
+        "is_public": is_public, "user_id": user_id
+    }
+    payload = {k: v for k, v in payload.items() if v is not None}
+    return await call_genome_backend("POST", "/api/v1/etl/trigger-genome", json_data=payload)
+
+
+# 2. The LangChain Tool (The agent uses this)
+@register_agent_tool
+@tool(args_schema=ETLTriggerInput)
+async def trigger_genome_etl(*args, **kwargs) -> Dict[str, Any]:
+    """
+    Triggers the backend ETL pipeline to process and index genomic data files from S3.
+    """
+    return await execute_trigger_genome_etl(*args, **kwargs)

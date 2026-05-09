@@ -18,9 +18,6 @@ class IngestionSourceType(StrEnum):
     USER_PRIVATE_DOCUMENT = "user_private_document"
     USER_PRIVATE_DATABASE = "user_private_database"
     
-    # --- Agentic & Temporary Sources ---
-    AGENT_WEB_SEARCH = "agent_web_search"
-    
     # --- Agentic NCBI APIs ---
     NCBI_LITERATURE = "ncbi_literature"     # PubMed Abstracts
     NCBI_GENE = "ncbi_gene"                 # Gene Metadata & Ontology
