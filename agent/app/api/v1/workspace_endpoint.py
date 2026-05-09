@@ -3,9 +3,10 @@ import json
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 
-from app.core.dependencies import get_workspace_service, get_knowledge_service
+from app.core.dependencies import get_workspace_service, get_knowledge_service, get_storage_service
 from app.services.workspace.workspace_service import WorkspaceService
 from app.services.knowledge.knowledge_service import KnowledgeService
+from app.services.storage.storage_service import StorageService
 from app.models.user.user_project import UserProject
 from app.models.user.user_dataset import UserDataset, UserDatasetFile
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
@@ -176,6 +177,34 @@ async def upload_dataset_files(
         dataset_id=dataset_id,
         files_metadata=parsed_files_metadata
     )
+
+@router.get("/files/download")
+async def get_file_download_url(
+    file_id: Optional[uuid.UUID] = None,
+    s3_uri: Optional[str] = None,
+    workspace_service: WorkspaceService = Depends(get_workspace_service),
+    storage_service: StorageService = Depends(get_storage_service)
+):
+    """
+    Generate a pre-signed download URL for a file.
+    Can be requested via file_id (from DB) or raw s3_uri (from tool results).
+    """
+    target_uri = s3_uri
+
+    if file_id:
+        file_record = await workspace_service.get_file_by_id(file_id)
+        if not file_record:
+            raise HTTPException(status_code=404, detail="File record not found")
+        target_uri = file_record.rustfs_uri
+
+    if not target_uri:
+        raise HTTPException(status_code=400, detail="Either file_id or s3_uri must be provided")
+
+    try:
+        url = await storage_service.get_presigned_url(target_uri)
+        return {"download_url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate download URL: {str(e)}")
 
 @router.get("/projects/{project_id}/threads")
 async def list_project_threads(

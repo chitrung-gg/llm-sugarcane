@@ -16,7 +16,7 @@ from app.core.tools.registry.registry_tool import KNOWLEDGE_GRAPH_TOOL_REGISTRY
 from app.core.vector_store.vector_store import VectorStoreType
 from app.schemas.graph.knowledge_graph_schema import KnowledgeGraphComponents, BatchKnowledgeGraphComponents
 from app.services.llm.llm_service import LLMService
-from app.configs.storage.databases import genome_connection_pool
+from app.configs.storage.databases import genome_connection_pool, userdata_connection_pool
 from langchain_qdrant import QdrantVectorStore
 from langchain_neo4j.graphs.graph_document import GraphDocument, Node, Relationship
 from langchain_core.documents import Document
@@ -38,82 +38,7 @@ class GraphIngestionService:
         self.settings = get_settings()
         self.allowed_labels = {"Gene", "Cultivar", "Paper", "Trait", "Disease", "Tissue", "Stress"}
 
-    async def extract_components(self, text: str) -> KnowledgeGraphComponents:
-        prompt = EXTRACTION_PROMPT.format(text=text)
-        model = self.llm_service.get_structured_secondary_model(KnowledgeGraphComponents)
-        result = await model.ainvoke(prompt)
-        return cast(KnowledgeGraphComponents, result)
-
-    async def extract_components_batch(self, texts: List[str]) -> List[KnowledgeGraphComponents]:
-        """
-        Extracts components from a list of texts efficiently by using a single batch LLM call.
-        Falls back to concurrent individual calls if the batch call fails.
-        """
-        logger.debug(f"Starting batch extraction for {len(texts)} chunks...")
-        for i, text in enumerate(texts):
-            logger.debug(f"Chunk {i} [chars={len(text)}]: {text[:150]}...")
-        
-        try:
-            # Try single-call batch extraction first (more efficient)
-            # We use json.dumps to ensure the list of strings is formatted correctly for the prompt
-            prompt = BATCH_EXTRACTION_PROMPT.format(chunks=json.dumps(texts))
-            model = self.llm_service.get_structured_secondary_model(BatchKnowledgeGraphComponents)
-            
-            start_time = asyncio.get_event_loop().time()
-            result = await model.ainvoke(prompt)
-            duration = asyncio.get_event_loop().time() - start_time
-            logger.debug(f"Batch LLM extraction for {len(texts)} chunks completed in {duration:.2f}s")
-            
-            # Ensure we got the right number of results
-            if len(result.results) == len(texts):
-                return result.results
-            
-            logger.warning(f"Batch extraction returned {len(result.results)} instead of {len(texts)}. Falling back...")
-        except Exception as e:
-            logger.warning(f"Batch extraction failed: {str(e)}. Falling back to concurrent extraction...")
-
-        # Fallback: Concurrent individual extraction (old behavior)
-        tasks = [self.extract_components(text) for text in texts]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        valid_results = []
-        all_failed = True
-        for i, res in enumerate(results):
-            if isinstance(res, Exception):
-                logger.warning(f"Chunk {i} extraction failed: {str(res)}")
-                # Append an empty component so the lists remain the same length
-                valid_results.append(KnowledgeGraphComponents(
-                    nodes=[], relationships=[], is_domain_relevant=False, overall_confidence=0.0
-                ))
-            else:
-                all_failed = False
-                valid_results.append(res)
-        
-        if all_failed and texts:
-            raise ValueError(f"All {len(texts)} chunks in batch failed extraction.")
-                
-        return valid_results
-
-    def _get_text_hash(self, text: str) -> str:
-        return hashlib.md5(text.encode()).hexdigest()
-
     async def ingest_knowledge(
-        self,
-        source_text: str, 
-        source_metadata: Optional[Dict[str, Any]] = None,
-        project_name: Optional[str] = None,
-        owner_id: uuid.UUID = SYSTEM_OWNER_ID,
-        is_public: Optional[bool] = None
-    ):
-        await self.ingest_knowledge_batch(
-            source_texts=[source_text],
-            source_metadata=source_metadata,
-            project_name=project_name,
-            owner_id=owner_id,
-            is_public=is_public
-        )
-
-    async def ingest_knowledge_batch(
         self,
         source_texts: List[str], 
         source_metadata: Optional[Dict[str, Any]] = None,
@@ -155,7 +80,7 @@ class GraphIngestionService:
                 return
 
             # 3. Extract in batch
-            results = await self.extract_components_batch(unique_ingestable_texts)
+            results = await self._extract_components_batch(unique_ingestable_texts)
 
             if len(results) != len(unique_ingestable_texts):
                 logger.error(f"LLM Batch Mismatch: Expected {len(unique_ingestable_texts)} results, got {len(results)}. Using zip() which may truncate.")
@@ -199,6 +124,7 @@ class GraphIngestionService:
         project_name: Optional[str] = None
     ):
         tool_name = source_meta.get("tool", "unknown")
+        file_id_str = source_meta.get("file_id")
 
         # 1. Route to the Correct Vector Store
         target_vector_store = None
@@ -236,7 +162,9 @@ class GraphIngestionService:
         # 3. Save to PostgreSQL (Upsert Unique Entities)
         logger.info(f"Saving {len(unique_nodes_registry)} unique entities to PostgreSQL...")
         async with genome_connection_pool.connection() as conn:
-            for node_name, (node, confidence, _) in unique_nodes_registry.items():
+            for node_name, meta_data in unique_nodes_registry.items():
+                node = meta_data["node"]
+                confidence = meta_data["confidence"]
                 temp_id = uuid.uuid4()
                 
                 meta_payload = json.dumps({
@@ -252,6 +180,7 @@ class GraphIngestionService:
                         """
                         INSERT INTO knowledge_references (global_id, title)
                         VALUES (:id, :title)
+                        ON CONFLICT (title) DO UPDATE SET title = EXCLUDED.title
                         RETURNING global_id
                         """,
                         {"id": temp_id, "title": node.name}
@@ -276,6 +205,30 @@ class GraphIngestionService:
                 row = await res_pg.fetchone()
                 if row:
                     node_registry[node.name] = {"id": row["global_id"], "label": node.label}
+
+        # 3.5 Save Many-to-Many Links to PostgreSQL (Workspace Schema)
+        if file_id_str and node_registry:
+            logger.info(f"Linking {len(node_registry)} entities to file {file_id_str}...")
+            async with userdata_connection_pool.connection() as ud_conn:
+                for node_name, info in node_registry.items():
+                    confidence = unique_nodes_registry[node_name]["confidence"]
+                    entity_id = info["id"]
+                    
+                    # We use an UPSERT here just in case multiple chunks from the same file 
+                    # extract the same entity. We update to keep the highest relevance score!
+                    await ud_conn.execute(
+                        """
+                        INSERT INTO knowledge_file_links (file_id, knowledge_entity_id, relevance_score)
+                        VALUES (:file_id, :entity_id, :score)
+                        ON CONFLICT (file_id, knowledge_entity_id) DO UPDATE 
+                        SET relevance_score = GREATEST(knowledge_file_links.relevance_score, EXCLUDED.relevance_score)
+                        """,
+                        {
+                            "file_id": file_id_str, 
+                            "entity_id": str(entity_id), 
+                            "score": confidence
+                        }
+                    )
 
         # 4. Save to Neo4j (Add all GraphDocuments in one call)
         logger.info(f"Saving {len(results)} chunks to Neo4j...")
@@ -314,6 +267,7 @@ class GraphIngestionService:
                             "confidence": rel.confidence,
                             "owner_id": str(owner_id),
                             "is_public": final_is_public,
+                            "source_file_id": file_id_str,
                             "source_type": tool_config.source_type_label,
                             "source_tier": tool_config.ingestion_confidence_tier.value,
                             "tool_used": tool_name
@@ -342,7 +296,11 @@ class GraphIngestionService:
         
         seen_texts = set() # For deduplicating identical summaries
         
-        for node_name, (node, confidence, text) in unique_nodes_registry.items():
+        for node_name, meta_data in unique_nodes_registry.items():
+            node = meta_data["node"]
+            confidence = meta_data["confidence"]
+            text = meta_data["texts"][0]    # use the first chunk's text for the summary
+
             if node_name in node_registry:
                 node_info = node_registry[node_name]
                 text_to_embed = (
@@ -452,3 +410,62 @@ class GraphIngestionService:
             return False
             
         return True
+
+    async def _extract_components(self, text: str) -> KnowledgeGraphComponents:
+        prompt = EXTRACTION_PROMPT.format(text=text)
+        model = self.llm_service.get_structured_secondary_model(KnowledgeGraphComponents)
+        result = await model.ainvoke(prompt)
+        return cast(KnowledgeGraphComponents, result)
+
+    async def _extract_components_batch(self, texts: List[str]) -> List[KnowledgeGraphComponents]:
+        """
+        Extracts components from a list of texts efficiently by using a single batch LLM call.
+        Falls back to concurrent individual calls if the batch call fails.
+        """
+        logger.debug(f"Starting batch extraction for {len(texts)} chunks...")
+        for i, text in enumerate(texts):
+            logger.debug(f"Chunk {i} [chars={len(text)}]: {text[:150]}...")
+        
+        try:
+            # Try single-call batch extraction first (more efficient)
+            # We use json.dumps to ensure the list of strings is formatted correctly for the prompt
+            prompt = BATCH_EXTRACTION_PROMPT.format(chunks=json.dumps(texts))
+            model = self.llm_service.get_structured_secondary_model(BatchKnowledgeGraphComponents)
+            
+            start_time = asyncio.get_event_loop().time()
+            result = await model.ainvoke(prompt)
+            duration = asyncio.get_event_loop().time() - start_time
+            logger.debug(f"Batch LLM extraction for {len(texts)} chunks completed in {duration:.2f}s")
+            
+            # Ensure we got the right number of results
+            if len(result.results) == len(texts):
+                return result.results
+            
+            logger.warning(f"Batch extraction returned {len(result.results)} instead of {len(texts)}. Falling back...")
+        except Exception as e:
+            logger.warning(f"Batch extraction failed: {str(e)}. Falling back to concurrent extraction...")
+
+        # Fallback: Concurrent individual extraction (old behavior)
+        tasks = [self._extract_components(text) for text in texts]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        valid_results = []
+        all_failed = True
+        for i, res in enumerate(results):
+            if isinstance(res, Exception):
+                logger.warning(f"Chunk {i} extraction failed: {str(res)}")
+                # Append an empty component so the lists remain the same length
+                valid_results.append(KnowledgeGraphComponents(
+                    nodes=[], relationships=[], is_domain_relevant=False, overall_confidence=0.0
+                ))
+            else:
+                all_failed = False
+                valid_results.append(res)
+        
+        if all_failed and texts:
+            raise ValueError(f"All {len(texts)} chunks in batch failed extraction.")
+                
+        return valid_results
+
+    def _get_text_hash(self, text: str) -> str:
+        return hashlib.md5(text.encode()).hexdigest()

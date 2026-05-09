@@ -179,6 +179,53 @@ class WorkspaceService:
         datasets = await self.get_datasets_by_ids([dataset_id])
         return datasets[0] if datasets else None
 
+    async def get_file_by_id(self, file_id: uuid.UUID) -> Optional[UserDatasetFile]:
+        """Fetches a specific file record by ID, checking both knowledge and genome tables."""
+        # 1. Check user_dataset_files
+        async with userdata_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT id, dataset_id, file_name, file_type, rustfs_uri, file_metadata, genome_global_id, created_at FROM user_dataset_files WHERE id = %s",
+                (file_id,)
+            )
+            row = await cursor.fetchone()
+            if row:
+                return UserDatasetFile(**row)
+
+        # 2. Check genomes table
+        async with genome_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT global_id as id, dataset_id, name as file_name, 
+                       genome_path as rustfs_uri, genome_metadata as file_metadata, 
+                       is_public, created_at 
+                FROM genomes WHERE global_id = %s
+                """,
+                (file_id,)
+            )
+            row = await cursor.fetchone()
+            if row:
+                r_dict = dict(row)
+                
+                # 🌟 Dynamically map to the correct Enum based on the DB flag
+                mapped_file_type = (
+                    IngestionSourceType.SYSTEM_REFERENCE_GENOME 
+                    if r_dict.get("is_public") 
+                    else IngestionSourceType.USER_PRIVATE_GENOME
+                )
+
+                return UserDatasetFile(
+                    id=r_dict["id"],
+                    dataset_id=r_dict["dataset_id"],
+                    file_name=r_dict["file_name"],
+                    file_type=mapped_file_type,
+                    rustfs_uri=r_dict["rustfs_uri"] or "No primary path",
+                    file_metadata=r_dict["file_metadata"],
+                    created_at=r_dict["created_at"],
+                    genome_global_id=r_dict["id"]
+                )
+                
+        return None
+
     async def get_datasets_by_ids(self, dataset_ids: List[uuid.UUID]) -> List[UserDataset]:
         """Fetches multiple datasets and ALL their files in exactly 3 queries."""
         if not dataset_ids:
@@ -189,7 +236,7 @@ class WorkspaceService:
         # 1. Fetch Dataset Containers (Query 1)
         async with userdata_connection_pool.connection() as conn:
             cursor = await conn.execute(
-                "SELECT id, project_id, name, description, dataset_metadata, created_at FROM user_datasets WHERE id = ANY(%s)",
+                "SELECT id, project_id, name, description, dataset_metadata, is_public, created_at FROM user_datasets WHERE id = ANY(%s)",
                 (dataset_ids,)
             )
             rows = await cursor.fetchall()
@@ -212,79 +259,41 @@ class WorkspaceService:
 
         return list(datasets_map.values())
 
-    async def _get_bulk_dataset_files(self, dataset_ids: List[uuid.UUID]) -> List[UserDatasetFile]:
-        """Aggregates files from both databases in bulk."""
-        all_files = []
-        
-        # Query 2: Fetch all matching files from user_dataset_files
-        async with userdata_connection_pool.connection() as conn:
-            cursor = await conn.execute(
-                "SELECT id, dataset_id, file_id, file_name, file_type, rustfs_uri, file_metadata, created_at FROM user_dataset_files WHERE dataset_id = ANY(%s)",
-                (dataset_ids,)
-            )
-            rows = await cursor.fetchall()
-            all_files.extend([UserDatasetFile(**dict(row)) for row in rows])
-            
-        # Query 3: Fetch all matching files from genomes
-        async with genome_connection_pool.connection() as conn:
-            cursor = await conn.execute(
-                """
-                SELECT global_id as id, dataset_id, global_id as file_id, name as file_name, 
-                       'user_private_genome' as file_type, genome_path as rustfs_uri, 
-                       genome_metadata as file_metadata, created_at 
-                FROM genomes WHERE dataset_id = ANY(%s)
-                """,
-                (dataset_ids,)
-            )
-            rows = await cursor.fetchall()
-            for row in rows:
-                r_dict = dict(row)
-                all_files.append(UserDatasetFile(
-                    id=r_dict["id"],
-                    dataset_id=r_dict["dataset_id"],
-                    file_id=r_dict["file_id"],
-                    file_name=r_dict["file_name"],
-                    file_type=IngestionSourceType.USER_PRIVATE_GENOME,
-                    rustfs_uri=r_dict["rustfs_uri"] or "No primary path",
-                    file_metadata=r_dict["file_metadata"],
-                    created_at=r_dict["created_at"]
-                ))
-                
-        return all_files
-
     # --- Dataset File Logic ---
     async def register_dataset_file(
         self,
-        dataset_id: uuid.UUID,
         file_id: uuid.UUID,
+        dataset_id: uuid.UUID,
         file_name: str,
         file_type: IngestionSourceType,
         rustfs_uri: str,
-        file_metadata: Optional[Dict[str, Any]] = None
+        file_metadata: Optional[Dict[str, Any]] = None,
+        genome_id: Optional[uuid.UUID] = None
     ) -> UserDatasetFile:
         async with userdata_connection_pool.connection() as conn:
-            record_id = uuid.uuid4()
             await conn.execute(
                 """
-                INSERT INTO user_dataset_files (id, dataset_id, file_id, file_name, file_type, rustfs_uri, file_metadata, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO user_dataset_files (id, dataset_id, file_name, file_type, rustfs_uri, file_metadata, genome_id, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
-                    record_id, dataset_id, file_id, file_name, 
+                    file_id, dataset_id, file_name, 
                     file_type.value, rustfs_uri, 
-                    json.dumps(file_metadata) if file_metadata else None,
+                    json.dumps(file_metadata) if file_metadata else None, genome_id,
                     datetime.now()
                 )
             )
             return UserDatasetFile(
-                id=record_id, dataset_id=dataset_id, file_id=file_id, 
-                file_name=file_name, file_type=file_type, rustfs_uri=rustfs_uri,
-                file_metadata=file_metadata
+                id=file_id, dataset_id=dataset_id, file_name=file_name, file_type=file_type, rustfs_uri=rustfs_uri,
+                file_metadata=file_metadata, genome_global_id=genome_id
             )
 
     async def delete_dataset_file(self, file_record_id: uuid.UUID) -> bool:
         """Deletes a file record. Does NOT delete the physical file in RustFS (S3) yet."""
         async with userdata_connection_pool.connection() as conn:
+            # 1. Clean up Soft Links first (if any)
+            await conn.execute("DELETE FROM knowledge_file_links WHERE file_id = %s", (file_record_id,))
+
             # Check docs table
             await conn.execute("DELETE FROM user_dataset_files WHERE id = %s", (file_record_id,))
             
@@ -302,3 +311,85 @@ class WorkspaceService:
             )
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
+
+    async def _get_bulk_dataset_files(self, dataset_ids: List[uuid.UUID]) -> List[UserDatasetFile]:
+        """Aggregates files from both databases in bulk."""
+        all_files = []
+        
+        # Query 2: Fetch Knowledge Files AND their knowledge links
+        async with userdata_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT 
+                    f.id, 
+                    f.dataset_id, 
+                    f.file_name, 
+                    f.file_type, 
+                    f.rustfs_uri, 
+                    f.file_metadata, 
+                    f.genome_global_id, 
+                    f.created_at,
+                    COALESCE(
+                        json_agg(
+                            json_build_object(
+                                'file_id', kfl.file_id,
+                                'knowledge_entity_id', kfl.knowledge_entity_id,
+                                'relevance_score', kfl.relevance_score
+                            )
+                        ) FILTER (WHERE kfl.knowledge_entity_id IS NOT NULL), 
+                        '[]'
+                    ) as knowledge_links_json
+                FROM user_dataset_files f
+                LEFT JOIN knowledge_file_links kfl ON f.id = kfl.file_id
+                WHERE f.dataset_id = ANY(%s) 
+                AND f.genome_global_id IS NULL
+                GROUP BY f.id
+                """,
+                (dataset_ids,)
+            )
+            rows = await cursor.fetchall()
+            
+            for row in rows:
+                r_dict = dict(row)
+                links_data = r_dict.pop("knowledge_links_json", [])
+                file_obj = UserDatasetFile(**r_dict)
+                
+                # Mock the relationship property for Agent Context builder
+                setattr(file_obj, "knowledge_links", [
+                    link for link in (links_data if isinstance(links_data, list) else json.loads(links_data))
+                ])
+                all_files.append(file_obj)
+            
+        # Query 3: Fetch Logical Genomes from Genome Schema
+        async with genome_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT global_id as id, dataset_id, name as file_name, 
+                       genome_path as rustfs_uri, genome_metadata as file_metadata, 
+                       is_public, created_at 
+                FROM genomes WHERE dataset_id = ANY(%s)
+                """,
+                (dataset_ids,)
+            )
+            rows = await cursor.fetchall()
+            for row in rows:
+                r_dict = dict(row)
+
+                mapped_file_type = (
+                    IngestionSourceType.SYSTEM_REFERENCE_GENOME 
+                    if r_dict["is_public"] 
+                    else IngestionSourceType.USER_PRIVATE_GENOME
+                )
+
+                all_files.append(UserDatasetFile(
+                    id=r_dict["id"],
+                    dataset_id=r_dict["dataset_id"],
+                    file_name=r_dict["file_name"],
+                    file_type=mapped_file_type, 
+                    rustfs_uri=r_dict["rustfs_uri"] or "No primary path",
+                    file_metadata=r_dict["file_metadata"],
+                    created_at=r_dict["created_at"],
+                    genome_global_id=r_dict["id"] 
+                ))
+                
+        return all_files

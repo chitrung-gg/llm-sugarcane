@@ -21,17 +21,14 @@ from app.services.llm.llm_service import LLMService
 from app.utils.document_processor import DocumentProcessor
 from app.services.ingestion.graph_ingestion_service import GraphIngestionService
 from app.services.workspace.workspace_service import WorkspaceService
+from app.services.storage.storage_service import StorageService
 
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 from app.core.vector_store.vector_store import VectorStore
 from app.configs.storage.object_storage import rustfs_session
 from app.configs.storage.databases import userdata_connection_pool
-from app.core.tools.genome_tool import (
-    design_polyploid_primer, get_gene_detail,
-    get_genes_list, list_genome_files, run_blast, run_crispor,
-    run_synteny_haplotype_analysis, search_genes_full
-)
-from app.core.tools.index_genome_etl import index_new_genome
+from app.core.tools.genome_tool import *
+# from app.core.tools.index_genome_etl import index_new_genome
 from app.core.tools.graph_rag_tool import make_graph_rag_tool
 
 class AppContainer:
@@ -42,6 +39,7 @@ class AppContainer:
         self._llm_service: LLMService | None = None
         self._agent_service: AgentService | None = None
         self._knowledge_service: KnowledgeService | None = None
+        self._storage_service: StorageService | None = None
         self._graph_ingestion_service: GraphIngestionService | None = None
         self._workspace_service: WorkspaceService | None = None
         self._embedding_model: GeminiEmbeddingModel | None = None
@@ -61,6 +59,7 @@ class AppContainer:
         await self._init_langfuse_client()
         await self._init_llm_service() 
         await self._init_rustfs_session()
+        await self._init_storage_service()
         await self._init_searx_wrapper()
         # await self._init_ncbi_tools()
         
@@ -103,10 +102,14 @@ class AppContainer:
         """Initialize LLM models with fallback chain."""
         self._llm_service = LLMService()
 
+    async def _init_storage_service(self):
+        """Initialize StorageService."""
+        self._storage_service = StorageService(rustfs_session=self.rustfs_session)
+
     async def _init_knowledge_service(self):
         """Initialize KnowledgeService."""
         self._knowledge_service = KnowledgeService(
-            rustfs_session=self.rustfs_session,
+            storage_service=self.storage_service,
             workspace_service=self.workspace_service
         )
 
@@ -221,7 +224,7 @@ class AppContainer:
 
         self._agent_graph = await build_super_agent_graph(
             llm_service=self.llm_service,
-            graph_ingestion_service=self.graph_ingestion_service,
+            # graph_ingestion_service=self.graph_ingestion_service,
             vector_store_solid=self.vector_store_solid,
             vector_store_volatile=self.vector_store_volatile,
             searx_wrapper=self.searx_search,
@@ -265,6 +268,11 @@ class AppContainer:
     def knowledge_service(self) -> KnowledgeService:
         assert self._knowledge_service, "Container not initialized (KnowledgeService missing)"
         return self._knowledge_service
+    
+    @property
+    def storage_service(self) -> StorageService:
+        assert self._storage_service, "Container not initialized (StorageService missing)"
+        return self._storage_service
     
     @property
     def workspace_service(self) -> WorkspaceService:

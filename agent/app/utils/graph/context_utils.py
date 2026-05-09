@@ -1,14 +1,30 @@
 from typing import List, Dict, Any, Optional
 from langchain_core.tools import BaseTool
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 
 from app.core.graph.state.agent_state import AgentDataset, AgentProject
 
-def get_recent_messages(messages: List[BaseMessage], n: int = 5) -> List[BaseMessage]:
-    """Returns the last n messages from the history."""
+def get_recent_messages(messages: List[BaseMessage], last_k_turns: int = 3) -> List[BaseMessage]:
+    """
+    Returns the last `k` conversational turns from the history.
+    A 'turn' is defined as starting from a HumanMessage to the end of the AI's final response,
+    including all intermediate tool calls and tool messages.
+    """
     if not messages:
         return []
-    return messages[-n:]
+
+    # Find the indices of all HumanMessages in the history
+    human_indices = [i for i, msg in enumerate(messages) if isinstance(msg, HumanMessage)]
+
+    # If there are no human messages (rare), or we want more turns than exist, return everything
+    if not human_indices or last_k_turns >= len(human_indices):
+        return messages
+
+    # Get the index of the start of the target turn
+    # e.g., if last_k_turns=3, we want the 3rd to last HumanMessage
+    start_index = human_indices[-last_k_turns]
+    
+    return messages[start_index:]
 
 def format_optimized_workspace(
     active_project: Optional[AgentProject],
@@ -17,8 +33,9 @@ def format_optimized_workspace(
 ) -> str:
     """
     Formats the complete workspace context including:
-    1. Project Metadata (Name, Description, Biological Context)
-    2. Dataset grouping and file metadata pruning.
+    1. Project Metadata
+    2. Active Datasets (Detailed - full IDs for user tools)
+    3. System Datasets (Summarized - saves tokens)
     """
     blocks = []
 
@@ -36,33 +53,19 @@ def format_optimized_workspace(
     else:
         blocks.append("<active_project status='none' />")
 
-    # 2. Dataset Context
-    all_datasets = []
-    if active_datasets:
-        all_datasets.extend(active_datasets)
-    if system_datasets:
-        all_datasets.extend(system_datasets)
-
-    if not all_datasets:
-        blocks.append("<datasets status='empty' />")
+    # 2. Active Datasets (User Data) -> Fully Detailed
+    if not active_datasets:
+        blocks.append("<active_datasets status='empty' />")
     else:
-        blocks.append("<datasets>")
-        for ds in all_datasets:
+        blocks.append("<active_datasets>")
+        for ds in active_datasets:
             ds_id = ds.get("dataset_id", "unknown")
             ds_name = ds.get("dataset_name", "unnamed")
-            ds_source = ds.get("source", "unknown")
+            blocks.append(f"  <dataset id='{ds_id}' name='{ds_name}' source='USER_WORKSPACE'>")
             
-            blocks.append(f"  <dataset id='{ds_id}' name='{ds_name}' source='{ds_source}'>")
+            for f in ds.get("genomic_files", []):
+                blocks.append(f"    <file category='GENOMIC' type='{f.get('file_type')}' id='{f.get('file_id')}'>{f.get('file_name')}</file>")
             
-            # Genomic Files
-            genomic_files = ds.get("genomic_files") or []
-            for f in genomic_files:
-                f_id = f.get("file_id", "unknown")
-                f_name = f.get("file_name", "unknown")
-                f_type = f.get("file_type", "unknown")
-                blocks.append(f"    <file category='GENOMIC' type='{f_type}' id='{f_id}'>{f_name}</file>")
-            
-            # Knowledge Files
             knowledge_files = ds.get("knowledge_files") or []
             knowledge_counts = {}
             knowledge_metadata = {}
@@ -82,7 +85,29 @@ def format_optimized_workspace(
                 blocks.append(f"    <file category='KNOWLEDGE' type='{meta.get('type', 'unknown')}' id='{meta.get('id', 'unknown')}'>{name}{count_str}</file>")
                 
             blocks.append("  </dataset>")
-        blocks.append("</datasets>")
+        blocks.append("</active_datasets>")
+
+    # 3. System Datasets (Admin Data) -> DYNAMIC SUMMARY ONLY
+    if system_datasets:
+        total_ds = len(system_datasets)
+        genome_names = set()
+        knowledge_count = 0
+
+        # Dynamically aggregate what exists in the system
+        for ds in system_datasets:
+            for f in ds.get("genomic_files", []):
+                # We only show the name, NOT the ID
+                genome_names.add(f.get("file_name", "unknown"))
+            knowledge_count += len(ds.get("knowledge_files", []))
+
+        genome_str = ", ".join(genome_names) if genome_names else "None"
+
+        blocks.append("<system_library_summary>")
+        blocks.append(f"  The system contains {total_ds} curated public dataset(s).")
+        blocks.append(f"  Available Reference Genomes: [{genome_str}]")
+        blocks.append(f"  Curated Knowledge Files: {knowledge_count} documents (These are automatically queried via Semantic Search / RAG).")
+        blocks.append("  *NOTE*: If you need the exact ID for a system genome to run a bioinformatics tool, use the 'list_genome_files' tool.")
+        blocks.append("</system_library_summary>")
         
     return "\n".join(blocks)
 

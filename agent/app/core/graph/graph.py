@@ -40,7 +40,7 @@ async def build_super_agent_graph(
     vector_store_volatile: QdrantVectorStore,
     searx_wrapper: SearxSearchWrapper,
     document_processor: DocumentProcessor, 
-    graph_ingestion_service: GraphIngestionService,
+    # graph_ingestion_service: GraphIngestionService,
     available_tools: dict[str, BaseTool]
 ):
     # 1. Build the INNER ReAct Graph exactly as it is today
@@ -50,7 +50,7 @@ async def build_super_agent_graph(
         vector_store_volatile=vector_store_volatile,
         searx_wrapper=searx_wrapper,
         document_processor=document_processor,
-        graph_ingestion_service=graph_ingestion_service,
+        # graph_ingestion_service=graph_ingestion_service,
         available_tools=available_tools
     )
 
@@ -110,7 +110,7 @@ async def _build_agent_graph(
     vector_store_volatile: QdrantVectorStore,
     searx_wrapper: SearxSearchWrapper,
     document_processor: DocumentProcessor, 
-    graph_ingestion_service: GraphIngestionService,
+    # graph_ingestion_service: GraphIngestionService,
     available_tools: dict[str, BaseTool]
 ):
     # Initialize graph
