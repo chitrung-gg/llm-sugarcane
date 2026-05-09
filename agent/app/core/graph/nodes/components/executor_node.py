@@ -2,7 +2,7 @@ from typing import Literal
 from loguru import logger
 from langgraph.types import Command
 from langgraph.graph.state import CompiledStateGraph
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from app.core.prompts.executor_prompts import EXECUTOR_INNER_QUERY_PROMPT
 from app.utils.observability.tracing import tracing
@@ -44,7 +44,7 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
         )
 
         # 3. Create a fresh INNER state for your ReAct Agent
-        recent_messages = get_recent_messages(state.get("messages", []), n=5)
+        recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=3)
 
         inner_state_input = {
             "query": current_step.description,
@@ -113,7 +113,14 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
             update={
                 "plan": updated_plan,
                 "past_steps": [observation], 
-                "extracted_knowledge": extracted_data 
+                "extracted_knowledge": extracted_data,
+                # Propagate the inner graph's final answer up to the outer graph so that Planner can see what the Executor actually did.
+                "messages": [
+                    AIMessage(
+                        content=step_answer,
+                        additional_kwargs={"execution_id": str(state.get("execution_id"))}
+                    )
+                ]
             }
         )
 

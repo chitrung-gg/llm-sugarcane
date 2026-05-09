@@ -35,7 +35,15 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
         agent_capabilities_str = "\n".join([f"{i+1}. {cap}" for i, cap in enumerate(agent_capabilities)])
 
         # 3. Block C: Recent Message History for Coreference Resolution
-        recent_messages = get_recent_messages(state.get("messages", []), n=5)
+        raw_recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=3)
+
+        # Filter out internal planner thoughts/announcements
+        recent_messages = [
+            msg for msg in raw_recent_messages 
+            if not msg.additional_kwargs.get("is_thought")
+        ]
+
+        # Remove the latest message from history to avoid duplication with the HumanMessage(query)
         if recent_messages and recent_messages[-1].content == query:
             recent_messages = recent_messages[:-1]
             
@@ -43,13 +51,28 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
             [f"{msg.type.capitalize()}: {msg.content}" for msg in recent_messages]
         ) if recent_messages else "No prior context."
 
+        past_steps = state.get("past_steps", [])
+        if past_steps:
+            formatted_steps = []
+            for s in past_steps:
+                # Safely handle both dicts and Pydantic models
+                step_summary = s.get('summary') if isinstance(s, dict) else getattr(s, 'summary', '')
+                formatted_steps.append(f"- {step_summary}")
+            past_steps_str = "\n".join(formatted_steps)
+        else:
+            past_steps_str = "No background research executed yet."
+            
+        conv_summary = state.get("summary", "No summary available.")
+
         # 4. Format System Prompt
         system_msg = SystemMessage(content=PLANNER_SYSTEM_PROMPT.format(
             project_name=p_name,
             project_description=p_desc,
             datasets=workspace_context,
             agent_capabilities_str=agent_capabilities_str,
-            chat_history_str=chat_history_str
+            chat_history_str=chat_history_str,
+            past_steps_str=past_steps_str, 
+            conv_summary=conv_summary            
         ))
 
         # 5. The Current Task
@@ -83,7 +106,7 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
                 "plan": result.steps, 
                 "iteration_count": 0,
                 "past_steps": [], 
-                "messages": [AIMessage(content=announcement)]
+                "messages": [AIMessage(content=announcement, additional_kwargs={"is_thought": True})]
             }
         )
 

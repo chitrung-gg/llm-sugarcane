@@ -55,7 +55,7 @@ def make_router_node(
         ))
 
         # 2. Block B: Recent Message History (Deduplicated)
-        recent_messages = get_recent_messages(state.get("messages", []), n=3)
+        recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=3)
         if recent_messages and recent_messages[-1].content == query:
             recent_messages = recent_messages[:-1]
         

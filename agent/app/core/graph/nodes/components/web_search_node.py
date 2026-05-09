@@ -58,7 +58,7 @@ def make_web_search_node(
             )
 
             # Include recent messages for context
-            recent_messages = get_recent_messages(state.get("messages", []), n=3)
+            recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=3)
 
             messages: List[BaseMessage] = [
                 SystemMessage(content=system_prompt),

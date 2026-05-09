@@ -51,7 +51,7 @@ def make_rag_node(
             )
 
             # Include recent messages for better query rewriting
-            recent_messages = get_recent_messages(state.get("messages", []), n=3)
+            recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=3)
 
             messages: List[BaseMessage] = [
                 SystemMessage(content=system_prompt),

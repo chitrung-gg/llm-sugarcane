@@ -52,3 +52,10 @@ CREATE TABLE IF NOT EXISTS public.file_ingestion_status
 
 CREATE INDEX IF NOT EXISTS idx_file_ingestion_filename ON public.file_ingestion_status(filename);
 CREATE INDEX IF NOT EXISTS idx_file_ingestion_created_at ON public.file_ingestion_status(created_at DESC);
+
+CREATE TABLE knowledge.knowledge_file_links (
+    file_id UUID NOT NULL,            -- Raw UUID, no REFERENCES clause
+    knowledge_entity_id UUID NOT NULL, -- Raw UUID, no REFERENCES clause
+    relevance_score FLOAT,
+    CONSTRAINT pk_knowledge_file_links PRIMARY KEY (file_id, knowledge_entity_id)
+);

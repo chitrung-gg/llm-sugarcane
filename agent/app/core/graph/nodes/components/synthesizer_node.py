@@ -96,7 +96,7 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
         llm = llm_service.get_structured_primary_model(SynthesizerOutput)
 
         # Include recent messages for context awareness
-        recent_messages = get_recent_messages(state.get("messages", []), n=3)
+        recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=5)
 
         messages_to_send: List[BaseMessage] = [
             SystemMessage(content=system_prompt),
@@ -108,20 +108,24 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             result = await llm.ainvoke(messages_to_send)
         except asyncio.TimeoutError:
             logger.error(f"[Synthesizer] ❌ LLM generation timed out after {synthesizer_timeout} seconds.")
+            error_text = "I apologize, but synthesizing this massive amount of data took too long and timed out. Could you please narrow down your question?"
             return Command(
                 goto=AgentGraphNode.END_NODE,
                 update={
-                    "final_answer": "I apologize, but synthesizing this massive amount of data took too long and timed out. Could you please narrow down your question?",
-                    "is_complete": True
+                    "final_answer": error_text,
+                    "is_complete": True,
+                    "messages": [AIMessage(content=error_text, additional_kwargs={"execution_id": str(state.get("execution_id"))})]
                 }
             )
         except Exception as e:
             logger.error(f"[Synthesizer] ❌ LLM Generation failed: {e}")
+            error_text = "I apologize, but I encountered an error while formatting the synthesized information."
             return Command(
                 goto=AgentGraphNode.END_NODE,
                 update={
-                    "final_answer": "I apologize, but I encountered an error while formatting the synthesized information.",
-                    "is_complete": True
+                    "final_answer": error_text,
+                    "is_complete": True,
+                    "messages": [AIMessage(content=error_text, additional_kwargs={"execution_id": str(state.get("execution_id"))})]
                 }
             )
 
@@ -158,6 +162,8 @@ def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, Ba
             # The Outer Executor will catch this answer, update past_steps, and decide what to do next.
             logger.info("[Synthesizer] Answer complete. Exiting inner graph.")
             destination = AgentGraphNode.END_NODE
+
+
         return Command(
             goto=destination,
             update=updates

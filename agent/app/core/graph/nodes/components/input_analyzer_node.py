@@ -35,7 +35,7 @@ def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service:
             
             # 1. Build an Enriched Context Query
             # Include recent messages and unified workspace context
-            recent_messages_text = "\n".join([f"{m.type}: {m.content}" for m in get_recent_messages(state.get("messages", []), n=3)])
+            recent_messages_text = "\n".join([f"{m.type}: {m.content}" for m in get_recent_messages(state.get("messages", []), last_k_turns=3)])
             
             step_history = "\n".join([f"- Step {obs.step_id}: {obs.summary}" for obs in past_steps]) if past_steps else "None"
             
