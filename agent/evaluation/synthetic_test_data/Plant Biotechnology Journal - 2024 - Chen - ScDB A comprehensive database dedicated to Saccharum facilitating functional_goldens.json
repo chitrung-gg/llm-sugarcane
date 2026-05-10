@@ -1,0 +1,112 @@
+[
+    {
+        "input": "How does ScDB's Transcriptomics module facilitate gene expression analysis and network visualization?",
+        "actual_output": null,
+        "expected_output": "ScDB's Transcriptomics module facilitates gene expression analysis and network visualization by offering search and visualization functionalities for gene expression and co-expression gene networks. Users can access expression data for various genes, select preferred studies, choose expression units (TPM or FPKM), and customize heatmap color schemes.",
+        "context": [
+            "Comprehensive Saccharum Database (ScDB) 3387\nFigure 1 Overview of ScDB and its functions in multi-omics analysis. (a) The phylogenetic relationships and data sources of all existing species in ScDB, the construction process and the modules and tools included. (b) Advanced search of the home page. (c) Part of the gene details page: gene function annotations and expression data for different studies. (d) The gene synteny blocks are obtained using the synteny blocks search function. The results are presented as a synteny diagram and table. (e) Gene expression heatmaps allow users to select different studies and Expression Units (TPM or FPKM) and customize colour schemes. (f) The Profile Inference tool enables users to match known motifs by gene ID, gene name and amino acid sequence, and meme files are provided for download.\nArabidopsis, rice and sorghum. The 'Synteny Block' can be used for a swift examination of the evolution and variety within large homologous gene segments and chromosome (Figure 1d). The 'Genome Browser' tool provides a fast and interactive genome browser for navigating large-scale high-throughput sequencing data under a genomic framework.\nThe 'Transcriptomics module' offers search and visualization functionalities for gene expression (Figure 1e) and co-expression gene networks. In the 'Gene Expression', Users are facilitated to access expression data for a range of genes. Users have the freedom to select their preferred studies, select the expression units (either Transcripts Per Million or Fragments Per Kilobase Million), and customize the color scheme of the heatmap according to their preferences."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How does ScDB's dedication to Saccharum facilitate functional genomics and molecular biology studies?",
+        "actual_output": null,
+        "expected_output": "ScDB, as a comprehensive database dedicated to Saccharum, facilitates functional genomics and molecular biology studies in sugarcane.",
+        "context": [
+            "ScDB: A comprehensive database dedicated to Saccharum , facilitating functional genomics and molecular biology studies in sugarcane\nSiyuan Chen 1,2,† , Xiaoxi Feng 1,2,† , Zhe Zhang 3 , Xiuting Hua 1 , Qing Zhang 1 , Chengjie Chen 4 , Jiawei Li 5 , Xiaojing Liu 3 , Chenyu Weng 1,2 , Baoshan Chen 1 , Muqing Zhang 1 , Wei Yao 1 , Haibao Tang 3 , Ray Ming 3 and Jisen Zhang 1, *\n1 State Key Laboratory for Conservation and Utilization of Subtropical Agro-Bioresources, College of Agriculture, Guangxi Key Laboratory of Sugarcane Biology, Guangxi University, Nanning, China\n2 College of Life Science and Technology, Guangxi University, Nanning, China\n3 Center for Genomics and Biotechnology, Fujian Provincial Key Laboratory of Haixia Applied Plant Systems Biology, Haixia Institute of Science, Fujian Agriculture and Forestry University, Fuzhou, China\n4 State Key Laboratory for Conservation and Utilization of Subtropical Agro-Bioresources, College of Horticulture, South China Agricultural University, Guangzhou, Guangdong, China\n5 Guangdong Key Laboratory of Non-human Primate Research, Key Laboratory of CNS Regeneration (Ministry of Education), GHM Institute of CNS Regeneration, School of Medicine, Jinan University, Guangzhou, China\n* Correspondence (Tel + 86-0771-3235266; email zjisen@126.com)\nReceived 8 June 2024; revised 7 August 2024; accepted 14 August 2024. † These authors contributed equally to this work.\nKeywords: comparative genomics, database, Saccharum , ScDB."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Compare the support from National Key R&D and Natural Science Foundation programs.",
+        "actual_output": null,
+        "expected_output": "The context provides the grant numbers for both programs (National Key Research and Development program: 2021YFF1000101 and 2021YFF10001 04; National Natural Science Foundation of China: 32272196) but does not offer information to compare their support.",
+        "context": [
+            "Acknowledgements\nThis work was supported by the National Key Research and Development program (2021YFF1000101 and 2021YFF10001 04); This work is also supported by the National Natural Science Foundation of China (32272196). We express our gratitude to all the ScDB users for their support."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Compare ScDB's genomic and transcriptomic data with its online functions.",
+        "actual_output": null,
+        "expected_output": "ScDB comprises 38.91 Gb of genomic assembly sequences with 1,366,608 genes and approximately 2.5 TB of transcriptomic data from 24 projects. Its 12 online functions, including 'Gene Search', 'Orthologous Gene Search', 'Synteny Block', 'Genome Browser', 'Gene Expression', 'Co-expression Network', 'Blast', 'Primer', 'Sequence Fetch', 'Transcription Factors', 'Protein Interaction Network', and 'Profile Inference', are developed to facilitate the use and analysis of this extensive genomic and transcriptomic information. An advanced search function also allows querying by gene ID, gene name, GO, and KEGG numbers.",
+        "context": [
+            "ScDB: A comprehensive database dedicated to Saccharum , facilitating functional genomics and molecular biology studies in sugarcane\nSaccharum species (AP85-441, Np-X, LA-Purple, XTT22, R570, ZZ1) and a Erianthus rufipilus (YN2009-3). ScDB currently comprises a total of 38.91 Gb of genomic assembly sequences, encompassing 1 366 608 genes. Additionally, ScDB includes 24 transcriptome projects involving over 300 sugarcane samples and approximately 2.5 TB of data. Furthermore, 12 online functions that are frequently used by users have been developed to facilitate the use of ScDB, include 'Gene Search', 'Orthologous Gene Search', 'Synteny Block', 'Genome Browser', 'Gene Expression', 'Co-expression Network', 'Blast', 'Primer', 'Sequence Fetch', 'Transcription Factors', 'Protein Interaction Network', 'Profile Inference' (Figure 1a).\nScDB consists of a frontend web interface, a backend application server, a main database and a suite of tools for analysis and visualization. The database is an organized database into six main modules: 'Home', 'Genomics', 'Transcriptomics', 'Tools', 'Download' and 'Publication'. The homepage features an introduction to ScDB, an advanced search engine, descriptions of Saccharum species and Erianthus rufipilus , and links to various tools. The advanced search function enables users to search by gene ID, gene name, GO number and KEGG number (Figure 1b)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Where is the study's supporting data publicly hosted?",
+        "actual_output": null,
+        "expected_output": "The study's supporting data is publicly hosted at https://sugarcane.gxu.edu.cn/scdb/download.",
+        "context": [
+            "Data availability statement\nThe data that support the findings of this study are openly available in Database Resource at https://sugarcane.gxu.edu. cn/scdb/download."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

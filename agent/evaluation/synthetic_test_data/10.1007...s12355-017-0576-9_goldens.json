@@ -1,0 +1,112 @@
+[
+    {
+        "input": "Investigate Oligonychus sacchari resistance in IRC99-02 vs. CP69-1062 sugarcane varieties.",
+        "actual_output": null,
+        "expected_output": "IRC99-02 was the most susceptible variety to Oligonychus sacchari, while CP69-1062 was the most resistant variety.",
+        "context": [
+            "Field Evaluation of Sugarcane Varieties Against Yellow Mite Oligonychus sacchari McGregor (Prostigmata: Tetranychidae)\nAmin Nikpay 1 • Francois-Regis Goebel 2\nReceived: 19 September 2017 / Accepted: 29 November 2017 Ó Society for Sugar Research & Promotion 2018\nAbstract Sugarcane yellow mite, Oligonychus sacchari (Prostigmata: Tetranychidae), is one of the main detrimental pests in sugarcane growing areas in Iran. The early populations of mites colonize on the lower surfaces of sugarcane leaves. Because of high reproductive potential, multi-generation are produced per year under warm and humid temperature during sugarcane growing season. This pest imposes economic damage to sugar industries. Field trials were conducted on evaluation of varietal resistance of five sugarcane varieties against yellow mite during two successive seasons 2014-2015 and 2015-2016 in sugarcane fields at Salman Farsi Agro-industry unit in Ahwaz, Iran. After initiation of O. sacchari activity in fields, in each plot, fifteen leaves were selected at random and number of living mites was recorded. The results showed that there were significant differences among tested varieties. The variety IRC99-02 was the most susceptible in tested years by CP57-614 in the total number of living mites and dry-leaf even though CP69-1062 was the most resistant variety.\nKeywords Sugarcane \u0001 Yellow mite \u0001 Multi-generation \u0001 Varieties \u0001 Population\nSugarcane is grown commercially in the subtropical regions of Iran. The most important region of sugarcane production in Iran is the Khuzestan province where it is\n& Amin Nikpay amin_nikpay@yahoo.com\n1 Department of Plant Protection, Sugarcane and By-products Development Company, Salman-Farsi Unit, Ahwaz, Iran\n2 Unite ´ de Recherche AIDA, CIRAD, Montpellier, France"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How does authors' conflict of interest declaration align with ethical standards?",
+        "actual_output": null,
+        "expected_output": "The authors' declaration that they have no conflict of interest aligns with ethical standards by promoting transparency and integrity.",
+        "context": [
+            "Compliance with Ethical Standards\nConflict of interest All the authors declare that they have no conflict of interest."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 0.2
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What were the specific mean living O. sacchari mite counts per leaf for each sugarcane variety on each 2016 sampling date?",
+        "actual_output": null,
+        "expected_output": "On 1 June 2016, IRC99-02 had 56.0 ± 2.61 mites, CP57-614 had 34.7 ± 1.25, CP48-103 had 32.2 ± 0.85, SP70-1143 had 20.5 ± 0.64, and CP69-1062 had 5.5 ± 0.64.On 11 June, IRC99-02 had 108.2 ± 3.01, CP57-614 had 79.0 ± 1.29, CP48-103 had 68.5 ± 0.64, SP70-1143 had 47.5 ± 1.66, and CP69-1062 had 8.7 ± 0.48.On 21 June, IRC99-02 had 160.2 ± 1.93, CP57-614 had 113.7 ± 3.84, CP48-103 had 96.0 ± 2.68, SP70-1143 had 64.2 ± 2.17, and CP69-1062 had 15.0 ± 1.08.On 1 July, IRC99-02 had 211.0 ± 2.68, CP57-614 had 146.2 ± 3.22, CP48-103 had 123.0 ± 2.79, SP70-1143 had 76.5 ± 1.55, and CP69-1062 had 18.0 ± 1.08.On 11 July, IRC99-02 had 202.0 ± 2.34, CP57-614 had 136.5 ± 3.43, CP48-103 had 113.7 ± 2.17, SP70-1143 had 66.0 ± 1.68, and CP69-1062 had 13.7 ± 0.47.",
+        "context": [
+            "Field Evaluation of Sugarcane Varieties Against Yellow Mite Oligonychus sacchari McGregor (Prostigmata: Tetranychidae)\nTable 2 Mean number of living mite O. sacchari per leaf on different sampling period (2016)\nIRC99-02, 1 June = 56.0 ± 2.61a. IRC99-02, 11 June = 108.2 ± 3.01a. IRC99-02, 21 June = 160.2 ± 1.93a. IRC99-02, 1 July = 211.0 ± 2.68a. IRC99-02, 11 July = 202.0 ± 2.34a. CP57-614, 1 June = 34.7 ± 1.25b. CP57-614, 11 June = 79.0 ± 1.29b. CP57-614, 21 June = 113.7 ± 3.84b. CP57-614, 1 July = 146.2 ± 3.22b. CP57-614, 11 July = 136.5 ± 3.43b. CP48-103, 1 June = 32.2 ± 0.85b. CP48-103, 11 June = 68.5 ± 0.64c. CP48-103, 21 June = 96.0 ± 2.68c. CP48-103, 1 July = 123.0 ± 2.79c. CP48-103, 11 July = 113.7 ± 2.17c. SP70-1143, 1 June = 20.5 ± 0.64c. SP70-1143, 11 June = 47.5 ± 1.66d. SP70-1143, 21 June = 64.2 ± 2.17d. SP70-1143, 1 July = 76.5 ± 1.55d. SP70-1143, 11 July = 66.0 ± 1.68d. CP69-1062, 1 June = 5.5 ± 0.64d. CP69-1062, 11 June = 8.7 ± 0.48e. CP69-1062, 21 June = 15.0 ± 1.08e. CP69-1062, 1 July = 18.0 ± 1.08e. CP69-1062, 11 July = 13.7 ± 0.47e. F 4,19 ; P, 1 June = 174.9; 0.000. F 4,19 ;"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Concretizing"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How does O. sacchari resistance vary among the five sugarcane varieties?",
+        "actual_output": null,
+        "expected_output": "Variety IRC99-02 showed severe mite damage from O. sacchari. The context does not detail the resistance variation among the other four varieties (CP57-614, CP48-103, CP69-1062, and SP70-1143).",
+        "context": [
+            "Field Evaluation of Sugarcane Varieties Against Yellow Mite Oligonychus sacchari McGregor (Prostigmata: Tetranychidae)\nFig. 1 Severe mite damage on variety IRC99-02 (June 2016)\nbasic control strategies, varietal resistance is important way to manage sugarcane pests under a global scenario (Goebel and Sallam 2011). The aim of this study was to evaluate varietal resistance of five different commercial sugarcane varieties to O. sacchari under field conditions.\nTrials were conducted in two successive years 2014-2015 and 2015-2016 at Salman Farsi Agro-industry Farms (48 ° 35 0 E, 31 8 8 0 S) Ahwaz, Iran. For this research study, five sugarcane varieties including IRC99-02 (cross made in Cuba and selected in Iran), CP57-614 (Canal Point USA), CP48-103 (Canal Point USA), CP69-1062 (Canal Point USA) and SP70-1143 (Sao Paulo Brazil) were used. These five selected varieties are cultivated extensively under Iranian sugarcane agro-industries.\nThe experiment used a randomized complete block design with four replicates. Each experimental plot (block) consisted of 8 rows 9 8 m in length and 1.8 m spaced (between two furrows) in different points of field (100.8 m 2 for each plot). This plot configuration was used for sugarcane experiments because plots for trials in sugarcane are recommended to be at least 25-m 2 (Laycock 2004). Each plot was separated by 10 m distance as buffer to build a protective barrier. Cultivation of each variety included standard tillage, complete plow-out of previous crop remaining following by ridging at 1.8-m furrow spacing. The whole field was fertilized according to local fertilizer recommendations to amend for any nutrient deficiencies. Following planting of seed cane sets (on each furrow); all furrows were treated with Atrazine and Sencor herbicides (2 ? 2 kg per hectare), as early post-emergence\napplication based on local recommendations for control of annual grass and broadleaf weeds."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 0.4
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Considering the 2015 field evaluation, which variety consistently had the lowest mean O. sacchari per leaf?",
+        "actual_output": null,
+        "expected_output": "CP69-1062 consistently had the lowest mean O. sacchari per leaf during the 2015 field evaluation.",
+        "context": [
+            "Field Evaluation of Sugarcane Varieties Against Yellow Mite Oligonychus sacchari McGregor (Prostigmata: Tetranychidae)\nTable 1 Mean number of living mite O. sacchari per leaf on different sampling period (2015)\nIRC99-02, 1 June = 59.7 ± 2.01a. IRC99-02, 11 June = 112.2 ± 2.63a. IRC99-02, 21 June = 165.5 ± 2.10a. IRC99-02, 1 July = 219.5 ± 2.02a. IRC99-02, 11 July = 210.2 ± 1.31a. CP57-614, 1 June = 37.7 ± 1.11b. CP57-614, 11 June = 80.7 ± 1.88b. CP57-614, 21 June = 120.2 ± 4.48b. CP57-614, 1 July = 152.7 ± 3.42b. CP57-614, 11 July = 143.2 ± 2.01b. CP48-103, 1 June = 34.7 ± 0.85b. CP48-103, 11 June = 71.0 ± 1.35c. CP48-103, 21 June = 99.5 ± 2.10c. CP48-103, 1 July = 130.0 ± 3.85c. CP48-103, 11 July = 120.7 ± 3.37c. SP70-1143, 1 June = 22.7 ± 1.11c. SP70-1143, 11 June = 50.0 ± 1.78d. SP70-1143, 21 June = 70.7 ± 1.11d. SP70-1143, 1 July = 80.7 ± 1.49d. SP70-1143, 11 July = 71.7 ± 0.75d. CP69-1062, 1 June = 6.2 ± 0.75d. CP69-1062, 11 June = 10.0 ± 0.82e. CP69-1062, 21 June = 18.2 ± 1.18e. CP69-1062, 1 July = 27.0 ± 1.22e. CP69-1062, 11 July = 20.2 ± 0.85e. F 4,19 ; P, 1 June = 249.4; 0.000. F 4,19 ;"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Multi-context"
+            ],
+            "synthetic_input_quality": 0.2
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

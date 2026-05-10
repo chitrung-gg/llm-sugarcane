@@ -15,7 +15,7 @@ from app.configs.settings.settings import get_settings
 class GoogleGeminiJudge(DeepEvalBaseLLM):
     def __init__(self, model_name: str):
         settings = get_settings()
-        api_key = settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None
+        api_key = settings.PRIMARY_GOOGLE_API_KEY.get_secret_value() if settings.PRIMARY_GOOGLE_API_KEY else None
 
         common_config = {
             "google_api_key": api_key,

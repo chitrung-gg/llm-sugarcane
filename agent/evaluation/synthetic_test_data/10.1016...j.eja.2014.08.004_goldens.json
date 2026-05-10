@@ -1,0 +1,112 @@
+[
+    {
+        "input": "How does cultivar-based RUE m recalibration address yield underestimation and improve accuracy?",
+        "actual_output": null,
+        "expected_output": "Cultivar-based RUE m recalibration addresses yield underestimation by adjusting the maximal radiation use efficiency (RUE m ), a key parameter in the MOSICAS model that is sensitive to the cultivar. This recalibration enhanced the accuracy of yield estimation, with the best results obtained when RUE m was recalibrated according to the cultivar (RMSE = 10.8 t ha -1 ).",
+        "context": [
+            "4. Discussion\nThe complete forcing method also indicated that the model with correct values of fIPAR tends to underestimate the yield. If we suppose that a stress applied to the plant will imply a diminution of the fIPAR, then errors remaining in the complete forcing simulations are expected to be linked to the parameterisation of the model. A key parameter in the MOSICAS process of yield estimation is the maximal radiation use efficiency (RUE m ), which is known to be sensitive to the cultivar and the number of ratoons of the sugarcane field (Robertson et al., 1996). Recalibration was first performed for each plot after having completely forced fIPAR values, and an analysis of variance was performed to determine which factor has a significant impact on the RUE m . The results show that the cultivar, the number of ratoons and the farm significantly influenced the RUE m value. These results are in agreement with Robertson et al. (1996) and Muchow et al. (1994), who showed the effect of the cultivar and the number of ratoons on the RUE m . The 'farmer' effect on RUE m may result from some cropping conditions that were not considered in the model, such as the amount of fertiliser applied to the field. Recalibrations were then performed on fields that were regrouped according to each factor and also for a group including all of the fields. The recalibrated values were comparable to the 3.08-3.41 g MJ -1 RUE m values obtained by Robertson et al. (1996) for sugarcane first ratoon crops of Q117 and Q138 cultivars under\nirrigated conditions, which we recalculated using a relative flux density of photosynthetically active solar radiation of 0.49 (Stanhill and Fuchs, 1977; Bonhomme, 2000). The results show that the recalibration enhanced the accuracy of the yield estimation, but the best results were obtained by recalibrating the RUE m according to the cultivar (RMSE = 10.8 t ha -1 )."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Quantify fIPAR's impact on sugarcane yield forecasting accuracy using coupled models.",
+        "actual_output": null,
+        "expected_output": "The provided context indicates that fIPAR is coupled with a sugarcane crop model to optimize yield estimation, but it does not quantify fIPAR's specific impact on forecasting accuracy.",
+        "context": [
+            "Coupling a sugarcane crop model with the remotely sensed time series of fIPAR to optimise the yield estimation\nJulien Morel a , ∗ , Agnès Bégué b , Pierre Todoroff a , Jean-Franc ¸ ois Martiné c , Valentine Lebourgeois d , Michel Petit e\n- a UPR SCA, CIRAD, Station de Ligne-Paradis, 7 chemin de l'Irat, FR-97410 Saint-Pierre, La Réunion, France\n- b UMR TETIS, CIRAD, 500 rue Jean-Franc ¸ ois Breton, FR-34093 Montpellier, France\n- c UPR SCA, CIRAD, Station de la Bretagne, 40 chemin de Grand Canal, FR-97743 Saint-Denis, La Réunion, France\n- d UMR TETIS, CIRAD, Station de Ligne-Paradis, 7 chemin de l'Irat, FR-97410 Saint-Pierre, La Réunion, France\n- e IRD, 911 avenue Agropolis, FR-34394 Montpellier Cedex 05, France"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Examine the methodology for RUEm recalibration under complete fIPAR forcing.",
+        "actual_output": null,
+        "expected_output": "The RUEm recalibration under complete fIPAR forcing involved optimizing the maximal radiation use efficiency (RUEm) parameter to reduce bias. This was performed by randomly sampling 30 (50%) fields from the dataset after completely forcing the fIPAR values. The average optimized RUEm value obtained for 60 fields was 3.47 g MJ-1, which is approximately 7.8% larger than the default MOSICAS value of 3.22 g MJ-1. Further optimization was conducted for each individual field to analyze the influence of factors such as cultivar, irrigation, number of ratoons, and farm.",
+        "context": [
+            "3.4.1. Optimised values of RUEm\nTo reduce the bias in the case of complete forcing, we investigated the recalibration of the maximal radiation use efficiency (RUE m ) model parameter, which is directly linked to the daily dry matter production (Eq. (4)). In MOSICAS, the default value of RUE m is set to 3.22 g MJ -1 (Table 2).\nThe optimisation was performed using a random sampling of 30 (50%) fields of the dataset after having completely forced the fIPAR values. The average value obtained for the 60 fields was 3.47 g MJ -1 , approximately 7.8% larger than the initial MOSICAS value (3.22 g MJ -1 ) (Table 2). To analyse the influence of several factors (cultivar, irrigation, number of ratoons, and farm) on the RUE m , the optimisation was then performed for each individual field. The analysis of variance of these results showed significant\nFig. 8. Observed yields as functions of simulated yields for (a) RAW, (b) partial forcing (PF), and (c) complete forcing (CF) simulations. Squares and crosses represent the irrigated and rainfed fields, respectively.\n"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Detail the recommendations for fIPAR-NDVI linear regression model formalization.",
+        "actual_output": null,
+        "expected_output": "Bartlett et al. (1989), Bégué (1993), and Law and Waring (1994) recommended fitting a linear regression model between measured fIPAR and interpolated daily NDVI to formalize the fIPAR-NDVI relationship.",
+        "context": [
+            "2.3.2. fIPAR-NDVI transfer function\nTo force the model with fIPAR values derived from satellite data, it was necessary to formalise the NDVI-fIPAR relationship. As recommended by Bartlett et al. (1989), Bégué (1993) and Law and Waring (1994), a linear regression model was fitted between the measured fIPAR and interpolated daily NDVI."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 0.2
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Investigate the role of irrigation in FS's yield given its lower rainfall.",
+        "actual_output": null,
+        "expected_output": "The Southern site (FS) has a mean annual rainfall of 940 mm, which is lower than the Northern site. FS has 12 irrigated fields and a mean yield of 94 tha-1.",
+        "context": [
+            "a b s t r a c t\nMain environmental conditions and studied fields characteristics of the two study sites.\n\nMean annual rainfall (mm), Northern site FN = 1670. Mean annual rainfall (mm), Southern site FS = 940. Daily mean radiation (MJm - 2 ), Northern site FN = 19.6. Daily mean radiation (MJm - 2 ), Southern site FS = 19.9. Daily mean temperature ( ◦ C), Northern site FN = 28. Daily mean temperature ( ◦ C), Southern site FS = 28.4. Altitude range (m), Northern site FN = 60-200. Altitude range (m), Southern site FS = 170-480. Cultivars (number of fields), Northern site FN = R579 (35), R582 (3). Cultivars (number of fields), Southern site FS = R570 (8), R577 (6), R579 (7), R582 (1). Number of studied fields, Northern site FN = 38. Number of studied fields, Southern site FS = 22. Number of irrigated fields, Northern site FN = 0. Number of irrigated fields, Southern site FS = 12. Number of ratoons (range), Northern site FN = 1-6. Number of ratoons (range), Southern site FS = 1-10. Mean field area (ha), Northern site FN = 6.2. Mean field area (ha), Southern site FS = 13.1. Mean yield (tha - 1 ), Northern site FN = 118. Mean yield (tha - 1 ), Southern site FS = 94\nthe parameters or input variables must be adjusted. This method requires knowing to which parameters the model is sensitive and adjusting the parameter by running the model with several values of this parameter within realistic ranges. Examples of the implementation of this method can be found in Claverie et al. (2012) and Launay and Guerif (2005)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 0.5
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

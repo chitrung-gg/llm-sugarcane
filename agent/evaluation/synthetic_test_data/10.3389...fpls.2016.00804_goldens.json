@@ -1,0 +1,112 @@
+[
+    {
+        "input": "Investigate Sobic.006G014632's presence/absence across Saccharum and Erianthus accessions.",
+        "actual_output": null,
+        "expected_output": "The disease resistance gene Sobic.006G014632 was absent in E. rufipilus (US57-060), E. procerum (Kalimpon), unknown (US61-037), S. hybrid (R570), S. robustum (NG57-054), and S. officinarum (P-MAG-84, NG96-024) accessions. It was present in S. sinense (TekchaOk) and S. spontaneum (SES196, IND81-14) accessions.",
+        "context": [
+            "Variants Annotation and Their Effects\nThe functional effects of structural variations including CNVs and PAVs were also annotated according to sorghum gene models. Out of 34,213 gene models, 919 had CNVs among the 10 Saccharum species and between two Erianthus spp, including 98 CNVs accruing only between two Erianthus spp. The annotation showed that 397 genes had Gene Ontology (GO) annotation in sorghum genome and 521 genes did not have any GO annotation. Gene family enrichment analysis indicated that genes with CNVs were significantly ( P < 0.001) enriched in 14 GO terms related to photosynthesis and nucleotide binding (Supplementary Figure S5A). Interestingly, seven down-CNVs showed S. spontaneum species-specificity, which indicated that these seven genes, such as NRAMP metal ion transporter family protein (Sobic.001G125400), terpene synthase (Sobic.007G133900), and PR5-like receptor kinase (Sobic.003G097200), had a significantly low copy number in the two S. spontaneum accessions but much high copy number in other Saccharum spp. (Supplementary Figure S6). Out of the total 1,257 genes showing PAVs between different accessions, 541genes were annotated in sorghum and 716 genes were of unknown function. The GO enrichment analysis showed that 13 GO terms related to oxidative stress and ion binding were significantly represented (Supplementary Figure S5B). In addition, one disease resistance gene, Sobic.006G014632, was absent in E. rufipilus accession (US57-060), E. procerum accession (Kalimpon), unknown accession (US61-037), S. hybrid accessions (R570), S. robustum accession (NG57-054), S. officinarum accession (P-MAG-84) and S. officinarum accession (NG96-024), but present in S. sinense accession (TekchaOk), S. spontaneum accessions (SES196), S. spontaneum accessions (IND81-14) and"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Compare the support, assistance, and revision contributions to this work.",
+        "actual_output": null,
+        "expected_output": "The Office of Science (BER), U.S. Department of Energy provided support. Dr. Xiao-Qin Xia assisted with probe parameters calculation. James Maku and Dev Paudel at University of Florida revised the manuscript.",
+        "context": [
+            "ACKNOWLEDGMENTS\nThis work was supported by the Office of Science (BER), U.S. Department of Energy. We would like to thank Dr. Xiao-Qin Xia for assisting with probe parameters calculation. We are grateful to James Maku and Dev Paudel at University of Florida on revising the manuscript."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Which scripts/software calculated probe GC content, PHFE, Tm, and PMFE?",
+        "actual_output": null,
+        "expected_output": "Probe GC content was calculated using custom Perl scripts. PHFE was calculated using Python scripts. Tm was calculated using MELTING software. PMFE was analyzed by metl.pl script.",
+        "context": [
+            "Characterization of Probe Features and Capture Efficiency\nFor probe feature characterization, the probes with at least five sequence reads capture were selected for investigation of thermodynamic parameters. The GC content for each probe was calculated using custom Perl scripts. Probe hybridization free energy (PHFE), hairpin, and dimer scores were calculated using Python scripts according to Xia et al. (2010). The hairpin and dimer scores were calculated with default setting, and the PHFE script was run with RNA as nucleic acid and temperature at 65 C. The melting temperature (Tm) was calculated by using MELTING software with the following parameters: B RNA/DNA hybridization, A Sugimoto et al., 1996, N 1 and P 0.0001 (Le Novere, 2001). The probe sequence minimum folding energy (PMFE) was analyzed by metl.pl script (Markham and Zuker, 2008).\nTo assess the probe capture efficiency and the captured sequence depth on the target region, we aligned all the probe sequences against the sorghum genome with BLAT v20140318 (alignment identity > 102) (Kent, 2002). A bed file was generated containing target capture region by adding 100-bp up and downstream of each probe on the sorghum reference sequences. Bedtools coverage (v2.23.0) was used to calculate the sequencing depth in a bam file containing read alignments and a bed file containing target capture regions (Quinlan and Hall, 2010). The\n[3 http://sourceforge.net/projects/bio-bwa/files/](http://sourceforge.net/projects/bio-bwa/files/)\n[4 http://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.5/](http://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.5/)\n[5 https://code.google.com/p/mosaik-aligner/](https://code.google.com/p/mosaik-aligner/)\n[6 http://trinityrnaseq.github.io/](http://trinityrnaseq.github.io/)"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 0.2
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Compare Saccharum and Erianthus species' capture efficiency and target region MSD.",
+        "actual_output": null,
+        "expected_output": "Capture efficiency was slightly higher in Saccharum species than in Erianthus species. For target region MSD, 60% of target regions in Saccharum species had about 50 MSD, whereas less than 50% of target regions in Erianthus species had 50 MSD.",
+        "context": [
+            "Sequences Generated from Target Enrichment\n Probes.No. of reads mapped (millions) = 17.2. Average, Probes.Percentage of reads mapped (%) = 50.2. Average, EST unigene set.No. of reads mapped (millions) = 23.8. Average, EST unigene set.Percentage of reads mapped (%) = 69.1. Average, Assembly ( > 200 bp).No. of reads mapped (millions) = 24.0. Average, Assembly ( > 200 bp).Percentage of reads mapped (%) = 70.0\nS. o, Saccharum officinarum; S. sp, Saccharum spontaneum; S. b, Saccharum barberi; S. r, Saccharum robustum; S. si, Saccharum sinense; S. h, Saccharum hybrid; un, unknown; E. p, Erianthus procerum; E. r, Erianthus rufipilus.\ndifferent species. The capture efficiency in Saccharum species was slightly higher than that in Erianthus species, since Saccharum species is genetically closer to sorghum than Erianthus species and sorghum genome was used as a reference for the alignment of the sequence reads. For all Saccharum species, 60% target regions had about 50 MSD, while less than 50% target region had 50 MSD in Erianthus species (Supplementary Figure S2)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 0.3
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Who specifically from Texas A&M AgriLife Research, USA and University of Memphis, USA performed the review?",
+        "actual_output": null,
+        "expected_output": "Shichen Wang from Texas A&M AgriLife Research, USA and Asela Wijeratne from University of Memphis, USA performed the review.",
+        "context": [
+            "Reviewed by:\nShichen Wang,\nTexas A&M AgriLife Research, USA\nAsela Wijeratne, University of Memphis, USA"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Concretizing"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

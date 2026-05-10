@@ -1,0 +1,112 @@
+[
+    {
+        "input": "How is HippoRAG 2's knowledge base directed graph structured, including node and edge types?",
+        "actual_output": null,
+        "expected_output": "HippoRAG 2's knowledge base is a directed graph G = (V, E). The node set V consists of entity phrases (VE) and passage nodes (VP). The edge set E includes three types: Relation Edges (Erel) between entity nodes, Synonym Edges (Esyn) connecting entity nodes with high vector similarity, and Context Edges (Ectx) linking passage nodes to contained entity nodes.",
+        "context": [
+            "3.1 Preliminaries\nWe build our approach upon the graph structure defined in HippoRAG 2. The knowledge base is modeled as a directed graph G = ( V, E ) . The node set V = V E ∪ V P consists of entity phrases V E and passage nodes V P .\nThe edge set E is composed of three distinct types of semantic connections:\n- Relation Edges ( E rel ): Edges between entity nodes ( u, v ∈ V E ) derived from OpenIE triples.\n- Synonym Edges ( E syn ): Edges connecting entity nodes with high vector similarity, capturing linguistic variations of the same concept.\n- Context Edges ( E ctx ): Edges linking a passage node p ∈ V P to the entity nodes e ∈ V E contained within it.\nWe adopt the Personalized PageRank (PPR) algorithm to model the retrieval process. The probability distribution over nodes at step k is updated as:\n<!-- formula-not-decoded -->\nwhere e s is the personalized probability distribution over seed nodes, and T is the row-normalized transition matrix. In the standard framework, T is static. Our work focuses on dynamically refining T into a query-specific transition matrix ˆ T q to better capture the reasoning requirements of the user query."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Concretizing"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Contrast author affiliations for 'Breaking the Static Graph' paper.",
+        "actual_output": null,
+        "expected_output": "Authors of 'Breaking the Static Graph' are affiliated with Huawei Hong Kong Research Center, The Hong Kong University of Science and Technology, and The Chinese University of Hong Kong, Shenzhen. Specifically, Kwun Hang Lau, Fangyuan Zhang, and Boyu Ruan are from Huawei Hong Kong Research Center. Kwun Hang Lau, Qintian Guo, Ruiyuan Zhang, and Xiaofang Zhou are from The Hong Kong University of Science and Technology. Yingli Zhou is from The Chinese University of Hong Kong, Shenzhen.",
+        "context": [
+            "Breaking the Static Graph: Context-Aware Traversal for Robust Retrieval-Augmented Generation\nKwun Hang Lau 1,2 † , Fangyuan Zhang 1 , Boyu Ruan 1 ,\nYingli Zhou 3 , Qintian Guo 2 , Ruiyuan Zhang 2 , Xiaofang Zhou 2\n1 Huawei Hong Kong Research Center, Hong Kong;\n2 The Hong Kong University of Science and Technology, Hong Kong;\n3 The Chinese University of Hong Kong, Shenzhen"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Compare standard RAG and structure-aware RAG baselines, especially HippoRAG 2, for CatRAG.",
+        "actual_output": null,
+        "expected_output": "CatRAG is evaluated against standard RAG baselines like BM25, Contriever, GTR, and text-embedding-3-small, as well as structure-aware RAG frameworks such as RAPTOR and LightRAG. Crucially, HippoRAG 2, the state-of-the-art in graph-based neuro-symbolic retrieval, is the main baseline because CatRAG is built upon its architecture, allowing for direct isolation of performance gains from CatRAG's proposed methods.",
+        "context": [
+            "4.1 Baselines\nWeevaluate CatRAG against a comprehensive suite of baselines spanning two paradigms: standard RAG with retrieval methods, and structure-aware RAG.\nFor standard retrieval comparisons, we employ several strong and widely used retrieval model,including BM25 (Robertson and Walker,\nTable 1: Dataset statistics.\n\n# of Queries, MuSiQue = 1,000. # of Queries, 2Wiki = 1,000. # of Queries, HotpotQA = 1,000. # of Queries, HoVer = 1,000. # of Passages, MuSiQue = 11,656. # of Passages, 2Wiki = 6,119. # of Passages, HotpotQA = 9,811. # of Passages, HoVer = 9,440\n1994), Contriever (Izacard et al., 2022b), GTR (Ni et al., 2022), text-embedding-3-small 1 model, to represent standard embedding-based approaches. Our primary comparison targets structure-aware RAG frameworks. We compare against RAPTOR (Sarthi et al., 2024), which constructs a recursive tree structure for hierarchical summarization, and LightRAG (Guo et al., 2025), leverage a KG structure to generate corpus-level concept summaries. Crucially, our main baseline is HippoRAG 2 (Gutiérrez et al., 2025),the state-of-theart in graph-based neuro-symbolic retrieval. We omit the original HippoRAG (Gutiérrez et al., 2024) from our evaluation, as HippoRAG 2 has demonstrated that it consistently outperforms its predecessor; thus, HippoRAG 2 serves as the most rigorous and relevant control. As CatRAG is built upon the HippoRAG 2 architecture, this comparison directly isolates the performance gains provided by our proposed methods."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 0.6
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Considering RCE evaluates FCR/JSR, why is LightRAG excluded due to its passage retrieval results?",
+        "actual_output": null,
+        "expected_output": "LightRAG is excluded from the Reasoning Completeness Evaluation because it does not directly produce passage retrieval results.",
+        "context": [
+            "5.1 Ablation Study\nTable 4: Reasoning Completeness Evaluation. We evaluation the Full Chain Retrieval ( FCR ) and Joint Success Rate ( JSR ) on multi-hop QA and fact verification datasets. LightRAG is not presented because it do not directly produce passage retrieval results."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Multi-context"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Identify the academic references, including authors, titles, years, and publication specifics.",
+        "actual_output": null,
+        "expected_output": "The academic references include: Akari Asai, Zeqiu Wu, Yizhong Wang, Avirup Sil, and Hannaneh Hajishirzi. 2023. Self-rag: Learning to retrieve, generate, and critique through self-reflection. Preprint, arXiv:2310.11511. Mohammad Aghajani Asl, Majid Asgari-Bidhendi, and Behrooz Minaei-Bidgoli. 2025. Fair-rag: Faithful adaptive iterative refinement for retrieval-augmented generation. Preprint, arXiv:2510.22344. Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, and 12 others. 2020. Language models are few-shot learners. Preprint, arXiv:2005.14165. Darren Edge, Ha Trinh, Newman Cheng, Joshua Bradley, Alex Chao, Apurva Mody, Steven Truitt, Dasha Metropolitansky, Robert Osazuwa Ness, and Jonathan Larson. 2025. From local to global: A graph rag approach to query-focused summarization. Preprint, arXiv:2404.16130. Wenqi Fan, Yujuan Ding, Liangbo Ning, Shijie Wang, Hengyun Li, Dawei Yin, Tat-Seng Chua, and Qing Li. 2024. A survey on rag meeting llms: Towards retrieval-augmented large language models. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining, KDD '24, page 6491-6501, New York, NY, USA. Association for Computing Machinery.",
+        "context": [
+            "References\n- Akari Asai, Zeqiu Wu, Yizhong Wang, Avirup Sil, and Hannaneh Hajishirzi. 2023. Self-rag: Learning to retrieve, generate, and critique through self-reflection. Preprint , arXiv:2310.11511.\n- Mohammad Aghajani Asl, Majid Asgari-Bidhendi, and Behrooz Minaei-Bidgoli. 2025. Fair-rag: Faithful adaptive iterative refinement for retrieval-augmented generation. Preprint , arXiv:2510.22344.\n- Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, and 12 others. 2020. Language models are few-shot learners. Preprint , arXiv:2005.14165.\n- Darren Edge, Ha Trinh, Newman Cheng, Joshua Bradley, Alex Chao, Apurva Mody, Steven Truitt, Dasha Metropolitansky, Robert Osazuwa Ness, and Jonathan Larson. 2025. From local to global: A graph rag approach to query-focused summarization. Preprint , arXiv:2404.16130.\n- Wenqi Fan, Yujuan Ding, Liangbo Ning, Shijie Wang, Hengyun Li, Dawei Yin, Tat-Seng Chua, and Qing Li. 2024. A survey on rag meeting llms: Towards retrieval-augmented large language models. In Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining , KDD '24, page 6491-6501, New York, NY, USA. Association for Computing Machinery."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Multi-context"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

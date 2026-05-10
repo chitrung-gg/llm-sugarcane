@@ -1,0 +1,112 @@
+[
+    {
+        "input": "How does genome-wide association aid in finding sugarcane virus resistance?",
+        "actual_output": null,
+        "expected_output": "Genome-wide association aids in prospecting sugarcane resistance to Sugarcane yellow leaf virus.",
+        "context": [
+            "Prospecting sugarcane resistance to Sugarcane yellow leaf virus by genome-wide association\nS. Debibakas · S. Rocher · O. Garsmeur · L. Toubi ·\nD. Roques · A. D'Hont · J.-Y. Hoarau · J. H. Daugrois\nreceived: 14 november 2013 / Accepted: 20 May 2014 © The Author(s) 2014. This article is published with open access at Springerlink.com"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 0.9
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Compare the application of PhV in trait correlation vs. marker-trait association tests.",
+        "actual_output": null,
+        "expected_output": "Phenotypic values (PhV) are applied to both trait correlation and marker-trait association tests. Specifically, PhV are used to correlate disease resistance traits among and within trials by calculating Pearson correlation coefficients, and they are also used to perform marker-trait association tests.",
+        "context": [
+            "Statistical analyses of phenotypic data\nBroad-sense  heritability  ( H 2 )  at  an  experimental  level was evaluated for each trait as the ratio of genotypic variance to phenotypic variance, using the components of variance obtained from the AnOVA as follows:\n<!-- formula-not-decoded -->\nwhere σ 2 G = estimation of the genotypic variance; σ 2 GC = estimation of the variance of genotype × crop cycle interaction  effect; σ 2 GT = estimation  of  genotype × trial interaction; σ 2 e = estimation  of  the  residual  variance; C = number of crop cycles (2); T = number of trial (2) and R = number of replications (3).\n<!-- formula-not-decoded -->\nPhenotypic cultivar values within each model were estimated  by  adding  to  their  empirical  best  linear  unbiased predictors  (eBlUPs),  the  intercept  estimate  and  all  fixed effects estimates. Phenotypic values (PhV) were then used to correlate disease resistance traits among and within trials by calculating Pearson correlation coefficients and to perform marker-trait association tests."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 0.5
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How do SNP dosage, statistical innovations, and allele signal intensities enhance polyploid genetic analysis?",
+        "actual_output": null,
+        "expected_output": "SNP dosage and statistical innovations overcome limitations in polyploid genetic analysis and QTL detection. A Bayesian model based on comparative allele signal intensities allows for SNP genotype calling and allele dosage estimates in polyploids. This approach improves association studies by inferring more realistic genetic structures and enabling refined genetic models to analyze within-loci effects.",
+        "context": [
+            "Association tests for SCYlV resistance\nThese well-known constraints in the genetic analysis of polyploids that severely limit the power of QTl detection could be overcome with the advent of single-nucleotide polymorphism (SnP) technology and statistical innovations in data interpretation dedicated to polyploids. recently, Hackett  et  al.  (2013)  adapted current methodologies of linkage and QTl analyses of diploid to autotetraploid potato using SnP dosage. Interestingly, Serang et al. (2012) developed a  formal  statistical  method  allowing  SnP  genotype  calling and allele dosage estimates in polyploids. A Bayesian model based on comparative allele signal intensities, gives access  to  genotype  configuration  with  any  bi-allelic  SnP loci  of  any  sort  of  polyploids  even  of  the  complex  sugarcane (Garcia et al. 2013). Moving from dominant markers to bi-allelic SnP with dosage information should improve the  power  of  association  studies  due  to:  (1)  the  inference of more realistic genetic structure likely reducing the inflation of test statistics, (2) the opportunity to conceive refined genetic model to analyze within loci effects."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Multi-context"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Assess the genetic contribution of Agccag14 to stalk vs. leaf traits.",
+        "actual_output": null,
+        "expected_output": "Agccag14 (frequency 0.17) contributes to both stalk and leaf traits. It shows an R^2 of 0.08 for stalk trait 6 and leaf trait 7. Additional stalk traits (8 and 9) have R^2 values of 0.06.",
+        "context": [
+            "Marker-trait associations\n\n Agccag14 (0.17), 6 = 3.72 (0.08). Agccag14 (0.17), 7 = 3.87 (0.08). Agccag14 (0.17), 8 = 2.86 (0.06). Agccag14 (0.17), 9 = 3.01 (0.06). Agccag14 (0.17), 10 = 4.00 (0.09). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 1 = 4.05 (0.09). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 2 = 2.63 (0.05). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 3 = 3.88 (0.08). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 4 = 2.54 (0.05). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 5 = 3.58 (0.06). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 6 = 3.81 (0.08). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 7 = 3.40 (0.07). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 8 = 4.47 (0.10). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 9 = 3.97 (0.09). Markers (frequency) - log P ( R 2 ) Aggctc35 (0.06), 10 = 3.62 (0.08). parameter Plant part, 1 = Stalk. parameter Plant part, 2 = leaf. parameter Plant part, 3 = Stalk. parameter Plant part, 4 = Stalk. parameter Plant part, 5 = leaf. parameter Plant part, 6 = Stalk. parameter Plant part, 7 = leaf. parameter Plant part, 8 = Stalk. parameter Plant part, 9 = Stalk. parameter Plant"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 0.9
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What is A.SCYlV incidence.leaf for Group A, SCYlV incidence trait, leaf part?",
+        "actual_output": null,
+        "expected_output": "A.SCYlV incidence.leaf for Group A, SCYlV incidence trait, leaf part is 1.",
+        "context": [
+            "Results\n\nA, Trait. = SCYlV incidence. A, Plant part = leaf. A, A.SCYlV incidence.leaf = 1. A, A.SCYlV incidence.Stalk = 0.83. A, A.SCYlV density.leaf = 0.95. A, A.SCYlV density.Stalk = 0.72. A, B.SCYlV inci- dence.leaf = . A, B.SCYlV inci- dence.Stalk = . A, B.SCYlV density.leaf = . A, B.SCYlV density.Stalk = . , Trait. = . , Plant part = Stalk. , A.SCYlV incidence.leaf = . , A.SCYlV incidence.Stalk = 1. , A.SCYlV density.leaf = 0.81. , A.SCYlV density.Stalk = 0.94. , B.SCYlV inci- dence.leaf = . , B.SCYlV inci- dence.Stalk = . , B.SCYlV density.leaf = . , B.SCYlV density.Stalk = . , Trait. = SCYlV density. , Plant part = leaf. , A.SCYlV incidence.leaf = . , A.SCYlV incidence.Stalk = . , A.SCYlV density.leaf = 1. , A.SCYlV density.Stalk = 0.76. , B.SCYlV inci- dence.leaf = . , B.SCYlV inci- dence.Stalk = . , B.SCYlV density.leaf = . , B.SCYlV density.Stalk = . , Trait. = . , Plant part = Stalk. , A.SCYlV incidence.leaf = . , A.SCYlV incidence.Stalk = . , A.SCYlV density.leaf = . , A.SCYlV density.Stalk = 1. , B.SCYlV inci- dence.leaf = . , B.SCYlV inci- dence.Stalk = . , B.SCYlV density.leaf = . , B.SCYlV density.Stalk = . B, Trait. = SCYlV incidence. B, Plant part = leaf. B, A.SCYlV incidence.leaf = 0.75."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Concretizing"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

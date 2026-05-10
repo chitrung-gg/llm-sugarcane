@@ -1,0 +1,112 @@
+[
+    {
+        "input": "How widely used is Tuxedo Suite (Tophat/Cufflinks) for transcriptomics read mapping, assembly, and gene quantification?",
+        "actual_output": null,
+        "expected_output": "Tuxedo Suite protocol (Tophat/Cufflinks) has been one of the most widely used tools for transcriptomics read mapping, assembly, and gene quantification.",
+        "context": [
+            "Transcriptomics\nSeveral data analysis tools are available. Analyzes are classified into three categories: i) read mapping; ii) transcript assembly, and iii) quantification of genes/transcripts (Trapnell et al., 2012). Tuxedo Suite protocol (Tophat/Cufflinks) (Trapnell et al., 2012) has been one of the most widely used tools (Figure 11).\nFigure 11. Tuxedo Suite protocol for differential expression analysis.\nIn general, these analyses are performed as follows: Tophat performs the read mapping to the reference genome and identifies the splicing junctions. These alignments are then used by the Cufflinks that assemble the transcripts, estimate their abundance and determine, under the conditions tested, the genes and differentially expressed transcripts (Cuffdiff) (Trapnell et al., 2009, 2012), which may be visualized by CummeRbund (Goff et al., 2012). From the list of genes obtained by differential expression analysis, it is possible to perform functional enrichment analysis and annotation of biological processes.  Also, it is possible to identify biological pathways in which these genes participate, for example, in KEGG and Reactome databases."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Concretizing"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Given vast biological data, how do bioinformatics & computational biology overcome storage & processing challenges?",
+        "actual_output": null,
+        "expected_output": "Bioinformatics and computational biology seek to overcome the challenges of storage and processing vast biological information.",
+        "context": [
+            "Bioinformatics: an overview and its applications\nW.J.S. Diniz 1  and F. Canduri 2\n1 Departamento de Genética e Evolução, Universidade Federal de São Carlos, São Carlos, SP, Brasil 2 Departamento de Química e Física Molecular, Instituto de Química de São Carlos, Universidade de São Paulo,\nSão Carlos, SP, Brasil\nCorresponding author: F. Canduri E-mail: fcanduri@iqsc.usp.br\nGenet. Mol. Res. 16 (1): gmr16019645 Received February 16, 2017 Accepted March 2, 2017 Published March 15, 2017\nDOI http://dx.doi.org/10.4238/gmr16019645\nCopyright © 2017 The Authors. This is an open-access article distributed under the terms of the Creative Commons Attribution ShareAlike (CC BY-SA) 4.0 License.\nABSTRACT. Technological advancements  in recent years have promoted  a  marked  progress  in  understanding  the  genetic  basis  of phenotypes.  In  line  with  these  advances,  genomics  has  changed the  paradigm  of  biological  questions  in  full  genome-wide  scale (genome-wide), revealing an explosion of data and opening up many possibilities. On the other hand, the vast amount of information that has been generated points the challenges that must be overcome for storage (Moore's law) and processing of biological information. In this context, bioinformatics  and  computational  biology  have  sought  to  overcome such challenges. This review presents an overview of bioinformatics and  its  use  in  the  analysis  of  biological  data,  exploring  approaches, emerging methodologies, and tools that can give biological meaning to the data generated.\nKey words: Data analysis; Databases; Genomics; Systems biology"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How does BLAST's E-value, considering alignment score and database size, indicate non-random alignment probability?",
+        "actual_output": null,
+        "expected_output": "The E-value in BLAST indicates the probability that an alignment did not occur at random, taking into account the alignment score and the database size.",
+        "context": [
+            "BLAST\nnt: nucleotide; aa: amino acid. *Translated for all possible sequences (frames). Source: Amaral et al. (2007).\nThe BLAST results are presented according to two parameters: the value of the score (Score bits) and the E-value. The E-value represents the statistical value that indicates the probability that the alignment did not occur at random, considering the alignment score and the database size (Prosdocimi et al., 2002; Amaral et al., 2007). On the other hand, the score is attributed by the algorithm based on the matches and mismatches between the input sequences and database (Amaral et al., 2007)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Multi-context"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How does essential sequence alignment for DNA/RNA/protein comparison enable evolutionary insights and function prediction?",
+        "actual_output": null,
+        "expected_output": "Sequence alignment enables evolutionary insights by revealing relationships between organisms, individuals, and genes, and allows for the prediction of functions and structures.",
+        "context": [
+            "ANALYSIS OF BIOLOGICAL SEQUENCES\nWidely  used  and  essential  for  biological  sequence  comparison,  alignment  has  been processed by the increase in availability of data generated by NGS technologies (Daugelaite et al., 2013). This process consists of comparing two or more nucleotide sequences (DNA or RNA) or amino acids (peptides or proteins) by seeking a series of individual characters or patterns that are also arranged in the sequences (Manohar and Shailendra, 2012; Junqueira et al., 2014).\nHowever, why compare sequences? There are some applications for this procedure that  allow  information  of  the  evolutionary  relationship  between  organisms,  individuals, genes, prediction functions and structures, among others (Junqueira et al., 2014) (Figure 2). Furthermore,  alignment  techniques  are  necessary  to  whole  genome  analysis,  in  which  the comparison between different genomes or from the same species allows us to identify variations in the sequences and associate them with specific phenotypes.\nFigure 2. Sequence alignment and some of its applications. Figure modified from Junqueira et al. (2014).\nRegarding  proteins,  the  alignment  of  structures  also  stands  out  as  an  important bioinformatics tool. While the comparison of structures refers to the analysis of similarities and differences between two or more structures, alignment refers to the determination of what amino acids would be equivalent between such structures (Junqueira et al., 2014). Although apparently trivial, sequence similarity analysis is complex since the algorithm used calculates a 'cost' to the alignment of such sequences to minimize the differences and obtain the 'best possible result' (Manohar and Shailendra, 2012).\nThe sequence alignment is arranged in rows and the characters in columns (Figure 2). It is up to the algorithm used to search for the best match for the sequences, sometimes inserting gaps ('-') representing one or more nucleotide indel events (Prosdocimi, 2010). However, for the same sequences ' n ' alignments are possible."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Compare data integration and multidisciplinary research's roles in advancing complex biological systems.",
+        "actual_output": null,
+        "expected_output": "Data integration initiates new discoveries and hypotheses, transforming the understanding of complex biological systems through systemic approaches. Multidisciplinary research, with its complementary abilities from scientists with mastery in multiple areas, enables remarkable advances in science, including the understanding of complex biological systems.",
+        "context": [
+            "CONSIDERATIONS AND PERSPECTIVES\nAdvances  in  the  capabilities  of  data  generation  and  analysis,  as  well  as  in  the interpretation of results,  have  pointed to a promising future. However, wide progress in all areas of science highlights the emergence of new analytical strategies. While expanding our understanding of how the body works, the use of information at the molecular level should move  to  systemic  approaches,  promising  to  transform  our  understanding  of  the  regulation of  complex biological systems. On the other hand, data integration is not the end. It is the beginning of new discoveries and hypotheses, generating a feedback system. Moreover, major advances in health will be obtained, such as the use of genomic technologies in gene therapy and\npersonalized medicine. This prospect points out the need for scientists with mastery in multiple areas of knowledge, as well as the performance of multidisciplinary research groups, in which the complementarity of the different abilities will allow remarkable advances in science."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

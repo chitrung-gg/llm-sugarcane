@@ -1,0 +1,112 @@
+[
+    {
+        "input": "How does emmeans function estimate variety/CropClass means, CIs, and enable pairwise comparisons?",
+        "actual_output": null,
+        "expected_output": "The emmeans function estimates predicted means and confidence intervals per variety or CropClass. It also performs pairwise comparisons using a Tukey p-adjustment method.",
+        "context": [
+            "2.5. Description of RUE - temperature formalisms in crop models\nfound (see 3.1 result section), the influence of crop class and variety on the whole varietal experiment dataset was assessed using a mixed linear analysis of variance with the trial as a random effect ( nlme R package, Pinheiro et al., 2022):\n<!-- formula-not-decoded -->\nVariables were also Box-Cox transformed to ensure residue normality.  Predicted  means  and  confidence  intervals  per  variety  or CropClass  were  estimated  using  the emmeans function  ( emmeans  R package, Lenth et al., 2023). The emmeans function was also used to perform pairwise comparison with a Tukey p -adjustment method.\nWhere TOPT is the optimal temperature, TB and TX are the base and maximum temperature for RUE, and β is a parameter controlling the curvature.\nThe  fourth  formalism  (referred  to  as  Johnson),  a  modified  beta function to describe the photosynthesis response to temperature, proposed  by  Johnson  et  al.  (2010),  was  similar  to  the  Wang-Engel formalism but with a maximum threshold:\n<!-- formula-not-decoded -->\nWhere  TOPT and  TREF are  optimal  temperatures,  TB is  the  base\ntemperature, and c a curvature coefficient."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Why is stable RUEMAX assumed constant in sugarcane crop models for yield projections?",
+        "actual_output": null,
+        "expected_output": "RUEMAX is assumed constant in sugarcane crop models because it is stable across elite varieties and environments.",
+        "context": [
+            "5. Conclusion\nThis study provides critical insights into sugarcane RUE, showing that RUEMAX  is stable across elite varieties and is highly temperaturedependent,  while  RUEA  varies  significantly  for  these  factors.  Therefore, in crop modeling, RUEMAX should be assumed constant across genotypes  and  environments.  Based  on  an  international  dataset,  the analysis emphasizes the importance of accurately parameterizing crop model  formalisms  and  cardinal  temperatures  (optimal:  30 -33 ◦ C)  to improve  projections  of  sugarcane  yield  under  climate  change.  Additionally, it offers a reference for calibrating RUE temperature response formalisms  in  major  crop  models  and  provides  guidelines  for  model calibration. While RUEMAX remains consistent, the sensitivity of RUEA to environmental factors highlights the need for refining crop models to capture better varietal responses to factors related to RGP (i.e., lodging, the decline in N use efficiency with age, and respiration of large crops). Incorporating  these  mechanisms  will  enable  crop  models  to  more accurately simulate sugarcane productivity dynamics, supporting climate  impact  assessments  and  breeding  programs  for  high-yield, climate-resilient varieties."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Multi-context"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Analyze RUEMAX-temp response parameter value dependencies on formalisms and regression types.",
+        "actual_output": null,
+        "expected_output": "The RUEMAX-temperature response parameter values exhibit dependencies on both the formalism and the regression type. For ApsimCanegro, RUE MAX values derived from Leaf-type and GPP-type regressions show inconsistent relationships (higher, lower, or similar) compared to the default RUE MAX across parameters like TB, TOPT1, TOPT2, and TX. Conversely, for Mosicas, RUE MAX (Leaf-type) and RUE MAX (GPP-type) values are consistently similar to each other and slightly higher than the RUE MAX (default) for parameters such as TOPT and TDEC.",
+        "context": [
+            "4.1. Contrasted response of RUEA  and RUEMAX  to variety\nTable 3 Parameter values in the different RUEMAX -temperature response formalisms depending on the quantile regressions on net leaf photosynthesis (Anet), gross primary productivity (GPP), and radiation use efficiency (RUE).\nApsimCanegro, Parameter = T B. ApsimCanegro, A net = 13.0. ApsimCanegro, GPP = 7.0. ApsimCanegro, RUE MAX (default) = 10. ApsimCanegro, RUE MAX (Leaf-type) = 13.0*. ApsimCanegro, RUE MAX (GPP-type) = 7.0*. , Parameter = T OPT1. , A net = 32.1. , GPP = 27.6. , RUE MAX (default) = 20. , RUE MAX (Leaf-type) = 27.8. , RUE MAX (GPP-type) = 29.6. , Parameter = T OPT2. , A net = 35.6. , GPP = 32.6. , RUE MAX (default) = 40. , RUE MAX (Leaf-type) = 35.6*. , RUE MAX (GPP-type) = 32.6*. , Parameter = T X. , A net = 46.8. , GPP = 37.7. , RUE MAX (default) = 47. , RUE MAX (Leaf-type) = 46.8*. , RUE MAX (GPP-type) = 37.7*. Mosicas, Parameter = T OPT. Mosicas, A net = 33.7. Mosicas, GPP = 28.7. Mosicas, RUE MAX (default) = 32. Mosicas, RUE MAX (Leaf-type) = 33.1. Mosicas, RUE MAX (GPP-type) = 33.1. , Parameter = T DEC. , A net = 0.032. , GPP = 0.027. , RUE MAX (default) = 0.0025. , RUE MAX (Leaf-type) = 0.0027. , RUE MAX (GPP-type) = 0.0027. , Parameter = γ. , A net = 1.14. , GPP = 1.17. , RUE MAX (default) = 2.0. , RUE MAX"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 0.3
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Identify authors of 'Sugarcane radiation use efficiency: varietal differences, temperature dependence, and implications for modeling biomass across environments'.",
+        "actual_output": null,
+        "expected_output": "The authors of 'Sugarcane radiation use efficiency: varietal differences, temperature dependence, and implications for modeling biomass across environments' are Mathias Christina, David Clark, Fabio Ricardo Marin, Rafael Vasconcelos Ribeiro, Julio Victor Saez, Tendai Polite Chibarabada, Murilo dos Santos Vianna, Matthew R. Jones, Santiago Vianna Cuadra, Osvaldo Machado Rodrigues Cabral, Martin Moises Acreche, and Henrique Boriolo Dias.",
+        "context": [
+            "Sugarcane radiation use efficiency: varietal differences, temperature dependence, and implications for modeling biomass across environments\nMathias Christina a,b,* , David Clark c,d , Fabio Ricardo Marin e , Rafael Vasconcelos Ribeiro f , Julio Victor Saez g , Tendai Polite Chibarabada h,i , Murilo dos Santos Vianna j , Matthew R. Jones k , Santiago Vianna Cuadra l , Osvaldo Machado Rodrigues Cabral m , Martin Moises Acreche n , Henrique Boriolo Dias o\na CIRAD, UPR AIDA, F-34398 Montpellier, France\nb AIDA, Univ Montpellier, CIRAD, Montpellier, France\nc SASRI, Private Bag X02, Mount Edgecombe, 4300, South Africa\nd School of Agricultural, Earth and Environmental Sciences, University of KwaZulu-Natal, Durban 4041, South Africa\ne University of S ˜ ao Paulo (USP), ' Luiz de Queiroz ' College of Agriculture (ESALQ), SP 13418-900 PO Box 09 Piracicaba, Brazil\nf Laboratory of Crop Physiology, Department of Plant Biology, State University of Campinas, Campinas SP, 13083-862, Brazil\ng EEA Famailla, Instituto Nacional de Tecnología Agropecuaria, 4132 Tucum ´ an, Argentina\nh Agronomy Department, Zimbabwe Sugar Association Experiment Station, Private Bag 7006, Chiredzi, Zimbabwe\ni Centre for Transformative Agricultural and Food Systems, School of Agricultural, Earth and Environmental Sciences, University of KwaZulu-Natal, P. Bag X01, Pietermaritzburg 3209, South Africa\nj Institute of Bio- and Geosciences (IBG-3), Forschungszentrum Jülich GmbH, 52428, Jülich, Germany"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Multi-context"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Contrast sugarcane modeling systems with genotypic responses to environmental stresses.",
+        "actual_output": null,
+        "expected_output": "Sugarcane modeling systems, such as those by Keating et al. (1999) and Kebalo et al. (2025) using the STICS soil-crop model, focus on simulating sugarcane production and growth in various environments. In contrast, genotypic responses to environmental stresses involve understanding traits like lodging resistance from diverse sugarcane lines (Jongrungklang et al., 2018) and adaptive physiological and biochemical responses of sugarcane genotypes to high-temperature stress (Kohila & Gomathi, 2018).",
+        "context": [
+            "References\n- [Jongrungklang, N., Maneerattanarungroj, P., Jogloy, S., Songsri, P., Jaisil, P., 2018. Understanding lodging resistant traits from diverse sugarcane lines. Philipp. J. Crop. Sci. 43, 71 -80.](http://refhub.elsevier.com/S0168-1923(25)00473-3/sbref0042)\n- Keating, B.A., Robertson, M.J., Muchow, R.C., Huth, N.I., 1999. Modelling sugarcane production systems I. Development and performance of the sugarcane module. Field Crops Res. 61, 253 -271. https://doi.org/10.1016/S0378-4290(98)00167-1.\n- Kebalo, L.F., Versini, A., Soulie, J.-C., Ramos, M., Chevalier, L., Chaput, M., Christina, M., 2025. Modeling perennial sugarcane growth with the STICS soil-crop model in contrasted environments: assessment of accuracy and robustness. Field Crops Res. 333, 110100. https://doi.org/10.1016/j.fcr.2025.110100.\n- Koenker, R., 2009. quantreg: quantile regression. R Package. https://doi.org/10.32614/ CRAN.package.quantreg.\n- Kohila, S., Gomathi, R., 2018. Adaptive physiological and biochemical response of sugarcane genotypes to high-temperature stress. Indian J. Plant Physiol. 23, 245 -260. https://doi.org/10.1007/s40502-018-0363-y.\n- Leal, M.R.L.V., Horta Nogueira, L.A., Cortez, L.A.B., 2013. Land demand for ethanol production. Appl. Energy 102, 266 -271. https://doi.org/10.1016/j. apenergy.2012.09.037."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

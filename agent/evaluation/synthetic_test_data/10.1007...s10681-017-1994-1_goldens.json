@@ -1,0 +1,112 @@
+[
+    {
+        "input": "How does MET characterize sugarcane final selection using TCH, ERS, FIB, and EI?",
+        "actual_output": null,
+        "expected_output": "MET characterizes the final selection stage of the sugarcane breeding program by considering the genotypic response in terms of tonnes of cane per hectare (TCH), estimable recoverable sugar (ERS), fiber content (FIB), and an economic index (EI).",
+        "context": [
+            "Analysis of multienvironment trials (MET) in the sugarcane breeding program of Re ´union Island\nSusie Guilly . Thomas Dumont . Audrey Thong-Chane . Laurent Barau . Jean-Yves Hoarau\nReceived: 4 January 2017 / Accepted: 7 August 2017 / Published online: 28 August 2017 Ó The Author(s) 2017. This article is an open access publication\nAbstract The sugarcane variety development program on Re ´union Island is dedicated to an industry that encompasses numerous different agroclimatic production zones. The objective of this study is to characterize in detail the final selection stage of this program, consisting of multienvironment trials (MET) at seven representative locations, considering the genotypic response in terms of tonnes of cane per hectare (TCH), estimable recoverable sugar (ERS), fiber content (FIB), and an economic index (EI). Data from four recent variety series tested between one and three crop years were used. Each trait revealed a significant genotype 9 location (GL) interaction, always higher than the genotype 9 crop year (GC) interaction, indicating that testing genotypes across locations is more important than testing for ratooning ability. Broad-sense heritability ( H ) at MET level was relatively high for FIB compared with EI, while ERS and TCH exhibited intermediate H values. Genotype main\nSusie Guilly and Thomas Dumont contributed equally to this paper.\nS. Guilly \u0001 T. Dumont \u0001 A. Thong-Chane \u0001 L. Barau \u0001 J.-Y. Hoarau ( & ) eRcane, 29 rue d'Emmerez de Charmoy, 97490 Sainte-Clotilde, La Re ´union, France e-mail: hoarau.jean-yves@ercane.re\nJ.-Y. Hoarau Cirad, UMR AGAP, Avenue Agropolis, 34398 Montpellier, France"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 0.2
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How do AE vector biplot abscissa and ordinates distinguish genotype mean performance from stability?",
+        "actual_output": null,
+        "expected_output": "In the new reference frame defined by the AE vector, the highest positive (or negative) abscissa pinpoints genotypes with the highest (or lowest) mean performance across environments, while the highest ordinates in absolute value pinpoint genotypes exhibiting the highest instability of their performance across environments.",
+        "context": [
+            "Mean yield and stability of genotypes\nVisualization of both mean performance and stability of genotypes across all environments is always an important issue in cultivar evaluation and to assist in decision-making for selection purposes. This can be done by following the methodology proposed by Yan (2002), which consists in the introduction of an average environment (AE) vector in trait biplots whose coordinates are defined by the average of PC1 and PC2 scores of all environments. This AE vector and its orthogonal vector define a new orthogonal reference frame in which: (i) the highest positive (or negative) abscissa in the new frame should pinpoint the genotypes exhibiting the highest (or lowest) mean performance across all environments, and (ii) the highest ordinates in absolute value (either positive or negative) in this new frame should pinpoint the genotypes exhibiting the highest instability of their performance across environments. These guidelines for analysis in this new reference frame (pictured by dashed arrows in Fig. 2) permits one to identify at a glance: (i) three (G9, G10, G19), one (G2), two (G12, G20), and two (G10, G19) genotypes likely having the highest overall performance means for TCH, ERS, FIB, and EI, respectively, and (ii) one (G3), one (G9), one (G6), and three (G3, G7, G11) genotypes likely having the lowest overall performance means for the same respective traits. All these graphical findings provided by the four two-dimension biplots are perfectly supported by the genotype mean values observed in the original data (Tables 5, 6). They support the reliability of the AE reference frame in displaying a representative ranking of best and poorest mean performances, although biplots did not explain 100% of GGE variation. Moreover, genotypes G11, G7, G7, and G11 appeared to have the highest ordinates in absolute values in this new reference frame for TCH, ERS, FIB, and EI, respectively. These graphical findings pinpoint genotypes that should exhibit the poorest or almost the poorest performance stability across environments. Comparison of these findings with ecovalence values of genotypes ( Wm ) that measure the contribution of each genotype to the GE"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Comparative"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How do GGE biplots, using balanced data and Wricke's index, visualize genotype-site relationships and interactions?",
+        "actual_output": null,
+        "expected_output": "GGE biplots visualize relationships among selection sites and genotype performance using perfectly balanced space-time information to avoid bias. Wricke's ecovalence stability index (Wm) estimates each genotype's contribution to the genotype x location interaction, and a similar index (Wj) estimates each location's contribution to the interaction.",
+        "context": [
+            "GGE biplots\nTo visualize the relationships existing among selection sites and the performance of some of the most promising candidate genotypes, GGE biplots were produced for the 21 genotypes of both series S00 and S03 (10 and 11 genotypes, respectively) that were tested across all sites (Table 2). To this end, we restricted the trait data analyzed to the first two crop years in order to consider space-time information perfectly balanced (7 locations 9 4 replications 9 2 crop years 9 21 genotypes) to visualize relationships among environments and genotypes without risks of bias. In a first step, using cultivar checks common to both series within each site (see footnote b of Table 2), both series were analyzed at each site using the following linear mixed model:\n<!-- formula-not-decoded -->\nwhere the symbols and indices designate the same effects as in model 2 and in which the genotype effect was fixed and other effects were random. At each location j , the adjusted mean ( \u0016 Ymj ) of genotype m (free of any trial/series membership effects) was inferred by adding to the best linear unbiased estimate (BLUE) of genotype the overall mean ( l ) of the model (Littell et al. 2006, p. 211). Pearson's correlation coefficients between traits and across sites were calculated using average adjusted means of genotypes for the seven sites. For each trait, the contribution of each genotype m to the genotype 9 location interaction was estimated using Wricke's (1965) ecovalence stability index ( Wm ), and the contribution of each location j to the interaction was estimated using a similar index ( Wj ) by interchanging locations and genotypes as follows:\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->\n<!-- formula-not-decoded -->"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Multi-context"
+            ],
+            "synthetic_input_quality": 0.3
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Given no TCH-FIB correlation, how does TCH's positive correlation with EI manifest?",
+        "actual_output": null,
+        "expected_output": "TCH shows a high positive correlation with EI, with a correlation coefficient of 0.746.",
+        "context": [
+            "Statistical analysis of GGE data\n(GL [ MN C LM C ES = VB [ SB [ SP), and EI (LM C SB C GL [ ES = VB [ MN = SP) and did not reveal any broad similarity between any two traits. Correlations of traits across locations revealed in the set of genotypes surveyed are presented in Table 7. There was no correlation between TCH and FIB or between ERS and EI, high positive correlation between TCH and EI (0.746), high negative correlation between TCH and ERS ( -0.626), and moderate negative correlations between ERS and FIB ( -0.367) and between FIB and EI ( -0.342). The ecovalence of the seven locations ( Wj ) varied around its average value (14% = 100%/7 locations) with larger range (rg) for TCH (rg = 20.9%) and ERS (rg = 24.9%) compared with FIB (rg = 12.9%) or EI (rg = 13.4%). For TCH, the smallest contribution to genotype 9 location interaction was due to location LM ( W LM = 5.3%) and the highest to location SB\n"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 0.1
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What are the specific VB, SP, SB, and MN values from the GGE data?",
+        "actual_output": null,
+        "expected_output": "The specific values are: VB: 14.7c, 9.5, 18.3. SP: 14.3, 13.7, 14.6, 13.0, 13.9, 12.8, 13.8, 13.3, 12.8, 13.4, 13.5, 16.8, 15.8, 14.5, 14.7, 14.9, 15.8, 14.0, 12.2, 17.1, 13.1, 14.2d, 9.2, 16.9. SB: 14.1, 13.1, 14.3, 12.6, 12.8, 12.3, 11.9, 12.6, 12.7, 13.4, 12.8, 15.7, 15.2, 12.4, 12.7, 14.0, 15.2, 12.5, 12.9, 15.6, 12.1, 13.4e, 8.9, 8.1. MN: 15.7.",
+        "context": [
+            "Statistical analysis of GGE data\n\n VB,  = 14.7c. VB,  = 9.5. VB,  = 18.3. SP,  = 14.3. SP, 3.9 7.4 = 13.7 14.6. SP, 3.5 = . SP, 2.7 = 13.0. SP, 3.4 = 13.9. SP, 5.7 = 12.8. SP, 4.6 = 13.8. SP, 1.8 = 13.3. SP, 8.4 5.6 = 12.8 13.4. SP, 12.0 = 13.5. SP, 0.9 = 16.8. SP,  = . SP, 3.7 = 15.8. SP, 7.1 = 14.5. SP, 4.7 3.4 = 14.7. SP, 4.5 = 14.9 15.8. SP,  = . SP, 3.6 = 14.0 12.2. SP, 7.3 = . SP, 2.4 = 17.1. SP, 3.2 = 13.1. SP,  = 14.2d. SP,  = 9.2. SP,  = 16.9. SB,  = 14.1. SB, 3.9 7.4 = 13.1. SB, 3.5 = 14.3. SB, 2.7 = 12.6. SB, 3.4 = 12.8. SB, 5.7 = 12.3. SB, 4.6 = 11.9. SB, 1.8 = 12.6. SB, 8.4 5.6 = 12.7 13.4. SB, 12.0 = 12.8. SB, 0.9 = 15.7. SB,  = 15.2. SB, 3.7 = 12.4. SB, 7.1 = . SB, 4.7 3.4 = 12.7. SB, 4.5 = 14.0. SB,  = 15.2. SB, 3.6 = 12.5. SB, 7.3 = 12.9. SB, 2.4 = 15.6 12.1. SB, 3.2 = 13.4e. SB,  = 8.9. SB,  = . SB,  = 8.1. MN,  = 15.7. MN, 3.9"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Concretizing"
+            ],
+            "synthetic_input_quality": 0.2
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

@@ -29,6 +29,8 @@ async def run_rag_evaluations():
         userdata_connection_pool
     )
     from app.core.app_container import get_container
+    from langgraph.types import Command
+    from app.common.constants import UserFeedbackAction
     
     
     # 1. Manually open the connection pools before initializing the container
@@ -86,58 +88,81 @@ async def run_rag_evaluations():
         base_eval_folder = os.path.abspath(env_base_folder)
 
         # Hyperparameter Sweep
-        for temp in [0.0]:
-            test_cases = []
+        test_cases = []
 
-            # Create the exact folder path dynamically
-            folder_name = f"{current_file_name}_{timestamp}_temp_{temp}"
-            run_folder = os.path.join(base_eval_folder, folder_name)
-            
-            # Ensure the directory actually exists before writing to it
-            os.makedirs(run_folder, exist_ok=True)
+        # Create the exact folder path dynamically
+        folder_name = f"{current_file_name}_{timestamp}"
+        run_folder = os.path.join(base_eval_folder, folder_name)
+        
+        # Ensure the directory actually exists before writing to it
+        os.makedirs(run_folder, exist_ok=True)
 
-            logger.info(f"Starting evaluation run. Saving results to: {run_folder}")
+        logger.info(f"Starting evaluation run. Saving results to: {run_folder}")
 
-            for query in queries:
-                config = cast(RunnableConfig, {
-                    "configurable": {
-                        "thread_id": str(uuid.uuid4())
-                    }
-                })
-                
-                # 2. Run Agent
-                initial_state = {
-                    "query": query,
-                    "messages": [HumanMessage(content=query)],
-                    "active_datasets": [],
-                    "iteration_count": 0,
+        for query in queries:
+            config = cast(RunnableConfig, {
+                "configurable": {
+                    "thread_id": str(uuid.uuid4())
                 }
-                final_state = await agent_service.graph.ainvoke(initial_state, config=config)
+            })
+            
+            # 2. Run Agent
+            initial_state = {
+                "query": query,
+                "messages": [HumanMessage(content=query)],
+                "active_datasets": [],
+                "iteration_count": 0,
+            }
+            logger.info(f"Test case: '{query}' -> Starting initial graph run...")
+
+            # The graph will run Planner and then suspend at HUMAN_REVIEW
+            suspended_state = await agent_service.graph.ainvoke(initial_state, config=config)
+
+            # 3. Simulate Human Approval
+            current_thread_state = await agent_service.graph.aget_state(config)
+            
+            if current_thread_state.next:
+                logger.info(f"Test case: '{query}' -> Graph suspended at {current_thread_state.next}. Simulating Human Approval...")
                 
-                # Aggregate all sources of information used by the agent
-                retrieval_context = []
-
-                # 1. Add Vector RAG results
-                retrieval_context.extend([str(res["content"]) for res in final_state.get("rag_results", [])])
-
-                # 2. Add Tool outputs (Knowledge Graph, NCBI, etc.)
-                retrieval_context.extend([str(res["output"]) for res in final_state.get("tool_results", [])])
-
-                # 3. Add Web Search snippets
-                retrieval_context.extend([str(res["snippet"]) for res in final_state.get("web_results", [])])
-
-                test_case = LLMTestCase(
-                    input=query,
-                    actual_output=str(final_state.get("final_answer", "")),
-                    retrieval_context=retrieval_context # Now includes all retrieved data
+                # Mock the payload that the React frontend would normally send
+                mock_approval = Command(
+                    resume={"action": UserFeedbackAction.APPROVE}
                 )
-                # 3. Build Test Case
-                test_case = LLMTestCase(
-                    input=query,
-                    actual_output=str(final_state.get("final_answer", "")),
-                    retrieval_context=[str(res["content"]) for res in final_state.get("rag_results", [])]
-                )
-                test_cases.append(test_case)
+                
+                # Resume the graph to trigger Executor and Synthesizer
+                final_state = await agent_service.graph.ainvoke(mock_approval, config=config)
+            else:
+                logger.info(f"Test case: '{query}' -> Graph did not suspend. Proceeding.")
+                final_state = suspended_state
+
+            # Aggregate all sources of information used by the agent
+            retrieval_context = []
+
+            # 1. Add Vector RAG results
+            retrieval_context.extend([str(res["content"]) for res in final_state.get("rag_results", [])])
+
+            # 2. Add Tool outputs (Knowledge Graph, NCBI, etc.)
+            retrieval_context.extend([str(res["output"]) for res in final_state.get("tool_results", [])])
+
+            # 3. Add Web Search snippets
+            retrieval_context.extend([str(res["snippet"]) for res in final_state.get("web_results", [])])
+
+            step_answers = [
+                str(msg.content) for msg in final_state.get("messages", [])
+                if msg.type == "ai" and not msg.additional_kwargs.get("is_thought")
+            ]
+            actual_output = "\n\n".join(step_answers)
+
+            if not actual_output.strip():
+                actual_output = "The agent failed to generate an output."
+
+            # 3. Build Test Case
+            test_case = LLMTestCase(
+                input=query,
+                actual_output=actual_output,
+                retrieval_context=retrieval_context
+            )
+            test_cases.append(test_case)
 
             dataset = EvaluationDataset()
             for tc in test_cases:

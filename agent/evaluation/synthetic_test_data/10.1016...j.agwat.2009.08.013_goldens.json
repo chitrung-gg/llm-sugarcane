@@ -1,0 +1,112 @@
+[
+    {
+        "input": "How are non-water-stressed baselines determined using diurnal (Tc-Ta)/VPD study or seasonal collection?",
+        "actual_output": null,
+        "expected_output": "Non-water-stressed baselines can be determined using two methods. The first method involves a diurnal study of a well-watered crop, recording (Tc - Ta) and VPD throughout a single day (10 a.m. to 4 p.m.) to obtain a wide range of values. The second method consists of collecting (Tc - Ta) and VPD on a well-watered crop at a specific time of day (generally 1-2 hours after solar noon) for several dates throughout the growing season.",
+        "context": [
+            "2.5.1. Determination of the lower baseline\nTwo methods can be used to experimentally determine the non-water-stressed baseline. The first method is based on a diurnal study of a well-watered crop; ( T c \u0000 T a) and VPD are recorded throughout a single day, from about 10 a.m. to 4 p.m., in order to obtain a wide range of ( T c \u0000 T a) and VPD values. However, with this method, seasonal crop changes in canopy structure, transpiration rate and environmental variations, particularly in VPD, are not represented in the data (Gardner et al., 1992b). Furthermore, the method is not applicable in humid climates where the daily VPD range is too narrow to determine an equation.\nThe second method consists of collecting ( T c \u0000 T a) and VPD on a well-watered crop at a given time of the day for several dates throughout the growing season (Gardner et al., 1992a). Measurements are generally made 1-2 h after solar noon, corresponding to the period of the day for which VPD as well as water stress is maximum.\nIn order to determine the non-water stressed baseline equation, we calculated, for IRR treatments, the mean of ( T c \u0000 T a) and VPD between 1:30 and 2:00 p.m., corresponding to the period of the day for which the evapotranspiration is at a maximum rate. We excluded the cloudy days by thresholding values of global radiation, and only kept the days following an irrigation watering or a rainfall event during the irrigation period."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Concretizing"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How do CWSIe fixed, handheld, and airborne methods' views and coverage differ?",
+        "actual_output": null,
+        "expected_output": "CWSIe fixed sensors use a vertical view, hand-held radiometers use an oblique view to reduce soil proportion and work on partially covered crops, and airborne imagery provides spatially exhaustive coverage over large areas.",
+        "context": [
+            "4.2. On the use of CWSIe to monitor irrigation in real cropping conditions\nWe worked here with in-field fixed thermal infrared sensors that were set up with a vertical view in order to avoid azimuthal effects (Fuchs, 1990). However, more research is needed to propose and validate an easier method for canopy temperature measurements in an oblique view, performed with a hand-held thermal infrared radiometer that can be easily done by the sugarcane growers themselves. Making the thermal infrared measurements with an oblique view reduces the proportion of soil viewed by the sensor and allows the CWSIe to be used on partially covered crops. (Gardner et al., 1992b) provide standard sampling procedures for empirical CWSI calculation with a hand-held radiometer.\nAt the other extreme, the use of CWSIe through the acquisition of thermal data using an airborne imagery camera is also to be investigated. The method is certainly more difficult to set-up, mainly because of the radiometric and geometric corrections of the thermal images (Lebourgeois et al., 2008), but it has the unique advantage of being spatially exhaustive over large areas, allowing a direct comparison between the plots."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 0.9
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Investigate CWSIe and OSIRI tool coupling for sugarcane irrigation monitoring in humid regions.",
+        "actual_output": null,
+        "expected_output": "The study discussed opportunities provided by coupling CWSIe and OSIRI tool to improve irrigation monitoring of sugarcane in Reunion Island.",
+        "context": [
+            "1. Introduction\nThe theoretical method (CWSIt), based on energy balance considerations, was often reported to be more adapted for humid regions (Keener and Kircher, 1983) as it considers variations in net radiation and wind speed. However, these variables, as well as the aerodynamic and canopy resistances also required for the CWSIt calculation, are not always available. This theoretical approach is thus not adapted for operational irrigation scheduling.\nTo our knowledge, few studies have reported application of CWSI on sugarcane crop for irrigation scheduling, in spite of the fact that sugarcane crop covers the soil during approximately twothirds of its growing cycle, facilitating the use of such an approach. Boroomand-Nasab et al. (2005) and Khera and Sandhu (1986) used CWSIe on sugarcane crop, in an arid region, and obtained results that need to be consolidated and tested in humid climate conditions.\nConsidering the need of a simple and reliable index of sugarcane water status in order to consolidate irrigation scheduling provided by water balance modelling, we set up a 2-year experiment in Reunion with the objective of testing the empirical index CWSIe as a quantitative index of satisfaction of water requirements for sugarcane crop in the humid region of Reunion Island. We then discussed opportunities provided by coupling CWSIe and OSIRI tool to improve irrigation monitoring of sugarcane in the Island."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What is the objective of combining thermal infrared index and water balance modeling for tropical sugarcane?",
+        "actual_output": null,
+        "expected_output": "The objective is to monitor sugarcane irrigation in a tropical environment.",
+        "context": [
+            "Towards using a thermal infrared index combined with water balance modelling to monitor sugarcane irrigation in a tropical environment\nV. Lebourgeois a , J.-L. Chopart b , A. Be ´ gue ´ c, *, L. Le Me ´ zo b\n- a CIRAD UPR SCA, Station La Bretagne, Saint-Denis, La Re ´union, F-97408, France\n- b CIRAD UPR SCA, 7 chemin de l'IRAT, 97410 Saint-Pierre, La Re ´union, F-97410, France\n- c CIRAD UMR TETIS, Maison de la Te ´le ´de ´tection, 500 rue J.F. Breton, Montpellier, F-34093, France"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "Reasoning"
+            ],
+            "synthetic_input_quality": 1.0
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Assess the impact of limited VPD range on 2007 lower baseline equation accuracy.",
+        "actual_output": null,
+        "expected_output": "The 2007 lower baseline equation was derived using a limited VPD range of 0.75 to 1.4 kPa. This narrow range, combined with an R^2 of 0.67, suggests that the equation's accuracy and applicability may be restricted to similar low VPD conditions.",
+        "context": [
+            "3.2.1. Lower and upper baselines equations\nWe present here the upper and lower baseline equations obtained during the 2007 experiment (Fig. 4).\nWe defined the lower baseline using the measurements made on IRR-2 plot as it showed the lowest water stressed canopy level. Indeed, the IRR-2 treatment presented the minimum ( T c \u0000 T a ) values, with mean values 0.3 8 C lower than the ( T c \u0000 T a) values of the IRR-1 treatment. Due to frequent intermittent cloud cover, only eight dates were used to obtain the following equation (Fig. 4):\n<!-- formula-not-decoded -->\nwith R 2 = 0.67 ( n = 8), and where ( T c \u0000 T a ) ( 8 C) and VPD (kPa) are meanvalues of the measurements observed between 1:30 and 2:00 p.m.. The VPD measured on these 8 days and used for the lower baseline definition were low and ranged only from 0.75 to 1.4 kPa.\nFig. 3. Ratio between actual and maximum evapotranspiration (AET/MET) on irrigated (IRR, black lines) and rainfed (RAIN, grey lines) treatments during the 2007 (a) and 2008 (b) experiments (d.a.h.: days after harvest).\nDuring the experiment the highest water stress occurred on October 10th, on RAIN-1 plot. The upper baseline was thus fixed at 3.8 8 C, corresponding to the ( T c \u0000 T a) value measured on that day (Fig. 4)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": [
+                "In-Breadth"
+            ],
+            "synthetic_input_quality": 0.2
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": null,
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]
