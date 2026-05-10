@@ -4,17 +4,30 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, User, Bot, Loader2, Database, ChevronDown, ChevronRight, ExternalLink, Wrench, Brain, Check, X } from "lucide-react";
+import { Send, User, Bot, Loader2, Database, ChevronDown, ChevronRight, ExternalLink, Wrench, Brain, Check, X, Download, FileDown, FileCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useProjectDatasets } from "@/hooks/use-datasets";
+import { useProjectDatasets, useDatasetFiles } from "@/hooks/use-datasets";
 import { useChatHistory } from "@/hooks/use-chat";
 import { useChatStream } from "@/hooks/use-chat-stream";
+import { useDownload } from "@/hooks/use-download";
 import { PlanModificationForm } from "./plan-modification-form";
-import { Message } from "@/lib/types";
+import { Message, Dataset, DatasetFile } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
+
+// Helper to extract S3 URIs from text
+const extractS3Uris = (text: string): string[] => {
+  const s3Regex = /s3:\/\/[^\s"'`<>]+/g;
+  return text.match(s3Regex) || [];
+};
 
 // Memoized Message Item Component to prevent unnecessary re-renders
 const ChatMessageItem = React.memo(({ 
@@ -22,13 +35,15 @@ const ChatMessageItem = React.memo(({
   expandedSources, 
   expandedThoughts, 
   toggleSource, 
-  toggleThoughts 
+  toggleThoughts,
+  onDownload
 }: { 
   message: Message; 
   expandedSources: Record<string, boolean>; 
   expandedThoughts: Record<string, boolean>; 
   toggleSource: (id: string) => void; 
   toggleThoughts: (id: string) => void; 
+  onDownload: (params: { fileId?: string; s3Uri?: string }) => void;
 }) => {
   return (
     <div
@@ -92,12 +107,33 @@ const ChatMessageItem = React.memo(({
             {/* Tool Executions */}
             {message.tool_executions && message.tool_executions.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {message.tool_executions.map((tool, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
-                    <Wrench className="h-3 w-3" />
-                    {tool.tool_name}: {tool.status}
-                  </div>
-                ))}
+                {message.tool_executions.map((tool, idx) => {
+                  const s3Uris = extractS3Uris(tool.output || "");
+                  return (
+                    <div key={idx} className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
+                        <Wrench className="h-3 w-3" />
+                        {tool.tool_name}: {tool.status}
+                      </div>
+                      {s3Uris.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {s3Uris.map((uri, uIdx) => (
+                            <Button 
+                              key={uIdx}
+                              variant="outline" 
+                              size="sm" 
+                              className="h-6 px-2 text-[9px] gap-1 bg-white border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+                              onClick={() => onDownload({ s3Uri: uri })}
+                            >
+                              <FileDown className="h-3 w-3" />
+                              Download Result
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -153,6 +189,7 @@ export function ChatWindow() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: datasets, isLoading: datasetsLoading } = useProjectDatasets(projectId);
+  const { downloadFile } = useDownload();
   
   // Fetch history for this thread
   const { data: history, isLoading: historyLoading } = useChatHistory(threadId);
@@ -173,14 +210,51 @@ export function ChatWindow() {
         if (m.type === "thought") {
           currentThoughts.push(m.content);
         } else if (m.role === "assistant" && (!m.type || m.type === "answer" || m.type === "error")) {
-          formatted.push({
-            id: m.id || m.execution_id || `hist-${idx}`,
-            role: m.role,
-            content: m.content,
-            type: m.type as "answer" | "thought" | "error" | "interrupt",
-            execution_id: m.execution_id,
-            thoughts: [...currentThoughts]
-          });
+          const existingIdx = formatted.findIndex(f => f.execution_id === m.execution_id && f.role === "assistant" && (m.type === "answer" || !m.type));
+          if (existingIdx !== -1 && m.execution_id) {
+            // Append if content is unique and not just a sub-string
+            const existingContent = formatted[existingIdx].content;
+            if (!existingContent.includes(m.content)) {
+                formatted[existingIdx].content = existingContent + "\n\n" + m.content;
+            }
+            
+            formatted[existingIdx].thoughts = [...(formatted[existingIdx].thoughts || []), ...currentThoughts];
+            
+            // Merge tool executions if they exist in history results
+            const toolResults = history.tool_results?.filter((tr: any) => tr.execution_id === m.execution_id);
+            if (toolResults && toolResults.length > 0) {
+                const existingTools = formatted[existingIdx].tool_executions || [];
+                const newTools = toolResults.map((tr: any) => ({
+                    tool_name: tr.tool,
+                    status: tr.status || "complete",
+                    output: typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output)
+                }));
+                
+                // Avoid duplicates by tool name and output hash (simplified here by tool name and first 20 chars of output)
+                const mergedTools = [...existingTools];
+                newTools.forEach(nt => {
+                    if (!mergedTools.some(mt => mt.tool_name === nt.tool_name && mt.output === nt.output)) {
+                        mergedTools.push(nt);
+                    }
+                });
+                formatted[existingIdx].tool_executions = mergedTools;
+            }
+          } else {
+            const toolResults = history.tool_results?.filter((tr: any) => tr.execution_id === m.execution_id);
+            formatted.push({
+              id: m.id || m.execution_id || `hist-${idx}`,
+              role: m.role,
+              content: m.content,
+              type: (m.type as "answer" | "thought" | "error" | "interrupt") || "answer",
+              execution_id: m.execution_id,
+              thoughts: [...currentThoughts],
+              tool_executions: toolResults?.map((tr: any) => ({
+                tool_name: tr.tool,
+                status: tr.status || "complete",
+                output: typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output)
+              }))
+            });
+          }
           currentThoughts = []; // Reset for next group
         } else {
           formatted.push({
@@ -282,7 +356,7 @@ export function ChatWindow() {
   const activeStreamThoughts = useMemo(() => 
     currentStream
       .filter(e => e.event === 'thought')
-      .map(e => e.data.content),
+      .map(e => (e.data as any).content),
     [currentStream]
   );
   
@@ -292,11 +366,57 @@ export function ChatWindow() {
     [currentStream]
   );
   
-  const activeStreamAnswer = useMemo(() => 
-    currentStream
-      .find(e => e.event === 'answer')?.data,
-    [currentStream]
-  );
+  const activeStreamAnswer = useMemo(() => {
+    let rawText = "";
+    currentStream.forEach(e => {
+      if (e.event === 'answer') {
+        const content = typeof e.data === 'string' 
+          ? e.data 
+          : ((e.data as any)?.content || (e.data as any)?.final_answer || "");
+        
+        if (content) {
+          if (rawText && !rawText.includes(content)) {
+            rawText += "\n\n" + content;
+          } else if (!rawText) {
+            rawText = content;
+          }
+        }
+      } else if (e.event === 'token') {
+        const token = typeof e.data === 'string' ? e.data : (e.data as any)?.token;
+        if (token) {
+          if (!rawText.endsWith(token)) {
+            rawText += token;
+          }
+        }
+      }
+    });
+
+    // --- Real-time JSON Field Extraction ---
+    // If the raw text looks like JSON (starts with {), try to extract just the values
+    if (rawText.trim().startsWith('{')) {
+        // Find "answer": "..." or "direct_response": "..."
+        const fieldRegex = /"(?:answer|direct_response)"\s*:\s*"([^"]*)/g;
+        let match;
+        let extractedValues = [];
+        
+        while ((match = fieldRegex.exec(rawText)) !== null) {
+            if (match[1]) {
+                // Unescape common JSON characters
+                const cleaned = match[1]
+                    .replace(/\\n/g, '\n')
+                    .replace(/\\"/g, '"')
+                    .replace(/\\\\/g, '\\');
+                extractedValues.push(cleaned);
+            }
+        }
+        
+        if (extractedValues.length > 0) {
+            return extractedValues.join('\n\n');
+        }
+    }
+
+    return rawText;
+  }, [currentStream]);
 
   const activeStreamInterrupt = useMemo(() => 
     currentStream
@@ -315,19 +435,13 @@ export function ChatWindow() {
           <span className="text-xs text-stone-400 italic">No datasets in this project.</span>
         ) : (
           datasets?.map((ds) => (
-            <button
-              key={ds.id}
-              onClick={() => toggleDataset(ds.id)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all whitespace-nowrap",
-                selectedDatasets.includes(ds.id)
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
-                  : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
-              )}
-            >
-              <Database className="h-3 w-3" />
-              {ds.name}
-            </button>
+            <DatasetItem 
+                key={ds.id} 
+                dataset={ds} 
+                isSelected={selectedDatasets.includes(ds.id)} 
+                onToggle={() => toggleDataset(ds.id)}
+                onDownload={downloadFile}
+            />
           ))
         )}
       </div>
@@ -356,6 +470,7 @@ export function ChatWindow() {
               expandedThoughts={expandedThoughts}
               toggleSource={toggleSource}
               toggleThoughts={toggleThoughts}
+              onDownload={downloadFile}
             />
           ))}
 
@@ -416,12 +531,33 @@ export function ChatWindow() {
                     {/* Active Tools */}
                     {activeStreamTools.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {activeStreamTools.map((t, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
-                            <Wrench className="h-3 w-3" />
-                            {t.data.tool}: {t.event === 'tool_start' ? 'Running...' : 'Complete'}
-                          </div>
-                        ))}
+                        {activeStreamTools.map((t, idx) => {
+                          const s3Uris = extractS3Uris(t.data.output || "");
+                          return (
+                            <div key={idx} className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
+                                    <Wrench className="h-3 w-3" />
+                                    {t.data.tool}: {t.event === 'tool_start' ? 'Running...' : 'Complete'}
+                                </div>
+                                {t.event === 'tool_end' && s3Uris.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                        {s3Uris.map((uri, uIdx) => (
+                                            <Button 
+                                                key={uIdx}
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="h-6 px-2 text-[9px] gap-1 bg-white border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+                                                onClick={() => downloadFile({ s3Uri: uri })}
+                                            >
+                                                <FileDown className="h-3 w-3" />
+                                                Download Result
+                                            </Button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -527,4 +663,84 @@ export function ChatWindow() {
       </div>
     </div>
   );
+}
+
+function DatasetItem({ 
+    dataset, 
+    isSelected, 
+    onToggle,
+    onDownload
+}: { 
+    dataset: Dataset; 
+    isSelected: boolean; 
+    onToggle: () => void;
+    onDownload: (params: { fileId?: string; s3Uri?: string }) => void;
+}) {
+    const { data: files, isLoading } = useDatasetFiles(dataset.id);
+    const [isHovered, setIsHovered] = useState(false);
+
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <button
+                        onClick={onToggle}
+                        onMouseEnter={() => setIsHovered(true)}
+                        onMouseLeave={() => setIsHovered(false)}
+                        className={cn(
+                            "group flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all whitespace-nowrap relative",
+                            isSelected
+                                ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
+                                : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
+                        )}
+                    >
+                        <Database className="h-3 w-3" />
+                        {dataset.name}
+                        {isSelected && files && files.length > 0 && (
+                             <div className="ml-1 flex items-center gap-1">
+                                <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1 rounded-sm">{files.length}</span>
+                             </div>
+                        )}
+                    </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="w-64 p-0 overflow-hidden border-stone-200 bg-white shadow-xl">
+                    <div className="bg-stone-50 px-3 py-2 border-b border-stone-200">
+                        <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Dataset Files</h4>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                        {isLoading ? (
+                            <div className="p-4 flex justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-stone-300" />
+                            </div>
+                        ) : !files || files.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-stone-400 italic">No files available.</div>
+                        ) : (
+                            <div className="divide-y divide-stone-100">
+                                {files.map((file) => (
+                                    <div key={file.id} className="p-2 flex items-center justify-between hover:bg-stone-50 group/file">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <FileCode className="h-3 w-3 text-stone-400 shrink-0" />
+                                            <span className="text-[10px] text-stone-600 font-medium truncate">{file.file_name}</span>
+                                        </div>
+                                        <Button 
+                                            size="xs" 
+                                            variant="ghost" 
+                                            className="h-6 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2 gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDownload({ fileId: file.id });
+                                            }}
+                                        >
+                                            <Download className="h-3 w-3" />
+                                            <span className="text-[10px] font-bold uppercase tracking-tight">Download</span>
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
 }

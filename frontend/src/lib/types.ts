@@ -21,6 +21,7 @@ export interface Dataset {
   name: string;
   description?: string;
   dataset_metadata?: Record<string, unknown>;
+  is_public: boolean;
   files?: DatasetFile[];
 }
 

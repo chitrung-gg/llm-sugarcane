@@ -80,6 +80,7 @@ function DatasetInfoDialog({ dataset }: { dataset: Dataset }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
+        nativeButton={true}
         render={
           <SidebarMenuButton tooltip={dataset.name} className="font-bold text-stone-600">
             <Database aria-hidden="true" />
@@ -230,6 +231,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger
+                nativeButton={true}
                 render={
                   <SidebarMenuButton
                     size="lg"
@@ -315,9 +317,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     tooltip="System References"
                     className="font-bold text-emerald-700 hover:bg-emerald-50"
                     render={
-                      <Link href="/admin/references">
+                      <Link href="/admin/knowledge-base">
                         <Dna aria-hidden="true" className="text-emerald-700" />
-                        <span>System References</span>
+                        <span>Global Knowledge Base</span>
                       </Link>
                     }
                   />
@@ -361,7 +363,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     />
                   ))}
                   <SidebarMenuItem>
-                    <AddDatasetDialog projectName={activeProject?.name}>
+                    <AddDatasetDialog projectName={activeProject?.name} nativeButton={true}>
                       <SidebarMenuButton className="text-stone-400 font-bold hover:text-emerald-700">
                         <Plus className="size-4" />
                         <span>Add Dataset</span>
@@ -417,7 +419,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           )}
           <SidebarMenuItem>
             <DropdownMenu>
-               <DropdownMenuTrigger render={
+               <DropdownMenuTrigger nativeButton={true} render={
                  <SidebarMenuButton
                    tooltip="Settings"
                    className="font-bold text-stone-600"

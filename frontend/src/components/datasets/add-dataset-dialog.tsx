@@ -13,14 +13,18 @@ import { useParams } from "next/navigation"
 export function AddDatasetDialog({ 
   children, 
   projectName,
-  nativeButton = true
+  projectId: forcedProjectId,
+  nativeButton,
+  isGlobal = false
 }: { 
   children: React.ReactElement;
   projectName?: string;
+  projectId?: string;
   nativeButton?: boolean;
+  isGlobal?: boolean;
 }) {
   const params = useParams()
-  const projectId = params.id as string
+  const projectId = forcedProjectId || (params.id as string)
   const [open, setOpen] = React.useState(false)
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
@@ -52,7 +56,7 @@ export function AddDatasetDialog({
             <div className="bg-emerald-700 w-10 h-10 rounded-xl flex items-center justify-center mb-2">
               <Database className="h-5 w-5 text-white" />
             </div>
-            <DialogTitle className="text-2xl font-bold">New Dataset</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">{isGlobal ? "New Global Dataset" : "New Dataset"}</DialogTitle>
             <DialogDescription className="text-stone-400 font-medium">
               Create a container for genomic data and research documents.
             </DialogDescription>
@@ -63,7 +67,9 @@ export function AddDatasetDialog({
           {/* Project Context Box */}
           <div className="bg-stone-50 border border-stone-100 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest leading-none mb-1.5">Target Project</p>
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest leading-none mb-1.5">
+                {isGlobal ? "System Context" : "Target Project"}
+              </p>
               <p className="text-sm font-bold text-stone-900">{projectName || "Active Project"}</p>
             </div>
             <div className="bg-white p-2 rounded-lg border border-stone-100 shadow-sm">

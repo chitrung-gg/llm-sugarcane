@@ -42,11 +42,14 @@ export function ProjectSettingsDialog({ project }: { project: Project }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={
-        <Button variant="outline" className="rounded-xl border-stone-200 font-bold">
-          <Settings2 className="mr-2 size-4" /> Project Settings
-        </Button>
-      } />
+      <DialogTrigger 
+        nativeButton={true}
+        render={
+          <Button variant="outline" className="rounded-xl border-stone-200 font-bold">
+            <Settings2 className="mr-2 size-4" /> Project Settings
+          </Button>
+        } 
+      />
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
            <div className="flex items-center gap-3 mb-2">

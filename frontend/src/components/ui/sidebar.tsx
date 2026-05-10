@@ -497,12 +497,14 @@ const sidebarMenuButtonVariants = cva(
 )
 
 function SidebarMenuButton({
-  render,
+  asChild,
   isActive = false,
   variant = "default",
   size = "default",
   tooltip,
+  render,
   className,
+  nativeButton,
   ...props
 }: useRender.ComponentProps<"button"> &
   React.ComponentProps<"button"> & {

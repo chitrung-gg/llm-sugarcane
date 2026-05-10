@@ -6,9 +6,11 @@ import { streamPost } from "@/lib/api-client";
  * SSE Event types matching backend StreamEventType
  */
 export type StreamEvent = {
-  event: 'thought' | 'tool_start' | 'tool_end' | 'answer' | 'interrupt' | 'error' | 'done';
+  event: 'thought' | 'tool_start' | 'tool_end' | 'answer' | 'interrupt' | 'error' | 'done' | 'token';
   data: {
     content?: string;
+    token?: string;
+    node?: string;
     tool?: string;
     status?: string;
     interrupt_payload?: {
@@ -16,7 +18,7 @@ export type StreamEvent = {
       plan?: { step_id?: string | number; description: string; expected_tool?: string }[];
     };
     [key: string]: unknown;
-  };
+  } | string;
 };
 
 /**
@@ -68,7 +70,44 @@ export function useChatStream() {
           const trimmed = line.trim();
           if (trimmed.startsWith('data: ')) {
             try {
-              const eventData: StreamEvent = JSON.parse(trimmed.slice(6));
+              const rawData = trimmed.slice(6);
+              let eventData: StreamEvent = JSON.parse(rawData);
+              
+              // Standardize token data if it's a raw string or LangChain chunk array
+              if (eventData.event === 'token') {
+                if (typeof eventData.data === 'string') {
+                  eventData.data = { token: eventData.data };
+                } else if (Array.isArray(eventData.data)) {
+                  // Handle LangChain chunk format: [{"text": "...", ...}]
+                  const text = eventData.data.map((chunk: any) => chunk.text || '').join('');
+                  eventData.data = { token: text };
+                }
+              }
+
+              // Filtering Logic: Only show thought/answer from Synthesizer or Planner
+              const allowedNodes = ['synthesizer', 'planner'];
+              const dataObj = (eventData.data && typeof eventData.data === 'object') ? (eventData.data as Record<string, any>) : {};
+              const nodeName = (dataObj.node as string || '').toLowerCase();
+              
+              if (eventData.event === 'thought' || eventData.event === 'answer') {
+                if (nodeName) {
+                    if (!allowedNodes.includes(nodeName)) {
+                        continue; // Skip noise nodes
+                    }
+                    
+                    // Re-categorize Synthesizer/Planner thoughts as answers, but skip progress messages
+                    if (eventData.event === 'thought') {
+                        const content = dataObj.content || dataObj.final_answer || '';
+                        if (typeof content === 'string' && content.includes('Entering')) {
+                            // It's a progress message, ignore or keep as thought
+                        } else {
+                            eventData.event = 'answer';
+                            eventData.data = content || JSON.stringify(dataObj);
+                        }
+                    }
+                }
+              }
+
               setCurrentStream((prev) => [...prev, eventData]);
               
               if (eventData.event === 'done' || eventData.event === 'error') {

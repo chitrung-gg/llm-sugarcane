@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Upload, FileText, Database, Loader2, Sprout, CheckCircle2, AlertCircle, Clock } from "lucide-react"
+import { Upload, FileText, Database, Loader2, Sprout, CheckCircle2, AlertCircle, Clock, Plus, X, FileCode } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -25,6 +25,7 @@ import { useIngestionStatus } from "@/hooks/use-ingestion"
 import { useProject } from "@/hooks/use-projects"
 import { useParams, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { AddDatasetDialog } from "./add-dataset-dialog"
 
 function TaskProgress({ taskId, onComplete }: { taskId: string; onComplete: () => void }) {
   const { data: status } = useIngestionStatus(taskId);
@@ -76,7 +77,7 @@ export function UploadZone() {
   
   const [dataType, setDataType] = React.useState<"genome" | "knowledge">("genome")
   const [datasetId, setDatasetId] = React.useState<string>(initialDatasetId)
-  const [file, setFile] = React.useState<File | null>(null)
+  const [files, setFiles] = React.useState<File[]>([])
   const [activeTaskIds, setActiveTaskIds] = React.useState<string[]>([])
 
   const { data: project } = useProject(projectId)
@@ -98,39 +99,41 @@ export function UploadZone() {
     const allowed = dataType === "genome" ? allowedGenomic : allowedKnowledge;
     
     if (!allowed.includes(ext)) {
-      alert(`Invalid file format for ${dataType}. Please upload: ${allowed.join(", ")}`);
+      alert(`Invalid file format: ${file.name}. Please upload: ${allowed.join(", ")}`);
       return false;
     }
     return true;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      if (validateFile(selectedFile)) {
-        setFile(selectedFile);
-      } else {
-        e.target.value = ""; // Reset input
-      }
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      const validFiles = selectedFiles.filter(validateFile);
+      setFiles(prev => [...prev, ...validFiles]);
+      e.target.value = ""; // Reset input
     }
   }
 
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  }
+
   const handleUpload = () => {
-    if (!file || !datasetId) {
-      alert("Please select a file and a dataset")
+    if (files.length === 0 || !datasetId) {
+      alert("Please select at least one file and a dataset")
       return
     }
     
     uploadMutation.mutate({
       datasetId,
-      files: [file],
+      files: files,
       sourceType: dataType === "genome" ? "user_private_genome" : "user_private_document"
     }, {
       onSuccess: (data: any) => {
         if (data.task_ids && data.task_ids.length > 0) {
           setActiveTaskIds(prev => [...prev, ...data.task_ids]);
         }
-        setFile(null);
+        setFiles([]);
       },
       onError: (error) => {
         console.error("Upload failed:", error)
@@ -177,7 +180,7 @@ export function UploadZone() {
               <button 
                 onClick={() => {
                   setDataType("genome");
-                  setFile(null);
+                  setFiles([]);
                 }}
                 className={cn(
                   "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
@@ -192,7 +195,7 @@ export function UploadZone() {
               <button 
                 onClick={() => {
                   setDataType("knowledge");
-                  setFile(null);
+                  setFiles([]);
                 }}
                 className={cn(
                   "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
@@ -208,7 +211,14 @@ export function UploadZone() {
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="dataset" className="font-semibold">Select Dataset</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="dataset" className="font-semibold">Select Dataset</Label>
+              <AddDatasetDialog projectName={project?.name} nativeButton={true}>
+                <Button variant="ghost" size="xs" className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 h-6 gap-1 font-bold">
+                  <Plus className="size-3" /> Add New
+                </Button>
+              </AddDatasetDialog>
+            </div>
             <Select 
               value={datasetId} 
               onValueChange={(v: string | null) => setDatasetId(v || "")}
@@ -236,17 +246,16 @@ export function UploadZone() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault()
-              if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                const droppedFile = e.dataTransfer.files[0];
-                if (validateFile(droppedFile)) {
-                  setFile(droppedFile);
-                }
+              if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const droppedFiles = Array.from(e.dataTransfer.files);
+                const validFiles = droppedFiles.filter(validateFile);
+                setFiles(prev => [...prev, ...validFiles]);
               }
             }}
           >
             <Upload className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <p className="text-sm text-muted-foreground text-center font-medium">
-              {file ? file.name : `Drag and drop or click to select ${dataType} files`}
+              Drag and drop or click to select {dataType} files
             </p>
             <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
               {dataType === "genome" ? "FASTA, GFF, BAM" : "PDF, JSON, TXT, DOCX, CSV"}
@@ -256,23 +265,55 @@ export function UploadZone() {
               type="file" 
               className="hidden" 
               accept={acceptString}
+              multiple
               onChange={handleFileChange}
             />
           </div>
+
+          {files.length > 0 && (
+            <div className="space-y-3">
+               <Label className="font-semibold uppercase text-[10px] text-stone-400 ml-1 tracking-widest">Selected Files ({files.length})</Label>
+               <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                  {files.map((f, i) => (
+                    <div key={`${f.name}-${i}`} className="bg-stone-50 border border-stone-100 rounded-xl p-2.5 flex items-center justify-between group transition-all hover:bg-stone-100/50">
+                       <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="bg-white p-1.5 rounded-lg border border-stone-100 shadow-sm shrink-0">
+                             {dataType === "genome" ? <Database className="size-3.5 text-emerald-600" /> : <FileCode className="size-3.5 text-blue-600" />}
+                          </div>
+                          <span className="text-xs font-bold text-stone-700 truncate" title={f.name}>{f.name}</span>
+                          <span className="text-[10px] text-stone-400 font-mono">{(f.size / 1024 / 1024).toFixed(2)} MB</span>
+                       </div>
+                       <Button 
+                         variant="ghost" 
+                         size="xs" 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           removeFile(i);
+                         }}
+                         className="h-7 px-2 text-stone-400 hover:text-red-500 hover:bg-red-50 gap-1.5 transition-all"
+                       >
+                          <X className="size-3.5" />
+                          <span className="text-[10px] font-bold uppercase tracking-tight">Remove</span>
+                       </Button>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          )}
         </CardContent>
         <CardFooter>
           <Button 
             className="w-full font-bold" 
-            disabled={!file || !datasetId || uploadMutation.isPending}
+            disabled={files.length === 0 || !datasetId || uploadMutation.isPending}
             onClick={handleUpload}
           >
             {uploadMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
+                Uploading {files.length} {files.length === 1 ? 'file' : 'files'}...
               </>
             ) : (
-              "Upload to Project"
+              `Upload ${files.length} ${files.length === 1 ? 'File' : 'Files'} to Project`
             )}
           </Button>
         </CardFooter>

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Database, FileCode, GraduationCap, Loader2, Dna, File, Upload, Trash2, Plus } from "lucide-react"
+import { Database, FileCode, GraduationCap, Loader2, Dna, File, Upload, Trash2, Plus, Library, Download } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -12,8 +12,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { UploadZone } from "@/components/datasets/upload-zone"
 import { ProjectSettingsDialog } from "@/components/projects/project-settings-dialog"
+import { AddDatasetDialog } from "@/components/datasets/add-dataset-dialog"
 import { useProject } from "@/hooks/use-projects"
 import { useProjectDatasets, useDatasetFiles, useDeleteDataset, useDeleteDatasetFile } from "@/hooks/use-datasets"
+import { useDownload } from "@/hooks/use-download"
 import { Dataset } from "@/lib/types"
 import Link from "next/link"
 
@@ -25,6 +27,7 @@ function DatasetRow({ dataset }: { dataset: Dataset }) {
   const { data: files = [] } = useDatasetFiles(dataset.id)
   const deleteDatasetMutation = useDeleteDataset()
   const deleteFileMutation = useDeleteDatasetFile()
+  const { downloadFile } = useDownload()
   
   const genomeFiles = files.filter(f => f.file_type.includes('genome'))
   const knowledgeFiles = files.filter(f => !f.file_type.includes('genome'))
@@ -87,12 +90,23 @@ function DatasetRow({ dataset }: { dataset: Dataset }) {
                      <div className="flex items-center gap-2 text-[11px] text-stone-600 font-medium min-w-0">
                         <span className="truncate">{f.file_name}</span>
                      </div>
-                     <button 
-                       onClick={() => handleDeleteFile(f.id)}
-                       className="opacity-0 group-hover/file:opacity-100 p-1 text-stone-300 hover:text-red-500 transition-all"
-                     >
-                       <Trash2 className="size-3" />
-                     </button>
+                     <div className="flex items-center gap-1 opacity-0 group-hover/file:opacity-100 transition-all shrink-0">
+                        <Button 
+                          variant="ghost" 
+                          size="xs" 
+                          className="h-6 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2 gap-1.5"
+                          onClick={() => downloadFile({ fileId: f.id })}
+                        >
+                          <Download className="size-3" />
+                          <span className="text-[10px] font-bold uppercase tracking-tight">Download</span>
+                        </Button>
+                        <button 
+                          onClick={() => handleDeleteFile(f.id)}
+                          className="p-1 text-stone-300 hover:text-red-500 transition-all"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                     </div>
                   </div>
                 ))
               )}
@@ -111,12 +125,23 @@ function DatasetRow({ dataset }: { dataset: Dataset }) {
                      <div className="flex items-center gap-2 text-[11px] text-stone-600 font-medium min-w-0">
                         <span className="truncate">{f.file_name}</span>
                      </div>
-                     <button 
-                       onClick={() => handleDeleteFile(f.id)}
-                       className="opacity-0 group-hover/file:opacity-100 p-1 text-stone-300 hover:text-red-500 transition-all"
-                     >
-                       <Trash2 className="size-3" />
-                     </button>
+                     <div className="flex items-center gap-1 opacity-0 group-hover/file:opacity-100 transition-all shrink-0">
+                        <Button 
+                          variant="ghost" 
+                          size="xs" 
+                          className="h-6 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2 gap-1.5"
+                          onClick={() => downloadFile({ fileId: f.id })}
+                        >
+                          <Download className="size-3" />
+                          <span className="text-[10px] font-bold uppercase tracking-tight">Download</span>
+                        </Button>
+                        <button 
+                          onClick={() => handleDeleteFile(f.id)}
+                          className="p-1 text-stone-300 hover:text-red-500 transition-all"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                     </div>
                   </div>
                 ))
               )}
@@ -233,11 +258,19 @@ function ProjectContent({ id }: { id: string }) {
                     Manage cultivar references and knowledge documents.
                   </CardDescription>
                 </div>
-                <Button variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl font-bold" asChild>
-                   <Link href={`/projects/${id}/upload`}>
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl font-bold" asChild>
+                    <Link href={`/projects/${id}/library`}>
+                      <Library className="mr-2 size-4" /> Reference Library
+                    </Link>
+                  </Button>
+                  <AddDatasetDialog projectName={project.name} nativeButton={true}>
+                    <Button variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl font-bold">
                       <Plus className="mr-2 size-4" /> Add Dataset
-                   </Link>
-                </Button>
+                    </Button>
+                  </AddDatasetDialog>
+
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -248,11 +281,20 @@ function ProjectContent({ id }: { id: string }) {
                   </div>
                   <div className="space-y-1">
                     <h3 className="font-bold text-stone-900">No Datasets Found</h3>
-                    <p className="text-sm text-stone-500 max-w-xs mx-auto">Create your first dataset to start uploading genomic sequences or documents.</p>
+                    <p className="text-sm text-stone-500 max-w-xs mx-auto">Create your first dataset or connect global references from the library.</p>
                   </div>
-                  <Button className="bg-emerald-700 hover:bg-emerald-800 rounded-xl font-bold px-6" asChild>
-                    <Link href={`/projects/${id}/upload`}>Create Dataset</Link>
-                  </Button>
+                  <div className="flex items-center justify-center gap-3">
+                    <Button variant="outline" className="rounded-xl font-bold px-6 border-stone-200" asChild>
+                      <Link href={`/projects/${id}/library`}>
+                        Browse Library
+                      </Link>
+                    </Button>
+                    <AddDatasetDialog projectName={project.name} nativeButton={true}>
+                      <Button className="bg-emerald-700 hover:bg-emerald-800 rounded-xl font-bold px-6">
+                        Create Dataset
+                      </Button>
+                    </AddDatasetDialog>
+                  </div>
                 </div>
               ) : (
                 <div className="divide-y divide-stone-100">

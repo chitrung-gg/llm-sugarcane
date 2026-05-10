@@ -13,17 +13,23 @@ function Sheet({ ...props }: SheetPrimitive.Root.Props) {
 
 function SheetTrigger({
   asChild,
+  render,
   children,
+  nativeButton,
   ...props
-}: SheetPrimitive.Trigger.Props & { asChild?: boolean }) {
+}: SheetPrimitive.Trigger.Props & {
+  asChild?: boolean
+  nativeButton?: boolean
+}) {
+  const isCustom = asChild || !!render
   return (
     <SheetPrimitive.Trigger
       data-slot="sheet-trigger"
-      nativeButton={!asChild}
-      render={asChild ? (children as React.ReactElement) : undefined}
+      nativeButton={nativeButton ?? !isCustom}
+      render={render ?? (asChild ? (children as React.ReactElement) : undefined)}
       {...props}
     >
-      {asChild ? undefined : children}
+      {isCustom ? undefined : children}
     </SheetPrimitive.Trigger>
   )
 }

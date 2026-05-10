@@ -14,8 +14,27 @@ function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
   return <MenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
 }
 
-function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-  return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />
+function DropdownMenuTrigger({
+  asChild,
+  render,
+  children,
+  nativeButton,
+  ...props
+}: MenuPrimitive.Trigger.Props & {
+  asChild?: boolean
+  nativeButton?: boolean
+}) {
+  const isCustom = asChild || !!render
+  return (
+    <MenuPrimitive.Trigger
+      data-slot="dropdown-menu-trigger"
+      nativeButton={nativeButton ?? !isCustom}
+      render={render ?? (asChild ? (children as React.ReactElement) : undefined)}
+      {...props}
+    >
+      {isCustom ? undefined : children}
+    </MenuPrimitive.Trigger>
+  )
 }
 
 function DropdownMenuContent({
@@ -57,21 +76,19 @@ function DropdownMenuLabel({
   className,
   inset,
   ...props
-}: MenuPrimitive.GroupLabel.Props & {
+}: React.ComponentProps<"div"> & {
   inset?: boolean
 }) {
   return (
-    <MenuPrimitive.Group>
-      <MenuPrimitive.GroupLabel
-        data-slot="dropdown-menu-label"
-        data-inset={inset}
-        className={cn(
-          "px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7",
-          className
-        )}
-        {...props}
-      />
-    </MenuPrimitive.Group>
+    <div
+      data-slot="dropdown-menu-label"
+      data-inset={inset}
+      className={cn(
+        "px-1.5 py-1 text-xs font-medium text-stone-500 data-inset:pl-7",
+        className
+      )}
+      {...props}
+    />
   )
 }
 
@@ -105,23 +122,31 @@ function DropdownMenuSub({ ...props }: MenuPrimitive.SubmenuRoot.Props) {
 function DropdownMenuSubTrigger({
   className,
   inset,
+  asChild,
+  render,
+  nativeButton,
   children,
   ...props
 }: MenuPrimitive.SubmenuTrigger.Props & {
   inset?: boolean
+  asChild?: boolean
+  nativeButton?: boolean
 }) {
+  const isCustom = asChild || !!render
   return (
     <MenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
+      nativeButton={nativeButton ?? !isCustom}
+      render={render ?? (asChild ? (children as React.ReactElement) : undefined)}
       className={cn(
         "flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
     >
-      {children}
-      <ChevronRightIcon className="ml-auto" />
+      {!isCustom && children}
+      {!isCustom && <ChevronRightIcon className="ml-auto" />}
     </MenuPrimitive.SubmenuTrigger>
   )
 }

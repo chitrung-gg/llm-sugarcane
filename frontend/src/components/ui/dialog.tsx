@@ -11,8 +11,27 @@ function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 
-function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+function DialogTrigger({
+  asChild,
+  render,
+  children,
+  nativeButton,
+  ...props
+}: DialogPrimitive.Trigger.Props & {
+  asChild?: boolean
+  nativeButton?: boolean
+}) {
+  const isCustom = asChild || !!render
+  return (
+    <DialogPrimitive.Trigger
+      data-slot="dialog-trigger"
+      nativeButton={nativeButton ?? !isCustom}
+      render={render ?? (asChild ? (children as React.ReactElement) : undefined)}
+      {...props}
+    >
+      {isCustom ? undefined : children}
+    </DialogPrimitive.Trigger>
+  )
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {

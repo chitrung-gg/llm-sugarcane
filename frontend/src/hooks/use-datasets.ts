@@ -14,6 +14,16 @@ export function useProjectDatasets(projectId: string) {
   });
 }
 
+export function useLibraryDatasets() {
+  return useQuery({
+    queryKey: ["library-datasets"],
+    queryFn: async () => {
+      const response = await api.get<Dataset[]>("/workspace/library");
+      return response.data;
+    },
+  });
+}
+
 export function useDataset(id: string) {
   return useQuery({
     queryKey: ["datasets", id],
@@ -59,10 +69,11 @@ export function useUpdateDataset() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { datasetId: string; name?: string; description?: string }) => {
+    mutationFn: async (data: { datasetId: string; name?: string; description?: string; isPublic?: boolean }) => {
       const formData = new FormData();
       if (data.name) formData.append("name", data.name);
       if (data.description !== undefined) formData.append("description", data.description);
+      if (data.isPublic !== undefined) formData.append("is_public", String(data.isPublic));
       
       const response = await api.patch(`/workspace/datasets/${data.datasetId}`, formData);
       return response.data;
@@ -70,6 +81,7 @@ export function useUpdateDataset() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["datasets", variables.datasetId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["library-datasets"] });
     },
   });
 }
@@ -84,6 +96,7 @@ export function useDeleteDataset() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["library-datasets"] });
     },
   });
 }
@@ -130,6 +143,34 @@ export function useUploadDatasetFiles() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["datasets", variables.datasetId] });
       queryClient.invalidateQueries({ queryKey: ["dataset-files", variables.datasetId] });
+    },
+  });
+}
+
+export function useAttachDataset() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { projectId: string; datasetId: string }) => {
+      const response = await api.post(`/workspace/projects/${data.projectId}/attachments/${data.datasetId}`);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["projects", variables.projectId, "datasets"] });
+    },
+  });
+}
+
+export function useDetachDataset() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { projectId: string; datasetId: string }) => {
+      const response = await api.delete(`/workspace/projects/${data.projectId}/attachments/${data.datasetId}`);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["projects", variables.projectId, "datasets"] });
     },
   });
 }
