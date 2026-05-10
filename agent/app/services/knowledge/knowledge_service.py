@@ -138,7 +138,6 @@ class KnowledgeService:
 
                 # 6. Trigger Celery Task for Knowledge Documents
                 logger.info(f"Dispatching ingestion task for {target_uri}")
-                # Build the exact conf payload Airflow expects
                 conf_payload = {
                     "target_uri": target_uri,
                     "metadata": {

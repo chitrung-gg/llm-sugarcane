@@ -72,6 +72,35 @@ async def delete_project(
     success = await workspace_service.delete_project(project_id)
     return {"success": success}
 
+# --- Dataset Attachment & Library Endpoints ---
+
+@router.get("/library", response_model=List[UserDataset])
+async def list_library_datasets(
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """List all public datasets available for attachment."""
+    return await workspace_service.get_available_library_datasets()
+
+@router.post("/projects/{project_id}/attachments/{dataset_id}")
+async def attach_dataset(
+    project_id: uuid.UUID,
+    dataset_id: uuid.UUID,
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Attach a library dataset to a project."""
+    success = await workspace_service.attach_dataset_to_project(project_id, dataset_id)
+    return {"success": success}
+
+@router.delete("/projects/{project_id}/attachments/{dataset_id}")
+async def detach_dataset(
+    project_id: uuid.UUID,
+    dataset_id: uuid.UUID,
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """Detach a library dataset from a project."""
+    success = await workspace_service.detach_dataset_from_project(project_id, dataset_id)
+    return {"success": success}
+
 # --- Dataset (Cultivar) Endpoints ---
 
 @router.post("/projects/{project_id}/datasets", response_model=UserDataset, status_code=status.HTTP_201_CREATED)
@@ -97,10 +126,11 @@ async def update_dataset(
     dataset_id: uuid.UUID,
     name: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
+    is_public: Optional[bool] = Form(None),
     workspace_service: WorkspaceService = Depends(get_workspace_service)
 ):
     """Update dataset details."""
-    success = await workspace_service.update_dataset(dataset_id, name, description)
+    success = await workspace_service.update_dataset(dataset_id, name, description, is_public)
     return {"success": success}
 
 @router.delete("/datasets/{dataset_id}")

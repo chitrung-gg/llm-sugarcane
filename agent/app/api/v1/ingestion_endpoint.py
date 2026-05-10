@@ -1,3 +1,4 @@
+import asyncio
 from importlib.metadata import files
 from typing import List
 import uuid
@@ -47,7 +48,6 @@ async def get_task_status(task_id: str):
     
     try:
         # Offload the synchronous requests call to a background thread
-        import asyncio
         airflow_run = await asyncio.to_thread(
             get_airflow_run_status, 
             dag_id=dag_id, 

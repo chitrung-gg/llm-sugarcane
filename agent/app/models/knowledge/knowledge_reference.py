@@ -13,7 +13,7 @@ class KnowledgeReference(SQLModel, table=True):
         default_factory=uuid.uuid4,
         primary_key=True
     )
-    title: str
+    title: str = Field(index=True, unique=True)
     doi_or_url: Optional[str] = None
     publication_year: Optional[int] = None
     created_at: datetime = Field(default_factory=datetime.now)

@@ -119,7 +119,8 @@ class WorkspaceService:
         self,
         dataset_id: uuid.UUID,
         name: Optional[str] = None,
-        description: Optional[str] = None
+        description: Optional[str] = None,
+        is_public: Optional[bool] = None
     ) -> bool:
         updates = []
         params = []
@@ -129,6 +130,9 @@ class WorkspaceService:
         if description is not None:
             updates.append("description = %s")
             params.append(description)
+        if is_public is not None:
+            updates.append("is_public = %s")
+            params.append(is_public)
         
         if not updates:
             return False
@@ -146,15 +150,66 @@ class WorkspaceService:
             await conn.execute("DELETE FROM user_datasets WHERE id = %s", (dataset_id,))
             return True
 
-    async def get_project_datasets(self, project_id: uuid.UUID) -> List[UserDataset]:
-        """Returns metadata overviews for all datasets in a project."""
+    # --- Dataset Attachment Logic ---
+    async def attach_dataset_to_project(self, project_id: uuid.UUID, dataset_id: uuid.UUID) -> bool:
+        async with userdata_connection_pool.connection() as conn:
+            await conn.execute(
+                """
+                INSERT INTO project_dataset_attachments (project_id, dataset_id)
+                VALUES (%s, %s)
+                ON CONFLICT (project_id, dataset_id) DO NOTHING
+                """,
+                (project_id, dataset_id)
+            )
+            return True
+
+    async def detach_dataset_from_project(self, project_id: uuid.UUID, dataset_id: uuid.UUID) -> bool:
+        async with userdata_connection_pool.connection() as conn:
+            await conn.execute(
+                "DELETE FROM project_dataset_attachments WHERE project_id = %s AND dataset_id = %s",
+                (project_id, dataset_id)
+            )
+            return True
+
+    async def get_available_library_datasets(self) -> List[UserDataset]:
+        """Returns all datasets marked as public for the Reference Library."""
         async with userdata_connection_pool.connection() as conn:
             cursor = await conn.execute(
-                "SELECT id, project_id, name, description, dataset_metadata, created_at FROM user_datasets WHERE project_id = %s",
+                "SELECT id, project_id, name, description, dataset_metadata, is_public, created_at FROM user_datasets WHERE is_public = TRUE"
+            )
+            rows = await cursor.fetchall()
+            return [UserDataset(**row) for row in rows]
+
+    async def get_project_datasets(self, project_id: uuid.UUID) -> List[UserDataset]:
+        """Returns metadata overviews for all datasets in a project, including attached system ones."""
+        async with userdata_connection_pool.connection() as conn:
+            # Query 1: Owned datasets
+            cursor = await conn.execute(
+                "SELECT id, project_id, name, description, dataset_metadata, is_public, created_at FROM user_datasets WHERE project_id = %s",
                 (project_id,)
             )
-            dataset_rows = await cursor.fetchall()
-            return [UserDataset(**row) for row in dataset_rows]
+            owned_rows = await cursor.fetchall()
+            
+            # Query 2: Attached datasets
+            cursor = await conn.execute(
+                """
+                SELECT d.id, d.project_id, d.name, d.description, d.dataset_metadata, d.is_public, d.created_at 
+                FROM user_datasets d
+                JOIN project_dataset_attachments a ON d.id = a.dataset_id
+                WHERE a.project_id = %s
+                """,
+                (project_id,)
+            )
+            attached_rows = await cursor.fetchall()
+            
+            all_datasets = [UserDataset(**row) for row in owned_rows]
+            # Avoid duplicates if a project somehow owns and is attached to the same dataset
+            owned_ids = {d.id for d in all_datasets}
+            for row in attached_rows:
+                if row["id"] not in owned_ids:
+                    all_datasets.append(UserDataset(**row))
+                    
+            return all_datasets
 
     async def get_public_dataset_ids(self) -> List[uuid.UUID]:
         """Returns IDs of all datasets marked as public."""
@@ -269,23 +324,32 @@ class WorkspaceService:
         rustfs_uri: str,
         file_metadata: Optional[Dict[str, Any]] = None,
         genome_id: Optional[uuid.UUID] = None
-    ) -> UserDatasetFile:
+    ) -> UserDatasetFile:      
         async with userdata_connection_pool.connection() as conn:
             await conn.execute(
                 """
-                INSERT INTO user_dataset_files (id, dataset_id, file_name, file_type, rustfs_uri, file_metadata, genome_id, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO user_dataset_files (id, dataset_id, file_name, file_type, rustfs_uri, file_metadata, genome_global_id, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
-                    file_id, dataset_id, file_name, 
-                    file_type.value, rustfs_uri, 
-                    json.dumps(file_metadata) if file_metadata else None, genome_id,
+                    file_id, 
+                    dataset_id, 
+                    file_name, 
+                    file_type.value, 
+                    rustfs_uri, 
+                    json.dumps(file_metadata) if file_metadata else None, 
+                    genome_id,
                     datetime.now()
                 )
             )
             return UserDatasetFile(
-                id=file_id, dataset_id=dataset_id, file_name=file_name, file_type=file_type, rustfs_uri=rustfs_uri,
-                file_metadata=file_metadata, genome_global_id=genome_id
+                id=file_id, 
+                dataset_id=dataset_id, 
+                file_name=file_name, 
+                file_type=file_type, 
+                rustfs_uri=rustfs_uri,
+                file_metadata=file_metadata, 
+                genome_global_id=genome_id
             )
 
     async def delete_dataset_file(self, file_record_id: uuid.UUID) -> bool:

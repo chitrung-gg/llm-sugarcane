@@ -226,7 +226,7 @@ class Settings(BaseSettings):
     )
 
     # Pipelines
-    INGESTION_BATCH_SIZE: int = 15
+    INGESTION_BATCH_SIZE: int = 10
     INGESTION_DELAY_BETWEEN_BATCHES: int = 5
 
     # Graph Nodes

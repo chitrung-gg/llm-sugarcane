@@ -179,7 +179,7 @@ class GraphIngestionService:
                     res_pg = await conn.execute(
                         """
                         INSERT INTO knowledge_references (global_id, title)
-                        VALUES (:id, :title)
+                        VALUES (%(id)s, %(title)s)
                         ON CONFLICT (title) DO UPDATE SET title = EXCLUDED.title
                         RETURNING global_id
                         """,
@@ -190,7 +190,7 @@ class GraphIngestionService:
                     res_pg = await conn.execute(
                         """
                         INSERT INTO knowledge_entities (global_id, name, entity_type, owner_id, is_public, knowledge_entities_metadata)
-                        VALUES (:id, :name, :type, :owner, :public, :meta::jsonb)
+                        VALUES (%(id)s, %(name)s, %(type)s, %(owner)s, %(public)s, %(meta)s::jsonb)
                         ON CONFLICT (name, owner_id) DO UPDATE 
                         SET entity_type = EXCLUDED.entity_type,
                             is_public = EXCLUDED.is_public,
@@ -214,12 +214,10 @@ class GraphIngestionService:
                     confidence = unique_nodes_registry[node_name]["confidence"]
                     entity_id = info["id"]
                     
-                    # We use an UPSERT here just in case multiple chunks from the same file 
-                    # extract the same entity. We update to keep the highest relevance score!
                     await ud_conn.execute(
                         """
                         INSERT INTO knowledge_file_links (file_id, knowledge_entity_id, relevance_score)
-                        VALUES (:file_id, :entity_id, :score)
+                        VALUES (%(file_id)s, %(entity_id)s, %(score)s)
                         ON CONFLICT (file_id, knowledge_entity_id) DO UPDATE 
                         SET relevance_score = GREATEST(knowledge_file_links.relevance_score, EXCLUDED.relevance_score)
                         """,
@@ -419,42 +417,28 @@ class GraphIngestionService:
 
     async def _extract_components_batch(self, texts: List[str]) -> List[KnowledgeGraphComponents]:
         """
-        Extracts components from a list of texts efficiently by using a single batch LLM call.
-        Falls back to concurrent individual calls if the batch call fails.
+        Extracts components from a list of texts efficiently by using concurrent individual calls.
+        This prevents LLM timeouts, schema collapse, and "lost in the middle" data degradation.
         """
-        logger.debug(f"Starting batch extraction for {len(texts)} chunks...")
-        for i, text in enumerate(texts):
-            logger.debug(f"Chunk {i} [chars={len(text)}]: {text[:150]}...")
+        logger.debug(f"Starting concurrent extraction for {len(texts)} chunks...")
         
-        try:
-            # Try single-call batch extraction first (more efficient)
-            # We use json.dumps to ensure the list of strings is formatted correctly for the prompt
-            prompt = BATCH_EXTRACTION_PROMPT.format(chunks=json.dumps(texts))
-            model = self.llm_service.get_structured_secondary_model(BatchKnowledgeGraphComponents)
-            
-            start_time = asyncio.get_event_loop().time()
-            result = await model.ainvoke(prompt)
-            duration = asyncio.get_event_loop().time() - start_time
-            logger.debug(f"Batch LLM extraction for {len(texts)} chunks completed in {duration:.2f}s")
-            
-            # Ensure we got the right number of results
-            if len(result.results) == len(texts):
-                return result.results
-            
-            logger.warning(f"Batch extraction returned {len(result.results)} instead of {len(texts)}. Falling back...")
-        except Exception as e:
-            logger.warning(f"Batch extraction failed: {str(e)}. Falling back to concurrent extraction...")
-
-        # Fallback: Concurrent individual extraction (old behavior)
+        # 1. Spin up concurrent tasks for each individual chunk
         tasks = [self._extract_components(text) for text in texts]
+        
+        # 2. Fire them all to the Gemini server at the exact same time
+        start_time = asyncio.get_event_loop().time()
         results = await asyncio.gather(*tasks, return_exceptions=True)
+        duration = asyncio.get_event_loop().time() - start_time
+        logger.debug(f"Concurrent extraction for {len(texts)} chunks completed in {duration:.2f}s")
         
         valid_results = []
         all_failed = True
+        
+        # 3. Safely process the results
         for i, res in enumerate(results):
             if isinstance(res, Exception):
                 logger.warning(f"Chunk {i} extraction failed: {str(res)}")
-                # Append an empty component so the lists remain the same length
+                # Append an empty component so the arrays stay aligned
                 valid_results.append(KnowledgeGraphComponents(
                     nodes=[], relationships=[], is_domain_relevant=False, overall_confidence=0.0
                 ))
@@ -463,7 +447,7 @@ class GraphIngestionService:
                 valid_results.append(res)
         
         if all_failed and texts:
-            raise ValueError(f"All {len(texts)} chunks in batch failed extraction.")
+            raise ValueError(f"All {len(texts)} chunks in the batch failed extraction. Check API keys or rate limits.")
                 
         return valid_results
 
