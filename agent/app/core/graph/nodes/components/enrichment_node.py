@@ -13,7 +13,7 @@ def make_enrichment_node(
 ):
     @tracing(observation_type=ObservationType.CHAIN)
     async def enrichment(state: AgentState) -> Command[
-        Literal[AgentGraphNode.SYNTHESIZER]
+        Literal[AgentGraphNode.INNER_SYNTHESIZER]
     ]:
         logger.debug("[Enrichment] Analyzing tool results for knowledge graph ingestion...")
 
@@ -23,7 +23,7 @@ def make_enrichment_node(
         if not tool_results:
             logger.debug("[Enrichment] No tool results to ingest.")
             return Command(
-                goto=AgentGraphNode.SYNTHESIZER
+                goto=AgentGraphNode.INNER_SYNTHESIZER
             )
 
         # Only process the results for tools just executed in this turn
@@ -58,12 +58,12 @@ def make_enrichment_node(
             logger.info(f"[Enrichment] Staging {len(batch_payloads)} items for deferred ingestion.")
             
             return Command(
-                goto=AgentGraphNode.SYNTHESIZER,
+                goto=AgentGraphNode.INNER_SYNTHESIZER,
                 update={"extracted_knowledge": batch_payloads}
             )
 
         return Command(
-            goto=AgentGraphNode.SYNTHESIZER
+            goto=AgentGraphNode.INNER_SYNTHESIZER
         )
 
     return enrichment

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.core.prompts.planner_prompts import PLANNER_HUMAN_PROMPT, PLANNER_SYSTEM_PROMPT
 from app.utils.observability.tracing import tracing
-from app.common.constants import ObservationType, PlanStatus, InterruptAction, UserFeedbackAction
+from app.common.constants import ObservationType, PlanStatus, InterruptAction, StreamingTag, UserFeedbackAction
 from app.core.graph.state.planner_state import AgentStepPlan, PlanExecuteState
 from app.schemas.agent.planner import PlanOutput
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
@@ -17,7 +17,7 @@ from app.utils.graph.context_utils import get_recent_messages, format_optimized_
 def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
     @tracing(observation_type=ObservationType.CHAIN)
     async def planner(state: PlanExecuteState) -> Command[
-        Literal[AgentGraphNode.HUMAN_REVIEW, AgentGraphNode.SUMMARIZER]
+        Literal[AgentGraphNode.HUMAN_REVIEW, AgentGraphNode.OUTER_SYNTHESIZER]
     ]:
         logger.info("🧠 [Planner] Drafting research plan...")
 
@@ -81,7 +81,9 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
         messages: List[BaseMessage] = [system_msg] + recent_messages + [task_msg]
 
         # 6. Execute Model
-        llm = llm_service.get_structured_primary_model(PlanOutput)
+        llm = llm_service.get_structured_primary_model(PlanOutput).with_config(
+            {"tags": [StreamingTag.STREAM_PLANNER]}
+        )
         try:
             result: PlanOutput = await llm.ainvoke(messages)
         except Exception as e:
@@ -93,7 +95,7 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
             logger.info("[Planner] No steps generated. Routing directly to Summarizer.")
             final_text = result.direct_response or "I don't think any specific research steps are needed."
             return Command(
-                goto=AgentGraphNode.SUMMARIZER,
+                goto=AgentGraphNode.OUTER_SYNTHESIZER,
                 update={"plan": [], "final_answer": final_text, "messages": [AIMessage(content=final_text)]}
             )
 

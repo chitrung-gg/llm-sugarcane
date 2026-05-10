@@ -10,6 +10,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
+from app.core.graph.nodes.components.outer_synthesizer_node import make_outer_synthesizer_node
 from app.utils.graph.context_utils import format_tools_for_prompt
 from app.core.graph.nodes.components.human_review_node import make_human_review_node
 from app.core.graph.nodes.components.executor_node import make_executor_node
@@ -26,7 +27,7 @@ from app.services.llm.llm_service import LLMService
 from app.core.graph.nodes.components.rag_node import make_rag_node
 
 from app.core.graph.nodes.components.router_node import make_router_node
-from app.core.graph.nodes.components.synthesizer_node import make_synthesizer_node
+from app.core.graph.nodes.components.inner_synthesizer_node import make_inner_synthesizer_node
 from app.core.graph.nodes.components.tools_node import make_tools_node
 from app.core.graph.nodes.components.enrichment_node import make_enrichment_node
 from app.core.graph.state.agent_state import AgentState
@@ -79,6 +80,7 @@ async def build_super_agent_graph(
     workflow.add_node(AgentGraphNode.EXECUTOR, make_executor_node(inner_react_graph))
     # workflow.add_node(AgentGraphNode.REPLANNER, make_replanner_node(llm_service))
     workflow.add_node(AgentGraphNode.HUMAN_REVIEW, make_human_review_node())
+    workflow.add_node(AgentGraphNode.OUTER_SYNTHESIZER, make_outer_synthesizer_node(llm_service))
     workflow.add_node(AgentGraphNode.SUMMARIZER, make_summarizer_node(llm_service))
 
     # 4. Define Architectural Blueprint Edges
@@ -143,8 +145,8 @@ async def _build_agent_graph(
         make_enrichment_node(KNOWLEDGE_GRAPH_TOOL_REGISTRY)
     )
     workflow.add_node(
-        AgentGraphNode.SYNTHESIZER,
-        make_synthesizer_node(llm_service, available_tools)
+        AgentGraphNode.INNER_SYNTHESIZER,
+        make_inner_synthesizer_node(llm_service, available_tools)
     )
     
     # 1. Entry Point

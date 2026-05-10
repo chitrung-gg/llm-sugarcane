@@ -27,7 +27,7 @@ def make_rag_node(
 ):
     @tracing(observation_type=ObservationType.RETRIEVER)
     async def rag(state: AgentState) -> Command[
-        Literal[AgentGraphNode.SYNTHESIZER]
+        Literal[AgentGraphNode.INNER_SYNTHESIZER]
     ]:
         settings = get_settings()
 
@@ -131,7 +131,7 @@ def make_rag_node(
         elapsed = int((time.time() - start_time) * 1000)
 
         return Command(
-            goto=AgentGraphNode.SYNTHESIZER,
+            goto=AgentGraphNode.INNER_SYNTHESIZER,
             update={
                 "rag_results": new_rag_results,
                 "sources_used": new_sources,

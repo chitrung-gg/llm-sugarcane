@@ -57,12 +57,17 @@ You are the Biological Context Pruning Specialist. Your job is to review a user'
 </available_files>
 </input_data>
 
-### Guidelines:
-* **Biological Validity:** If the query is just a greeting, general knowledge, or nonsensical, simply select zero files.
-* **Direct Matches:** Include files that explicitly mention the cultivars (e.g., R570, SP80-3280), genes, or organisms mentioned in the query.
-* **Functional Necessity:** Include reference genomes if the query implies a comparative analysis, alignment (BLAST), or synteny mapping.
-* **Parsimony Principle:** When in doubt, exclude the file. We want to maximize context space by removing low-relevance metadata.
-* **Think Aloud:** Use your `scratchpad` to briefly justify why each selected file is mandatory for the research goal before outputting the UUIDs.
+### Data Relevance Heuristics (Cost vs. Value):
+Evaluate each dataset using these principles:
+1. **The Cost of Clutter:** Every irrelevant file dilutes the LLM's attention. If a file does not directly help answer the `<user_query>`, exclude it.
+2. **High-Value Matches:** If the query specifically names a cultivar (e.g., R570), a gene, or a biological process that matches a dataset's description, that dataset is high-value. Keep it.
+3. **Comparative Necessity:** If the query asks to "compare" or "align" (e.g., BLAST, Synteny), you must keep the specific reference genomes mentioned, or default reference genomes if none are explicitly named.
+4. **Conversational Queries:** If the user is just saying "hello", asking general knowledge, or asking a meta-question ("how do you know that?"), the value of genomic datasets is zero. Return an empty list.
+
+### Scratchpad Logic:
+1. Analyze the core entities in the user query.
+2. Weigh the relevance of each available dataset against those entities.
+3. Select ONLY the UUIDs of the datasets that pass the High-Value or Comparative threshold.
 
 ### Example Responses:
 {few_shots}
@@ -91,11 +96,10 @@ INPUT_ANALYZER_GENOMIC_FILE_NOTE = PromptTemplate.from_template("""
     <s3_uri>{rustfs_uri}</s3_uri>
     <description>{description}</description>
   </file_metadata>
-  <execution_guidelines>
-    * DIRECT ACCESS LIMITATION: You cannot read the raw contents of this file directly into your context window.
-    * TOOL USAGE REQUIRED: To analyze this dataset, you must pass the exact S3 URI (`{rustfs_uri}`) as an argument to a compatible backend tool.
-    * NO HALLUCINATIONS: If asked for metrics you cannot compute with available tools, explicitly state your limitations. Do not guess or estimate statistics.
-  </execution_guidelines>
+ <usage_heuristics>
+    * This is a raw bioinformatics file. It CANNOT be read as plain text.
+    * BEST CAPABILITY: Pass the `s3_uri` to External Tools (like BLAST, Synteny, Primer, CRISPOR tools) (the internal tool that call backend) to extract statistics or run alignments.
+  </usage_heuristics>
 </system_injected_context>
 """)
 
@@ -105,9 +109,9 @@ INPUT_ANALYZER_MASSIVE_FILE_NOTE = PromptTemplate.from_template("""
     <filename>{file_name}</filename>
     <state>Archived in vector memory. File exceeds instant-read context limits.</state>
   </file_status>
-  <routing_directive>
-    * PREFERRED PATHWAY: Route upcoming executions involving this file to the 'rag_only' or 'all' pathways to search the vector memory.
-  </routing_directive>
+ <usage_heuristics>
+    * BEST CAPABILITY: Route to the `rag_only` intent or use Internal Knowledge tools (related to Knowledge Graph) to query the contents of this document. 
+  </usage_heuristics>
 </system_injected_context>
 """)
 

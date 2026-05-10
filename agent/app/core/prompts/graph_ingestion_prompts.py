@@ -1,7 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 from app.schemas.graph.knowledge_graph_schema import KnowledgeGraphComponents, KnowledgeGraphNode, KnowledgeGraphRelationship
 
-# 1. Define examples as Pydantic objects
+# 1. Define examples as Pydantic objects (Keep this exactly as you had it!)
 _EX_EXTRACTION = KnowledgeGraphComponents(
     is_domain_relevant=True,
     overall_confidence=0.95,
@@ -40,21 +40,20 @@ _FEW_SHOTS = f"""
 </example>
 """
 
-# ---------------------------------------------------------
-# Single Extraction Prompt
-# ---------------------------------------------------------
+# 2. The Heuristic-Driven System Prompt
 EXTRACTION_PROMPT_STR = """
-You are the Lead Biological Data Curator for a Sugarcane Knowledge Graph. Your job is to read scientific text and extract precise biological entities and their relationships.
+You are the Lead Biological Data Ontology Architect for a Sugarcane Knowledge Graph. Your job is to read scientific text and extract highly structured, atomic biological entities and their relational dynamics.
 
 <text_to_analyze>
 {text}
 </text_to_analyze>
 
-### Guidelines:
-* **Relevance Check:** If the text is NOT about plant biology, sugarcane (Saccharum), or genomics—or if it's an error message (like "unable to retrieve")—simply mark it as irrelevant (`is_domain_relevant=False`) and leave nodes/relationships empty.
-* **Node Categorization:** Categorize entities using standard labels like "Gene", "Cultivar", "Paper", "Trait", "Disease", "Tissue", or "Stress".
-* **Relationship Naming:** Use clear, UPPERCASE action verbs for relationships (e.g., "UPREGULATES", "CAUSES", "RESISTS", "EXPRESSED_IN").
-* **Confidence Scoring:** Assign a realistic `overall_confidence` score (0.0 to 1.0) based on how explicitly the relationships are stated in the text.
+### Ontological Extraction Heuristics:
+1. **Domain Gatekeeping (Signal vs. Noise):** If the text is NOT about plant biology, sugarcane, genetics, or agronomy (e.g., it is just methodology, software tools like "Bowtie2", or author names), mark it as irrelevant (`is_domain_relevant=False`) and leave nodes empty. We only map biological reality.
+2. **Entity Atomicity (The Node Rule):** Nodes MUST be isolated nouns (e.g., "ScDREB2", "Smut", "R570"). NEVER extract clauses, adjectives, or full sentences as node names. 
+3. **Ontological Categorization:** You must classify every node into one of these strict labels: `Gene`, `Protein`, `Cultivar`, `Species`, `Trait`, `Disease`, `Tissue`, `Chemical`, or `Environmental_Factor`.
+4. **Directional Dynamics (The Edge Rule):** Relationships (`type`) must be clear, uppercase biological or physical verbs (e.g., "UPREGULATES", "EXPRESSED_IN", "CAUSES", "CONFERS_RESISTANCE_TO", "METABOLIZES"). The relationship must flow logically from the `source_name` to the `target_name`.
+5. **Evidence Grounding:** The `evidence` field must contain the exact snippet or logical deduction from the text that proves this relationship exists. Set `confidence` based on how explicitly the text states this fact.
 
 ### Example Response:
 {few_shots}
@@ -66,26 +65,4 @@ EXTRACTION_PROMPT = PromptTemplate(
     partial_variables={
         "few_shots": _FEW_SHOTS
     }
-)
-
-# ---------------------------------------------------------
-# Batch Extraction Prompt
-# ---------------------------------------------------------
-BATCH_EXTRACTION_PROMPT_STR = """
-You are the Lead Biological Data Curator for a Sugarcane Knowledge Graph. Your job is to evaluate a batch of text chunks and extract precise biological relationships for EACH chunk.
-
-<chunks_to_analyze>
-{chunks}
-</chunks_to_analyze>
-
-### Guidelines:
-* **Independent Analysis:** Treat each chunk as an isolated piece of data. Do not mix relationships, context, or entities between different chunks.
-* **Strict Ordering:** You must process and return the exact same number of results as the input chunks, preserving the original array order.
-* **Relevance Check:** If a specific chunk is not about plant biology, sugarcane, or genomics, mark its specific `is_domain_relevant` flag as False and leave its nodes/relationships empty.
-* **Standardized Labels:** Use standard labels ("Gene", "Cultivar", "Trait", etc.) and UPPERCASE relationship types ("UPREGULATES", "EXPRESSED_IN", "INTERACTS_WITH").
-"""
-
-BATCH_EXTRACTION_PROMPT = PromptTemplate(
-    template=BATCH_EXTRACTION_PROMPT_STR,
-    input_variables=["chunks"]
 )

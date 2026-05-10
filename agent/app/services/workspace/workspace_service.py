@@ -4,6 +4,7 @@ from datetime import datetime
 from loguru import logger
 import json
 
+from app.models.user.knowledge_file_link import KnowledgeFileLink
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.configs.storage.databases import userdata_connection_pool, langgraph_connection_pool, genome_connection_pool
 from app.models.user.user_project import UserProject
@@ -418,10 +419,11 @@ class WorkspaceService:
                 links_data = r_dict.pop("knowledge_links_json", [])
                 file_obj = UserDatasetFile(**r_dict)
                 
+                parsed_links = links_data if isinstance(links_data, list) else json.loads(links_data)
                 # Mock the relationship property for Agent Context builder
-                setattr(file_obj, "knowledge_links", [
-                    link for link in (links_data if isinstance(links_data, list) else json.loads(links_data))
-                ])
+                link_instances = [KnowledgeFileLink(**link_dict) for link_dict in parsed_links]
+                setattr(file_obj, "knowledge_links", link_instances)
+                
                 all_files.append(file_obj)
             
         # Query 3: Fetch Logical Genomes from Genome Schema

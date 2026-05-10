@@ -111,6 +111,7 @@ class StreamEventType(StrEnum):
     TOOL_START = "tool_start"
     TOOL_END = "tool_end"
     RAG_RESULT = "rag_result"
+    TOKEN = "token"
     ANSWER = "answer"
     INTERRUPT = "interrupt"
     ERROR = "error"
@@ -134,3 +135,7 @@ class EventKind(StrEnum):
     TOOL_START = "on_tool_start"
     TOOL_END = "on_tool_end"
     CHAT_MODEL_STREAM = "on_chat_model_stream"
+
+class StreamingTag(StrEnum):
+    STREAM_PLANNER = "stream_planner"
+    STREAM_SYNTHESIZER = "stream_synthesizer"

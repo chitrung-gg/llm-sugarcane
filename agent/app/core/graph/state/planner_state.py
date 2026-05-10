@@ -47,5 +47,10 @@ class PlanExecuteState(TypedDict):
     plan: List[AgentStepPlan] 
     past_steps: List[AgentStepObservation]
 
-    # Results
-    final_answer: str
+    # Hold the execution history
+    rag_results: List[Any]
+    tool_results: List[Any]
+    web_results: List[Any]
+
+    # # Results
+    # final_answer: str

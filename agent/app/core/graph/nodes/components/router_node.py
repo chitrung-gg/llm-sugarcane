@@ -27,7 +27,7 @@ def make_router_node(
             AgentGraphNode.RAG,
             AgentGraphNode.TOOL,
             AgentGraphNode.WEB_SEARCH,
-            AgentGraphNode.SYNTHESIZER,
+            AgentGraphNode.INNER_SYNTHESIZER,
         ]
     ]:
         settings = get_settings()
@@ -37,7 +37,7 @@ def make_router_node(
         max_iterations = state.get("max_iterations", 3)
 
         if current_iteration >= max_iterations:
-            return Command(goto=AgentGraphNode.SYNTHESIZER, update={"iteration_count": current_iteration + 1})
+            return Command(goto=AgentGraphNode.INNER_SYNTHESIZER, update={"iteration_count": current_iteration + 1})
 
         start_time = time.time()
         query = state["query"]
@@ -97,14 +97,14 @@ def make_router_node(
                     AgentGraphNode.RAG,
                     AgentGraphNode.TOOL,
                     AgentGraphNode.WEB_SEARCH,
-                    AgentGraphNode.SYNTHESIZER,
+                    AgentGraphNode.INNER_SYNTHESIZER,
                 ],
                 List[
                     Literal[
                         AgentGraphNode.RAG,
                         AgentGraphNode.TOOL,
                         AgentGraphNode.WEB_SEARCH,
-                        AgentGraphNode.SYNTHESIZER,
+                        AgentGraphNode.INNER_SYNTHESIZER,
                     ]
                 ]
             ],

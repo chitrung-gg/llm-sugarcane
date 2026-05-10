@@ -9,11 +9,11 @@ _EX_ACCESSION = ExecutorOutput(
     final_result="The NCBI Accession number for the R570 genome assembly is GCA_038087645.1."
 )
 
-_EX_BRIX = ExecutorOutput(
-    scratchpad="The user wants genes related to 'Brix content'. Scanning context: Gene_001 and Gene_003 explicitly mention Brix. Gene_002 is unrelated.",
+_EX_META_EXEC = ExecutorOutput(
+    scratchpad="The task is to extract citations and sources used in the previous step. Looking at the <conversation_history>, I see the data came from 'Qdrant Vector Search' which retrieved chunks from 'sugarcane_zz1_study.pdf'. No external tools are needed.",
     status="SUCCESS",
-    data_extracted=["Gene_001", "Gene_003"],
-    final_result="Based on the mapping, Gene_001 (sucrose synthase) and Gene_003 (cell wall invertase) are associated with Brix content."
+    data_extracted=["sugarcane_zz1_study.pdf"],
+    final_result="The previous answer was synthesized using internal RAG results, specifically referring to the document 'sugarcane_zz1_study.pdf'."
 )
 
 _JSON_OPTS = {"indent": 2, "exclude_none": True}
@@ -26,11 +26,11 @@ _FEW_SHOTS = f"""
   </ideal_response>
 </example>
 
-<example name="trait_mapping">
-  <task>Identify which genes are associated with 'Brix content' from the provided trait mapping list.</task>
-  <history>Search results returned: 'Gene_001: sucrose synthase (Brix)', 'Gene_002: chlorophyll binding', 'Gene_003: cell wall invertase (Brix)'.</history>
+<example name="internal_memory_extraction">
+  <task>Review the previous execution history and RAG context to extract the exact document names used to formulate the previous answer.</task>
+  <history>Step 1: Extracted genes from user uploaded document 'sugarcane_zz1_study.pdf'.</history>
   <ideal_response>
-{_EX_BRIX.model_dump_json(**_JSON_OPTS)}
+{_EX_META_EXEC.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
 </example>
 """
@@ -47,12 +47,18 @@ You are the Execution Agent for a Sugarcane Genomics system. Your job is to comp
 {step_description}
 </current_task>
 
-### Guidelines:
+### Execution Philosophy & Tool Hierarchy:
+Evaluate the `<current_task>` and select your action based on this strict cost hierarchy:
+
+1. **Tier 0 (Zero Cost - No Tools):** If the task asks to extract a citation, review sources, or parse data that ALREADY EXISTS in the `<conversation_history>`, **DO NOT USE ANY TOOLS**. Just read the history and output the answer directly, unless explicitly required to rerun the tools.
+2. **Tier 1 (Internal Proprietary Tools):** If the data is not in the history, use internal tools to securely search our Neo4j graph and vector databases for genes, relationships, and traits.
+3. **Tier 2 (External Bio-APIs):** Use heavy external tools (like `search_ncbi_genome` or Web Search) ONLY when Tier 1 tools fail to find the specific identifier, or when the task explicitly requires fetching brand new external biological metadata.
+
+### Execution Guidelines:
 * **Focus on the Current Task:** Do not try to solve the entire user query at once. Just complete the specific objective listed in `<current_task>`.
-* **Use the History:** The `<conversation_history>` contains the results of previous steps. Read it carefully to find data (like gene IDs, filenames, or tool outputs) needed for your current task.
-* **Be Precise:** When extracting data or identifiers, isolate them clearly in the `data_extracted` field. 
-* **Graceful Failure:** If you absolutely cannot complete the task because vital information is missing from the history, set your status to 'REQUIRES_CLARIFICATION' and explain what you need.
-* **Think Aloud:** Use your `scratchpad` to explain your logic before finalizing the output.
+* **Data Chaining:** If the `<current_task>` tells you to use data from a previous step, look closely at the `<conversation_history>` to find that exact data before executing your tool.
+* **Be Precise:** When extracting data, IDs, or filenames, isolate them clearly in the `data_extracted` list so downstream steps can use them.
+* **Graceful Failure:** If a tool fails or returns empty, DO NOT blindly repeat the exact same call. Switch to a Tier 2 tool or set your status to 'FAILED' and explain what is missing.
 
 ### Examples of how to respond:
 {few_shots}

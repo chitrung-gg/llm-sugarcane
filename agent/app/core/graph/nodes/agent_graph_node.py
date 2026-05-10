@@ -14,11 +14,12 @@ class AgentGraphNode(StrEnum):
     WEB_SEARCH = "web_search"
     TOOL = "tool"
     ENRICHMENT = "enrichment"
-    SYNTHESIZER = "synthesizer"
-    SUMMARIZER = "summarizer"
+    INNER_SYNTHESIZER = "inner_synthesizer"
 
     # --- Outer Graph Nodes (Plan & Execute Loop) ---
     PLANNER = "planner"
     HUMAN_REVIEW = "human_review"
     EXECUTOR = "executor"
+    SUMMARIZER = "summarizer"
+    OUTER_SYNTHESIZER = "outer_synthesizer"
     # REPLANNER = "replanner"

@@ -12,7 +12,7 @@ from langfuse.types import TraceContext
 from langgraph.graph.state import CompiledStateGraph, RunnableConfig
 from langgraph.types import Command
 from langgraph.errors import GraphInterrupt
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+from langchain_core.messages import BaseMessageChunk, HumanMessage, AIMessage, BaseMessage, AIMessageChunk
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langfuse.langchain import CallbackHandler
 from loguru import logger
@@ -30,6 +30,7 @@ from app.common.constants import (
     ObservationType, 
     SYSTEM_OWNER_ID, 
     StreamEventType,
+    StreamingTag,
     UserFeedbackAction,
     EventKind
 )
@@ -432,7 +433,18 @@ class AgentService:
                 AgentGraphNode.PLANNER, 
                 AgentGraphNode.EXECUTOR, 
                 AgentGraphNode.ROUTER, 
-                AgentGraphNode.SYNTHESIZER
+                AgentGraphNode.INNER_SYNTHESIZER,
+                AgentGraphNode.INPUT_ANALYZER,
+                AgentGraphNode.RAG
+            }
+
+            NODE_MESSAGES = {
+                AgentGraphNode.INPUT_ANALYZER: "📂 Analyzing attached workspace files...",
+                AgentGraphNode.PLANNER: "📋 Drafting research plan...",
+                AgentGraphNode.ROUTER: "🧭 Determining execution pathway...",
+                AgentGraphNode.EXECUTOR: "⚙️ Executing bioinformatics tools...",
+                AgentGraphNode.RAG: "🔎 Searching genomic vector databases...",
+                AgentGraphNode.INNER_SYNTHESIZER: "✍️ Synthesizing final response..."
             }
 
             async def _yield_interrupt_payload(status_flag: dict):
@@ -489,14 +501,56 @@ class AgentService:
                     async for event in self.graph.astream_events(input_state, config, version="v2"):
                         kind = event["event"]
                         name = event["name"]
+                        tags = event.get("tags", [])
+
+                        if kind == EventKind.CHAT_MODEL_STREAM and any(t in tags for t in [StreamingTag.STREAM_PLANNER, StreamingTag.STREAM_SYNTHESIZER]):
+                            data = event.get("data", {})
+                            chunk = data.get("chunk")
+
+                            # 1. Use the most specific check first to satisfy Pylance & Logic
+                            if isinstance(chunk, AIMessageChunk):
+                                chunk_text = ""
+
+                                # 1. Handle Content (Standard Text or Block List)
+                                if chunk.content:
+                                    if isinstance(chunk.content, str):
+                                        chunk_text = chunk.content
+                                    elif isinstance(chunk.content, list):
+                                        # Extract text from the list of blocks seen in your logs
+                                        for block in chunk.content:
+                                            if isinstance(block, dict) and block.get("type") == "text":
+                                                chunk_text += block.get("text", "")
+                                            elif isinstance(block, str):
+                                                chunk_text += block
+                                
+                                # CASE B: Handle Tool Calls (JSON fragments for Structured Output)
+                                # We append (+=) here so if a chunk has both text and tool calls, we catch both
+                                if chunk.tool_call_chunks:
+                                    for tc_chunk in chunk.tool_call_chunks:
+                                        if args := tc_chunk.get("args"):
+                                            chunk_text += args
+
+                                # 2. Yield the result if we captured any text
+                                if chunk_text:
+                                    token_chunk = StreamChunk(
+                                        event=StreamEventType.TOKEN,
+                                        data=chunk_text
+                                    )
+                                    yield f"data: {token_chunk.model_dump_json()}\n\n"
 
                         # 0. Show progress as we enter nodes
                         if kind == EventKind.CHAIN_START and name in REASONING_NODES:
+                            try:
+                                node_key = AgentGraphNode(name)
+                                message = NODE_MESSAGES.get(node_key, f"Running {name}...")
+                            except ValueError:
+                                message = f"Running {name}..."
+
                             chunk = StreamChunk(
                                 event=StreamEventType.THOUGHT, 
                                 data={
                                     'node': name, 
-                                    'content': f'Entering {name} node...'
+                                    'content': message
                                 }
                             )
                             yield f"data: {chunk.model_dump_json()}\n\n"
@@ -557,9 +611,9 @@ class AgentService:
                             )
                             yield f"data: {chunk.model_dump_json()}\n\n"
 
-                        # 3. Final Answer (From Synthesizer OR Planner)
-                        # Add AgentGraphNode.PLANNER to the condition!
-                        if kind == EventKind.CHAIN_END and name in [AgentGraphNode.SYNTHESIZER, AgentGraphNode.PLANNER]:
+                        # 3. Final Answer
+                        # Use to save output to backend
+                        if kind == EventKind.CHAIN_END and name == AgentGraphNode.OUTER_SYNTHESIZER:
                             output = event["data"].get("output")
                             final_answer = None
                             
@@ -567,11 +621,11 @@ class AgentService:
                                 final_answer = output.update.get("final_answer")
 
                             if final_answer:
-                                chunk = StreamChunk(
-                                    event=StreamEventType.ANSWER, 
-                                    data=final_answer
-                                )
-                                yield f"data: {chunk.model_dump_json()}\n\n"
+                                # chunk = StreamChunk(
+                                #     event=StreamEventType.ANSWER, 
+                                #     data=final_answer
+                                # )
+                                # yield f"data: {chunk.model_dump_json()}\n\n"
                                 
                                 # Save to DB immediately
                                 await self._save_chat_message(
@@ -581,7 +635,6 @@ class AgentService:
                                     type="answer",
                                     execution_id=execution_id
                                 )
-                                answer_saved_to_db = True
 
                 # 1. Initialize the status dictionary
                 interrupt_status = {"interrupted": False}

@@ -8,13 +8,13 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.graph.state.planner_state import AgentStepObservation
-from app.common.constants import AgentIntent, ObservationType, PlanStatus
+from app.common.constants import AgentIntent, ObservationType, PlanStatus, StreamingTag
 from app.configs.settings.settings import get_settings
 from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
-from app.core.prompts.synthesizer_prompts import SYNTHESIZER_SYSTEM_PROMPT, SYNTHESIZER_FINAL_WARNING
+from app.core.prompts.inner_synthesizer_prompts import SYNTHESIZER_SYSTEM_PROMPT, SYNTHESIZER_FINAL_WARNING
 from app.schemas.agent.synthesizer import SynthesizerOutput
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -22,7 +22,7 @@ from langchain_core.tools import BaseTool
 from langgraph.types import Command
 from app.utils.graph.context_utils import get_recent_messages, format_optimized_workspace
 
-def make_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
+def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
     @tracing(observation_type=ObservationType.CHAIN)
     async def synthesizer(state: AgentState) -> Command[
         Literal[AgentGraphNode.END_NODE, AgentGraphNode.ROUTER]

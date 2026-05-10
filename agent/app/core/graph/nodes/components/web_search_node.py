@@ -27,7 +27,7 @@ def make_web_search_node(
     """Factory to create the web search node with injected dependency."""
     @tracing(observation_type=ObservationType.RETRIEVER)
     async def web_search(state: AgentState) -> Command[
-        Literal[AgentGraphNode.SYNTHESIZER]
+        Literal[AgentGraphNode.INNER_SYNTHESIZER]
     ]:
         settings = get_settings()
 
@@ -128,7 +128,7 @@ def make_web_search_node(
         )
 
         return Command(
-            goto=AgentGraphNode.SYNTHESIZER,
+            goto=AgentGraphNode.INNER_SYNTHESIZER,
             update={"web_results": new_web_results}
         )
 

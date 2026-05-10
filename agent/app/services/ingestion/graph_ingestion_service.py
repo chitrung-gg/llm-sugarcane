@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from langchain.embeddings.base import Embeddings
 
 from app.configs.settings.settings import get_settings
-from app.core.prompts.graph_ingestion_prompts import EXTRACTION_PROMPT, BATCH_EXTRACTION_PROMPT
+from app.core.prompts.graph_ingestion_prompts import EXTRACTION_PROMPT
 from app.core.tools.registry.ingestion_config_tool import IngestionConfig
 from app.schemas.knowledge.knowledge_ingestion_schema import IngestionConfidenceTier, IngestionSourceType
 from app.core.tools.registry.registry_tool import KNOWLEDGE_GRAPH_TOOL_REGISTRY

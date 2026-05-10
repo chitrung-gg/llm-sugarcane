@@ -1,50 +1,66 @@
+import json
 from langchain_core.prompts import PromptTemplate
 from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.core.graph.routing.route_action import RouteDecision
 from app.common.constants import AgentIntent
 
-# 1. Define examples as Pydantic objects
-_EX_STOP_LOOP = RouteDecision(
-    intent=AgentIntent.DIRECT_ANSWER,
-    reasoning="The 'web_search' tool failed twice to find the abstract for DOI 10.1007/s12355. I have exhausted this path and will now inform the user.",
+# 1. Define heuristic examples as Pydantic objects
+_EX_PIVOT_ON_FAILURE = RouteDecision(
+    intent=AgentIntent.WEB_SEARCH, 
+    reasoning="The 'search_knowledge_graph' tool failed to find 'ZZ1' in the execution history. I MUST pivot to a different capability. I will use 'web_search' to find broader external literature.",
+    required_tools=[],
+    rag_query=None,
+    web_query="sugarcane ZZ1 genome assembly traits"
+)
+
+_EX_INTERNAL_FIRST = RouteDecision(
+    intent=AgentIntent.TOOL_ONLY,
+    reasoning="The task requires resolving a specific biological identifier (DOI 10.1007/s12355). Based on my capabilities map, I will prioritize internal structured tools before falling back to the web.",
+    required_tools=[
+        ToolCallRequest(
+            name="search_knowledge_graph",
+            args={"query": "10.1007/s12355"}
+        )
+    ],
+    rag_query=None,
+    web_query=None
+)
+
+_EX_META_ROUTER = RouteDecision(
+    intent=AgentIntent.DIRECT_ANSWER, 
+    reasoning="The task asks to read sources for a previous answer. The <extracted_knowledge> and <conversation_summary> already contain this information. I do not need external tools or RAG; I will answer directly.",
     required_tools=[],
     rag_query=None,
     web_query=None
 )
 
-_EX_INTERNAL_FIRST = RouteDecision(
-    intent=AgentIntent.TOOL_ONLY,
-    reasoning="The user provided a specific biological identifier (DOI/Gene ID). Prioritizing internal Knowledge Graph and RAG search before falling back to the web.",
-    required_tools=[
-        ToolCallRequest(
-            name="search_knowledge_graph",
-            args={"query": "10.1007/s12355-021-01068-1"}
-        )
-    ],
-    rag_query="orthologs of ScDREB2 in sugarcane",
-    web_query=None
-)
-
 _JSON_OPTS = {"indent": 2, "exclude_none": True}
 _FEW_SHOTS = f"""
-<example name="repeated_failure_stop">
-  <reason>Prevents infinite loops when a resource is truly missing or tools consistently fail.</reason>
+<example name="heuristic_pivot_on_failure">
+  <reason>Shows how to adapt when an internal tool fails, preventing infinite loops by pivoting to a different capability (Web Search).</reason>
   <ideal_response>
-{_EX_STOP_LOOP.model_dump_json(**_JSON_OPTS)}
+{_EX_PIVOT_ON_FAILURE.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
 </example>
 
-<example name="internal_data_priority">
-  <reason>Ensures we check proprietary/internal datasets before generic web results.</reason>
+<example name="heuristic_internal_priority">
+  <reason>Shows capability-based routing for exact biological identifiers.</reason>
   <ideal_response>
 {_EX_INTERNAL_FIRST.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
 </example>
+
+<example name="heuristic_meta_question">
+  <reason>Shows how to resolve tasks natively if the context already holds the answer.</reason>
+  <ideal_response>
+{_EX_META_ROUTER.model_dump_json(**_JSON_OPTS)}
+  </ideal_response>
+</example>
 """
 
-# 2. The Loosened System Instructions
+# 2. The Capabilities-Driven System Instructions
 ROUTER_SYSTEM_INSTRUCTIONS_STR = """
-You are the primary Routing Assistant for a Sugarcane Genomics intelligence system. Your job is to analyze the user's intent and context to select the most efficient execution pathway.
+You are the Execution Router for a Sugarcane Genomics intelligence system. Your job is to analyze the current task and select the most efficient capability (`intent`) to solve it.
 
 <system_context>
   <workspace_state>{workspace_context}</workspace_state>
@@ -53,19 +69,14 @@ You are the primary Routing Assistant for a Sugarcane Genomics intelligence syst
   <available_bioinformatics_tools>{tool_list_str}</available_bioinformatics_tools>
 </system_context>
 
-### Routing Guidelines:
-* **Workspace Verification:** The `<workspace_state>` is the absolute truth for uploaded files and datasets. If a user asks about their files, look *only* there. If it's not listed, it doesn't exist—route to 'direct_answer' to tell them. Do not use external tools to search for missing uploads.
-    - NOTE: Numeric IDs (e.g., genome_id: 53) are valid database identifiers. If a user or plan mentions a numeric ID not in the XML, do NOT reject it. Instead, use 'list_genome_files' or specific tools to verify it.
-* **Knowledge Utilization:** The `<extracted_knowledge>` section contains facts, IDs, and metadata retrieved in previous plan steps. Always check here for identifiers (like `genome_id`) before calling a tool that retrieves them (like `list_genome_files`).
-* **State Overrides History:** If the conversation summary claims a file is missing, but it IS present in the workspace state, trust the workspace state (it means the user just uploaded it).
-* **Internal Data Priority:** If the user provides a DOI, filename, or specific genomic identifier, try to resolve it via internal Knowledge Bases (RAG, Knowledge Graph) before searching the web. Treat all identifiers as potentially valid within our proprietary datasets.
-* **Pipeline Management:** If you detect an S3 URI for genomic data:
-   - 'READY': Proceed with analytical tools.
-   - 'PENDING': Dataset is processing. Do not re-call indexing.
-   - 'NOT FOUND': You must call `index_new_genome` using the active dataset_id.
+### Intent Selection Heuristics (Capabilities Map):
+- **`direct_answer` (Resolution):** FASTEST. Use this if the `<extracted_knowledge>`, `<workspace_state>`, or `<conversation_summary>` ALREADY contains the exact answer needed. Also use this for simple conversational pleasantries or meta-questions ("What files do I have?").
+- **`rag_only` (Unstructured Internal Memory):** Use this to search vector databases for unstructured text inside user-uploaded PDFs, FASTA descriptions, or general biological context. 
+- **`tool_only` / `all` (Structured Bioinformatics):** PRECISE. Use this when the task explicitly requires APIs (NCBI, SCOD) or Knowledge Graphs (Neo4j) to resolve exact identifiers (Genes, DOIs, Accessions) or trigger pipelines (e.g., Crispor).
+- **`web_search` (Broad Discovery):** FALLBACK. Use this for general scientific literature searches, recent news, or if internal tools/databases explicitly failed.
 """
 
-# 3. The Loosened Final Enforcement (Execution Governance)
+# 3. The Heuristic-Driven Final Enforcement
 ROUTER_FINAL_STATE_ENFORCEMENT_STR = """
 <execution_history>
 {execution_history}
@@ -79,19 +90,16 @@ ROUTER_FINAL_STATE_ENFORCEMENT_STR = """
 {intents_str}
 </available_intents>
 
-### Execution Guidelines:
-* **Success Criteria:** Select 'direct_answer' only if the execution history has enough data to fully answer the user's goal, or if you've hit a dead end.
-* **Anti-Loop Protocol:** Do not repeat exact tool calls that have already been executed with identical arguments. 
-* **Failure Recovery:** If a tool fails with a fixable error (like a malformed argument), try fixing it and routing back. If it's a terminal error (like a 404), route to 'direct_answer' and explain the limitation.
-* **Tool Selection:** If you select 'all' or 'tool_only', carefully populate the `required_tools` list based on the tools available to you.
-* **Think Aloud:** Use your reasoning field to explain your choice step-by-step before selecting the intent.
-* **Strict Tool Boundaries:** You must NEVER claim to have capabilities or tools that are not explicitly listed in the `<available_bioinformatics_tools>` block. If the user asks if you can do Primer Design or CRISPR, and those tools are not in your list, you must clearly state that you do not currently have that capability. Do not lie to please the user.
+### Execution & Self-Correction Guidelines:
+1. **Argument Precision (No Guessing):** If you choose `tool_only` or `all`, you MUST pull the exact IDs, DOIs, or Accession numbers from the `<extracted_knowledge>` or `<conversation_summary>` to populate your tool `args`. Do not invent or guess parameters.
+2. **Learn from History (Anti-Loop):** Read the `<execution_history>`. If a specific intent or tool failed (e.g., "not found", "timeout", "empty"), YOU MUST PIVOT. Do not repeat the exact same tool with the same arguments. Switch capabilities entirely (e.g., from `tool_only` to `web_search`).
+3. **Trust the State:** The `<workspace_state>` represents ground truth for user files. If a file is there, it exists. If it is not there, it does not exist. Do not use external tools to look for local user uploads.
+4. **Think Aloud:** Use your `reasoning` field to explicitly state *why* you chose this intent based on your Capabilities Map.
 
 ### Examples of how to respond:
 {few_shots}
 """
 
-# Removed the schema injections. LangChain natively handles it.
 ROUTER_SYSTEM_INSTRUCTIONS = PromptTemplate(
     template=ROUTER_SYSTEM_INSTRUCTIONS_STR,
     input_variables=["workspace_context", "extracted_knowledge", "conversation_summary", "tool_list_str"]

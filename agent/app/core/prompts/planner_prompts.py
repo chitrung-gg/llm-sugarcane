@@ -21,6 +21,15 @@ _EX_STATUS_CHECK = PlanOutput(
     steps=[]
 )
 
+_EX_META = PlanOutput(
+    scratchpad="User is asking for the sources/papers used to generate the previous answer. Based on the planning philosophy, I must NOT search external APIs. I will plan a single step to review our internal memory and RAG context.",
+    direct_response=None,
+    estimated_steps=1,
+    steps=[
+        AgentStepPlan(step_id=1, description="Review the previous execution history and RAG context to extract the exact document names, DOIs, and citations used to formulate the previous answer.")
+    ]
+)
+
 # 2. Keep exclusion rules to hide internal state from the LLM
 _JSON_OPTS = {
     "indent": 2, 
@@ -64,15 +73,25 @@ Description: {project_description}
 {past_steps_str}
 </memory>
 
-### Planning Guidelines:
-1. **Skip Redundant Steps (CRITICAL):** Look at [Completed Steps]. If required data (like genome_id, S3 path, or gene locus) was already found, DO NOT schedule a step to search for it again. Proceed directly to the next logical step using the existing data.
-2. **Be Goal-Oriented:** Write 1 to 5 clear steps. You do NOT need to specify exact tool parameters; the ReAct agent handles all technical formatting.
-3. **Coreference Resolution:** If the user says "that query" or "run this", check [Recent Messages] and explicitly write the exact ID, coordinate, or string into the plan.
+### Infrastructure Resource Map (How to solve problems):
+Understand the strengths of your available resources to plan efficiently:
+1. **Internal RAG / Memory (Fastest, Local):** Best for retrieving data from user-uploaded files, querying the chat history, or finding citations/sources for things we just discussed.
+2. **Knowledge Graph (Fast, Relational):** Best for finding entity relationships (e.g., "Which genes are linked to Smut resistance?").
+3. **Bioinformatics APIs - NCBI/SCOD (Slow, Precise):** Best when you have an EXACT identifier (Gene Symbol, DOI, Accession) and need highly structured biological metadata.
+4. **Web Search (Fallback, Broad):** Best for broad scientific literature searches, recent news, or concepts not found in our internal databases.
 
-### Scratchpad:
-1. Identify user request.
+### Planning Philosophy & Guidelines:
+1. **Start Local, Go Global:** Always plan to check internal workspace files, RAG, or Graph databases before planning external API/Web searches.
+2. **Step Dependency (The Linkage Rule):** If a later step depends on the output of an earlier step (e.g., Step 2 needs a Gene ID found in Step 1), explicitly state this dependency in the step description. (Example: "Using the Gene ID extracted in Step 1, query the NCBI database...").
+3. **Handling Meta-Questions (Citations/Sources):** If the user asks about the AI's reasoning or sources (e.g., "How do you know?"), plan a SINGLE step to review internal RAG and Conversation History. DO NOT plan external searches.
+4. **Skip Redundant Steps:** Look at [Completed Steps]. If required data (like genome_id or S3 path) was already found, DO NOT schedule a step to search for it again. 
+5. **Coreference Resolution:** If the user says "that query" or "run this", explicitly write the exact ID, coordinate, or string from [Recent Messages] into the plan.
+
+### Scratchpad Logic:
+1. Identify the core user request.
 2. Resolve pronouns via memory.
-3. Check [Completed Steps] to avoid repeating work.
+3. Map the request to the correct Infrastructure Resource.
+4. Draft the leanest possible plan.
 
 ### Examples:
 {few_shots}

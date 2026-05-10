@@ -71,35 +71,40 @@ class LLMService(BaseModel):
             model=settings.GEMINI_PRIMARY_MODEL,
             api_key=primary_google_api_key,
             temperature=0.0,
-            timeout=settings.LLM_TIMEOUT
+            timeout=settings.LLM_TIMEOUT,
+            streaming=True
         )
         
         self._secondary_model = ChatGoogleGenerativeAI(
             model=settings.GEMINI_SECONDARY_MODEL,
             api_key=secondary_google_api_key,
             temperature=0.0,
-            timeout=settings.LLM_TIMEOUT
+            timeout=settings.LLM_TIMEOUT,
+            streaming=True
         ) 
         
         self._tertiary_model = ChatGoogleGenerativeAI(
             model=settings.GEMINI_TERTIARY_MODEL,
             api_key=tertiary_google_api_key,
             temperature=0.0,
-            timeout=settings.LLM_TIMEOUT
+            timeout=settings.LLM_TIMEOUT,
+            streaming=True
         )
         
         self._quaternary_model = ChatGoogleGenerativeAI(
             model=settings.GEMINI_QUATERNARY_MODEL,
             api_key=quaternary_google_api_key,
             temperature=0.0,
-            timeout=settings.LLM_TIMEOUT
+            timeout=settings.LLM_TIMEOUT,
+            streaming=True
         )
 
         self._quinary_model = ChatGoogleGenerativeAI(
             model=settings.GEMINI_QUINARY_MODEL,
             api_key=quinary_google_api_key,
             temperature=0.0,
-            timeout=settings.LLM_TIMEOUT
+            timeout=settings.LLM_TIMEOUT,
+            streaming=True
         )
 
         logger.info(f"""
