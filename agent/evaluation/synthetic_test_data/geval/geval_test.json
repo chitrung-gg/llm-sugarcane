@@ -1,0 +1,6 @@
+[
+    {
+        "input": "Summarize the genome assembly GCA_038087645.1 based on the retrieved data.",
+        "expected_output": "The genome assembly GCA_038087645.1 has a total sequence length of approximately 5.03 Gb and a GC percentage of roughly 44.5%."
+    }
+]

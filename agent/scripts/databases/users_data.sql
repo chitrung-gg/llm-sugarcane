@@ -49,3 +49,13 @@ REVOKE ALL ON SCHEMA userdata FROM PUBLIC;
 -- Set the default schema for this specific user. 
 -- Now, whenever userdata logs in, it defaults to this schema automatically!
 ALTER ROLE userdata SET search_path TO userdata;
+
+CREATE TABLE IF NOT EXISTS project_dataset_attachments (
+    project_id UUID NOT NULL REFERENCES user_projects(id) ON DELETE CASCADE,
+    dataset_id UUID NOT NULL REFERENCES user_datasets(id) ON DELETE CASCADE,
+    attached_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, dataset_id)
+);
+
+-- Ensure user_datasets has the is_public flag indexed (it already exists in model but let's ensure DB index)
+CREATE INDEX IF NOT EXISTS ix_user_datasets_is_public ON user_datasets (is_public);

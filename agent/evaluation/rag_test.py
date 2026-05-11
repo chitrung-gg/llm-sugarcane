@@ -1,7 +1,10 @@
+import argparse
+import json
 from typing import Any, cast
 import os
 from datetime import datetime
 import uuid
+from dotenv import load_dotenv
 from loguru import logger
 import asyncio
 from langchain_core.runnables import RunnableConfig
@@ -20,9 +23,10 @@ from deepeval.dataset import EvaluationDataset
 from deepeval.test_case import LLMTestCase
 from deepeval.metrics import ContextualPrecisionMetric, ContextualRecallMetric, FaithfulnessMetric, AnswerRelevancyMetric, ContextualRelevancyMetric
 
-
+# env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+# load_dotenv(dotenv_path=env_path, override=True)
     
-async def run_rag_evaluations():
+async def run_rag_evaluations(dataset_path: str):
     from app.configs.storage.databases import (
         genome_connection_pool, 
         langgraph_connection_pool, 
@@ -48,9 +52,11 @@ async def run_rag_evaluations():
         agent_service = container.agent_service
 
         # 2. Setup the Judge and Metrics
-        faithfulness_judge = GoogleGeminiJudge(model_name=settings.GEMINI_PRIMARY_MODEL)
+        faithfulness_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
         answer_rel_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
-        context_rel_judge = GoogleGeminiJudge(model_name=settings.GEMINI_TERTIARY_MODEL)
+        context_rel_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
+        context_precision_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
+        context_recall_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
 
         metrics = [
             FaithfulnessMetric(
@@ -71,12 +77,26 @@ async def run_rag_evaluations():
                 verbose_mode=True,
                 async_mode=False
             ),
+            ContextualPrecisionMetric(
+                threshold=0.7,
+                model=context_precision_judge,
+                verbose_mode=True,
+                async_mode=False
+            ),
+            ContextualRecallMetric(
+                threshold=0.7,
+                model=context_recall_judge,
+                verbose_mode=True,
+                async_mode=False
+            ),
         ]
 
-        queries = [
-            "What are the key genes involved in sugarcane sucrose metabolism?",
-            # "How does drought stress affect sugarcane yield according to recent studies?"
-        ]
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"Dataset not found at: {dataset_path}")
+            
+        logger.info(f"Loading golden dataset from {dataset_path}...")
+        with open(dataset_path, "r", encoding="utf-8") as f:
+            golden_data = json.load(f)
 
         current_file_name = os.path.splitext(os.path.basename(__file__))[0]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -99,7 +119,11 @@ async def run_rag_evaluations():
 
         logger.info(f"Starting evaluation run. Saving results to: {run_folder}")
 
-        for query in queries:
+        for item in golden_data:
+            query = item["input"]
+            expected_output = item.get("expected_output", "")
+            ground_truth_context = item.get("context", [])
+
             config = cast(RunnableConfig, {
                 "configurable": {
                     "thread_id": str(uuid.uuid4())
@@ -160,7 +184,9 @@ async def run_rag_evaluations():
             test_case = LLMTestCase(
                 input=query,
                 actual_output=actual_output,
-                retrieval_context=retrieval_context
+                retrieval_context=retrieval_context,
+                expected_output=expected_output,
+                context=ground_truth_context
             )
             test_cases.append(test_case)
 
@@ -192,4 +218,15 @@ async def run_rag_evaluations():
         await userdata_connection_pool.close()
 
 if __name__ == "__main__":
-    asyncio.run(run_rag_evaluations())
+    parser = argparse.ArgumentParser(description="Run DeepEval Agentic RAG Evaluations.")
+    parser.add_argument(
+        "--dataset", 
+        type=str, 
+        required=True, 
+        help="Path to the golden synthetic JSON dataset file."
+    )
+    
+    args = parser.parse_args()
+
+    # Pass the argument into your async loop
+    asyncio.run(run_rag_evaluations(dataset_path=args.dataset))

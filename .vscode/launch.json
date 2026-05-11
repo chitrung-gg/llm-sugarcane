@@ -17,25 +17,31 @@
             "request": "launch",
             "program": "${workspaceFolder}/agent/evaluation/rag_test.py",
             "cwd": "${workspaceFolder}/agent",
+            "args": [
+                "--dataset",
+                "./evaluation/synthetic_test_data/10.1007...s00122-014-2334-7_goldens.json" 
+            ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/agent"
             },
             "envFile": "${workspaceFolder}/agent/.env",
-            "console": "integratedTerminal",
-            "justMyCode": true
+            "console": "integratedTerminal"
         },
         {
             "name": "Python: Debug Agentic Evaluations",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/agent/evaluation/agentic_test.py",
+            "args": [
+                "--dataset",
+                "./evaluation/synthetic_test_data/agentic/agentic_test.json" 
+            ],
             "cwd": "${workspaceFolder}/agent",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/agent"
             },
             "envFile": "${workspaceFolder}/agent/.env",
-            "console": "integratedTerminal",
-            "justMyCode": true
+            "console": "integratedTerminal"
         },
         {
             "name": "Python: Debug GEval Evaluations",
@@ -43,6 +49,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/agent/evaluation/geval_test.py",
             "cwd": "${workspaceFolder}/agent",
+            "args": [
+                "--dataset",
+                "./evaluation/synthetic_test_data/geval/geval_test.json" 
+            ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/agent"
             },

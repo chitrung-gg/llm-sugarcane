@@ -1,9 +1,12 @@
+import argparse
 import asyncio
-from datetime import datetime
+import json
 import os
+from datetime import datetime
 from typing import Any, List, cast
 import uuid
 
+from app.common.constants import UserFeedbackAction
 from app.configs.loggings.loggings import setup_logging
 from app.configs.settings.settings import get_settings
 
@@ -11,28 +14,36 @@ os.environ["DEEPEVAL_TIMEOUT"] = "600"
 setup_logging()
 
 from deepeval import evaluate
-from deepeval.test_case import LLMTestCase, ToolCall, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from deepeval.metrics import BaseMetric, GEval
 from deepeval.evaluate import AsyncConfig, DisplayConfig
 from deepeval.dataset import EvaluationDataset
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 from loguru import logger
 
 from evaluation.llm_judge import GoogleGeminiJudge
 
-def extract_tool_names_from_state(messages: List[Any]) -> List[str]:
+def extract_tool_names_from_state(state: dict) -> List[str]:
     """
-    Parses LangChain AIMessages to extract just the names of the tools executed.
+    Parses the LangGraph state directly to extract tool names from the hidden trace arrays.
     """
     executed_tools = []
-    for msg in messages:
-        if isinstance(msg, AIMessage) and hasattr(msg, "tool_calls") and msg.tool_calls:
-            for tc in msg.tool_calls:
-                executed_tools.append(tc.get("name", "unknown_tool"))
-    return executed_tools
+    
+    # Check tool_results array
+    for tr in state.get("tool_results", []):
+        if isinstance(tr, dict) and "tool_name" in tr:
+            executed_tools.append(tr.get("tool_name"))
+            
+    # Check web_results array
+    for wr in state.get("web_results", []):
+        if isinstance(wr, dict) and "tool_name" in wr:
+            executed_tools.append(wr.get("tool_name"))
+            
+    return list(set(executed_tools)) # Return unique names only
 
-async def run_agentic_evaluations():
+async def run_geval_evaluations(dataset_path: str):
     from app.configs.storage.databases import (
         genome_connection_pool, 
         langgraph_connection_pool, 
@@ -52,32 +63,25 @@ async def run_agentic_evaluations():
         agent_service = container.agent_service
 
         # --- Instantiate Judges ---
-        # Note: You can route these to different models if you want to save costs on simpler metrics
         task_judge = GoogleGeminiJudge(model_name=settings.GEMINI_PRIMARY_MODEL)
         efficiency_judge = GoogleGeminiJudge(model_name=settings.GEMINI_TERTIARY_MODEL)
 
-        # --- 1. Sugarcane RAG Quality GEval ---
-        sugarcane_rag_quality_geval = GEval(
-            name="Sugarcane RAG Quality",
+        # --- Define GEval Metrics ---
+        plan_quality_geval = GEval(
+            name="Plan Quality",
             evaluation_steps=[
-                "1. Answer Relevancy: Check if the 'actual output' directly addresses the user's specific sugarcane query (e.g., genome stats, disease traits) without drifting into unrelated topics.",
-                "2. Answer Faithfulness: Verify that EVERY sugarcane fact, accession number, or gene function mentioned in the 'actual output' is strictly supported by the 'retrieval context'. Heavily penalize hallucinated facts.",
-                "3. Contextual Precision & Relevancy: Assess if the 'retrieval context' contains the correct biological information. Did the retrieval pull data about the correct sugarcane variety or gene?",
-                "4. Contextual Recall: Compare the 'retrieval context' against the 'expected output'. Did the system successfully retrieve all the necessary facts to formulate a complete answer?",
-                "Assign a low score if the agent hallucinated data not in the context, or if the context retrieved was irrelevant to the input query."
+                "Review the user's 'input' query.",
+                "Extract the 'AGENT PLAN' from the 'actual output'.",
+                "Evaluate if the plan logically breaks down the bioinformatics problem.",
+                "Check if the plan proposes using the correct biological databases or tools (e.g., proposing NCBI for genomes, Neo4j for traits).",
+                "Penalize if the plan is overly vague, hallucinates tools that don't exist, or misses critical steps required to answer the query.",
+                "Score 1.0 for a perfect, logical, sequential scientific research plan."
             ],
-            evaluation_params=[
-                LLMTestCaseParams.INPUT, 
-                LLMTestCaseParams.ACTUAL_OUTPUT, 
-                LLMTestCaseParams.EXPECTED_OUTPUT,
-                LLMTestCaseParams.RETRIEVAL_CONTEXT
-            ],
+            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
             model=task_judge,
-            threshold=0.7,
-            async_mode=False
+            threshold=0.7
         )
 
-        # --- 2. Step Efficiency GEval ---
         step_efficiency_geval = GEval(
             name="Step Efficiency",
             evaluation_steps=[
@@ -88,30 +92,23 @@ async def run_agentic_evaluations():
             ],
             evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
             model=efficiency_judge,
-            threshold=0.7,
-            async_mode=False
+            threshold=0.7
         )
 
-        # --- 3. Answer Correctness GEval ---
-        answer_correctness_geval = GEval(
-            name="Answer Correctness",
+        plan_adherence_geval = GEval(
+            name="Plan Adherence",
             evaluation_steps=[
-                "Compare the factual information in the 'actual output' against the 'expected output'.",
-                "Check whether any facts in the 'actual output' contradict the 'expected output'.",
-                "Penalize heavily for the omission of critical biological, genetic, or numerical details present in the 'expected output'.",
-                "Ignore stylistic differences or phrasing variations as long as the core facts are identical."
+                "Extract the 'AGENT PLAN' and the 'TOOLS EXECUTED' from the 'actual output'.",
+                "Compare the tools that were actually executed against the steps proposed in the plan.",
+                "Did the agent actually follow its own instructions? Or did it go off-script and execute random tools?",
+                "Penalize the score if the agent skipped planned steps without a valid reason.",
+                "Score 1.0 if the executed tools perfectly align with the intended plan."
             ],
-            evaluation_params=[
-                LLMTestCaseParams.INPUT, 
-                LLMTestCaseParams.ACTUAL_OUTPUT, 
-                LLMTestCaseParams.EXPECTED_OUTPUT
-            ],
-            model=task_judge,
-            threshold=0.7,
-            async_mode=False
+            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            model=efficiency_judge,
+            threshold=0.7
         )
 
-        # --- 4. Coherence GEval ---
         coherence_geval = GEval(
             name="Coherence",
             evaluation_steps=[
@@ -123,11 +120,9 @@ async def run_agentic_evaluations():
             ],
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             model=efficiency_judge,
-            threshold=0.7,
-            async_mode=False
+            threshold=0.7
         )
 
-        # --- 5. Tonality GEval ---
         tonality_geval = GEval(
             name="Tonality",
             evaluation_steps=[
@@ -139,50 +134,24 @@ async def run_agentic_evaluations():
             ],
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             model=efficiency_judge,
-            threshold=0.7,
-            async_mode=False
+            threshold=0.7
         )
 
-        # --- Define Agentic Metrics ---
         metrics: List[BaseMetric] = [
-            sugarcane_rag_quality_geval,
+            plan_quality_geval,
+            plan_adherence_geval,
             step_efficiency_geval,
-            answer_correctness_geval,
             coherence_geval,
             tonality_geval
         ]
 
-        # --- Define Context-Based Test Queries ---
-        test_data = [
-            # Test Case 1: Testing Faithfulness and Recall (NCBI Context)
-            {
-                "input": "Summarize the genome assembly GCA_038087645.1 based on the retrieved data.",
-                "expected_output": "The genome assembly GCA_038087645.1 has a total sequence length of approximately 5.03 Gb and a GC percentage of roughly 44.5%.",
-                "retrieval_context": [
-                    "{'accession': 'GCA_038087645.1', 'organism': 'Saccharum officinarum x spontaneum', 'length_bp': 5038506984, 'gc_percent': 44.5}"
-                ]
-            },
-
-            # Test Case 2: Testing Answer Relevancy and Precision (Neo4j Context)
-            {
-                "input": "What disease does the Bru1 gene provide resistance against?",
-                "expected_output": "The Bru1 gene provides resistance against brown rust disease (bệnh gỉ sắt).",
-                "retrieval_context": [
-                    "Node: Bru1, Type: Gene, Link: [RESISTS] -> Node: Brown Rust, Type: Disease, Alias: bệnh gỉ sắt"
-                ]
-            },
-
-            # Test Case 3: Testing Hallucination/Faithfulness (Vector DB Context)
-            # The context explicitly mentions ROC10, but DOES NOT mention its yield. 
-            # The metric will penalize the agent if it hallucinates a yield number.
-            {
-                "input": "What are the characteristics of the ROC10 sugarcane variety according to the database?",
-                "expected_output": "ROC10 is a sugarcane variety known for its high sucrose content and good disease resistance.",
-                "retrieval_context": [
-                    "SCOD Document: ROC10 is a widely planted sugarcane variety originally bred in Taiwan. It is highly valued for its high sucrose content (chữ đường cao) and good disease resistance."
-                ]
-            }
-        ]
+        # --- LOAD DATASET DYNAMICALLY ---
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"Dataset not found at: {dataset_path}")
+            
+        logger.info(f"Loading GEval dataset from {dataset_path}...")
+        with open(dataset_path, "r", encoding="utf-8") as f:
+            test_data = json.load(f)
 
         current_file_name = os.path.splitext(os.path.basename(__file__))[0]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -193,59 +162,95 @@ async def run_agentic_evaluations():
         run_folder = os.path.join(base_eval_folder, folder_name)
         os.makedirs(run_folder, exist_ok=True)
 
-        logger.info(f"Starting Agentic evaluation run. Saving results to: {run_folder}")
+        logger.info(f"Starting GEval evaluation run. Saving results to: {run_folder}")
         test_cases = []
 
         for item in test_data:
             query = item["input"]
-            expected_tool_names = item["expected_tools"]
-            expected_output = item["expected_output"]
+            expected_output = item.get("expected_output", "")
             
             config = cast(RunnableConfig, {
                 "configurable": {"thread_id": str(uuid.uuid4())}
             })
             
-            # --- Run Agent ---
+            # --- Run Agent Planner ---
             initial_state = {
                 "query": query,
                 "messages": [HumanMessage(content=query)],
                 "active_datasets": [],
                 "iteration_count": 0,
             }
-            final_state = await asyncio.wait_for(
+            
+            # 1. Run until it hits the Human Approval breakpoint
+            suspended_state = await asyncio.wait_for(
                 agent_service.graph.ainvoke(initial_state, config=config),
                 timeout=1000 
             )
             
-            # 1. Get Tool Names for Efficiency Metric
-            actual_tool_names = extract_tool_names_from_state(final_state.get("messages", []))
+            # 2. Check if the graph suspended and trigger Executor
+            current_thread_state = await agent_service.graph.aget_state(config)
+            
+            if current_thread_state.next:
+                logger.info(f"Test case: '{query}' -> Graph suspended. Simulating Human Approval...")
+                mock_approval = Command(resume={"action": UserFeedbackAction.APPROVE})
+                final_state = await asyncio.wait_for(
+                    agent_service.graph.ainvoke(mock_approval, config=config),
+                    timeout=1000
+                )
+            else:
+                logger.info(f"Test case: '{query}' -> Graph did not suspend. Proceeding.")
+                final_state = suspended_state
+            
+            # 1. Get Tool Names for Efficiency Metric (Using Robust State Extraction)
+            actual_tool_names = extract_tool_names_from_state(final_state)
+            
+            # Robust final answer extraction
+            final_answer = final_state.get('final_answer', '')
+            if not final_answer:
+                for msg in reversed(final_state.get("messages", [])):
+                    if getattr(msg, "type", "") == "ai" and msg.content:
+                        final_answer = str(msg.content)
+                        break
+
+            raw_plan = final_state.get("plan", [])
+            plan_text = ""
+            for step in raw_plan:
+                # Format it so the Judge can easily read it
+                plan_text += f"Step {getattr(step, 'step_id', '?')}: {getattr(step, 'description', '')}\n"
+            
+            if not plan_text:
+                plan_text = "No plan was generated."
+
+            # --- Inject everything into the Combined Output ---
             combined_actual_output = (
-                f"Tools Executed: {actual_tool_names}\n\n"
-                f"Final Answer: {final_state.get('final_answer', '')}"
+                f"=== AGENT PLAN ===\n{plan_text}\n\n"
+                f"=== TOOLS EXECUTED ===\n{actual_tool_names}\n\n"
+                f"=== FINAL ANSWER ===\n{final_answer}"
             )
 
-            # 2. AGGREGATE ALL CONTEXT FOR RAG METRICS (The Fix)
+            # 2. AGGREGATE ALL CONTEXT FOR RAG METRICS
             actual_retrieval_context = []
             
-            # Add Vector DB results (if any)
             actual_retrieval_context.extend(
                 [str(res.get("content", res)) for res in final_state.get("rag_results", [])]
             )
-            # Add Tool Execution results like NCBI, SCOD, Neo4j (if any)
             actual_retrieval_context.extend(
                 [str(res.get("output", res)) for res in final_state.get("tool_results", [])]
             )
-            # Add Web Search results (if any)
             actual_retrieval_context.extend(
                 [str(res.get("snippet", res)) for res in final_state.get("web_results", [])]
             )
+            
+            # Fallback for empty context
+            if not actual_retrieval_context:
+                actual_retrieval_context = ["No context was retrieved by the agent."]
 
             # 3. Build TestCase
             test_case = LLMTestCase(
                 input=query,
                 actual_output=combined_actual_output, 
                 expected_output=expected_output,
-                retrieval_context=actual_retrieval_context # <-- Pass the aggregated context to the Judge
+                retrieval_context=actual_retrieval_context 
             )
             test_cases.append(test_case)
 
@@ -270,4 +275,12 @@ async def run_agentic_evaluations():
         await userdata_connection_pool.close()
 
 if __name__ == "__main__":
-    asyncio.run(run_agentic_evaluations())
+    parser = argparse.ArgumentParser(description="Run Custom GEval Agent Evaluations.")
+    parser.add_argument(
+        "--dataset", 
+        type=str, 
+        required=True, 
+        help="Path to the GEval JSON dataset file."
+    )
+    args = parser.parse_args()
+    asyncio.run(run_geval_evaluations(dataset_path=args.dataset))

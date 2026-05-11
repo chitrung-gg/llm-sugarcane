@@ -1,0 +1,536 @@
+[
+  {
+    "input": "Search NCBI for sugarcane genome assembly GCA_038087645.1 and summarize its stats.",
+    "expected_tools": [
+      {
+        "name": "search_ncbi_genome",
+        "input_parameters": {
+          "organism_or_cultivar": "GCA_038087645.1"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Find which genes are responsible for sucrose content in Saccharum according to literature.",
+    "expected_tools": [
+      {
+        "name": "search_literature_for_traits",
+        "input_parameters": {
+          "organism": "Saccharum",
+          "primary_concept": "sucrose content"
+        }
+      }
+    ]
+  },
+  {
+    "input": "List all available genome files in the system.",
+    "expected_tools": [
+      {
+        "name": "list_genome_files",
+        "input_parameters": {}
+      }
+    ]
+  },
+  {
+    "input": "Show me the analysis summary for genome 53.",
+    "expected_tools": [
+      {
+        "name": "get_genome_analysis",
+        "input_parameters": {
+          "id": 53
+        }
+      }
+    ]
+  },
+  {
+    "input": "Check the status of indexing task 98765.",
+    "expected_tools": [
+      {
+        "name": "check_genome_indexing_status",
+        "input_parameters": {
+          "task_id": 98765
+        }
+      }
+    ]
+  },
+  {
+    "input": "Run a synteny analysis between subgenomes of genome 53 using haplotype sets A and B.",
+    "expected_tools": [
+      {
+        "name": "run_synteny_haplotype_analysis",
+        "input_parameters": {
+          "genome_id": 53,
+          "haplotype_set_query": "A",
+          "haplotype_set_subject": "B"
+        }
+      }
+    ]
+  },
+  {
+    "input": "What is the status of the synteny task with ID 10101?",
+    "expected_tools": [
+      {
+        "name": "get_synteny_status",
+        "input_parameters": {
+          "task_id": 10101
+        }
+      }
+    ]
+  },
+  {
+    "input": "Get the functional distribution of genes in genome 53.",
+    "expected_tools": [
+      {
+        "name": "get_functional_distribution",
+        "input_parameters": {
+          "id": 53
+        }
+      }
+    ]
+  },
+  {
+    "input": "Does genome 53 show any subgenome bias?",
+    "expected_tools": [
+      {
+        "name": "get_subgenome_bias",
+        "input_parameters": {
+          "id": 53
+        }
+      }
+    ]
+  },
+  {
+    "input": "Show me the detail of chromosome Chr10A in genome 53.",
+    "expected_tools": [
+      {
+        "name": "get_chromosome_detail",
+        "input_parameters": {
+          "id": 53,
+          "name": "Chr10A"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Investigate the region on Chr10A from 220000 to 280000 in genome 53.",
+    "expected_tools": [
+      {
+        "name": "investigate_region",
+        "input_parameters": {
+          "genome_id": 53,
+          "chrom": "Chr10A",
+          "start": 220000,
+          "end": 280000
+        }
+      }
+    ]
+  },
+  {
+    "input": "Get the DNA sequence for the region Chr10A:220622-226285 in genome 53.",
+    "expected_tools": [
+      {
+        "name": "get_region_sequence",
+        "input_parameters": {
+          "genome_id": 53,
+          "chrom": "Chr10A",
+          "start": 220622,
+          "end": 226285
+        }
+      }
+    ]
+  },
+  {
+    "input": "List the first 20 genes in genome 53.",
+    "expected_tools": [
+      {
+        "name": "get_genes_list",
+        "input_parameters": {
+          "genome_id": 53,
+          "limit": 20
+        }
+      }
+    ]
+  },
+  {
+    "input": "Find all genes on chromosome Chr10A of genome 53 that contain 'esterase' in their description.",
+    "expected_tools": [
+      {
+        "name": "search_genes_full",
+        "input_parameters": {
+          "genome_id": 53,
+          "chromosome": "Chr10A",
+          "keyword": "esterase"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Get the detailed information for gene SoffiXsponR570.10Ag000400.v2.1 in genome 53.",
+    "expected_tools": [
+      {
+        "name": "get_gene_detail",
+        "input_parameters": {
+          "gene_id": "SoffiXsponR570.10Ag000400.v2.1",
+          "genome_id": 53
+        }
+      }
+    ]
+  },
+  {
+    "input": "Show the structure (exons/introns) of gene SoffiXsponR570.10Ag000100.v2.1.",
+    "expected_tools": [
+      {
+        "name": "get_gene_structure",
+        "input_parameters": {
+          "id": 53,
+          "gene_id": "SoffiXsponR570.10Ag000100.v2.1"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Retrieve 2kb of the promoter sequence for SoffiXsponR570.10Ag000200.v2.1.",
+    "expected_tools": [
+      {
+        "name": "get_gene_promoter",
+        "input_parameters": {
+          "id": 53,
+          "gene_id": "SoffiXsponR570.10Ag000200.v2.1",
+          "kb": 2
+        }
+      }
+    ]
+  },
+  {
+    "input": "Find all alleles for gene SoffiXsponR570.10Ag000300.v2.1.",
+    "expected_tools": [
+      {
+        "name": "get_gene_alleles",
+        "input_parameters": {
+          "id": 53,
+          "gene_id": "SoffiXsponR570.10Ag000300.v2.1"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Search for literature about 'lignin biosynthesis' in Saccharum.",
+    "expected_tools": [
+      {
+        "name": "search_literature_for_traits",
+        "input_parameters": {
+          "organism": "Saccharum",
+          "primary_concept": "lignin biosynthesis"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Find NCBI Bioprojects related to 'Saccharum officinarum'.",
+    "expected_tools": [
+      {
+        "name": "search_bioproject",
+        "input_parameters": {
+          "query": "Saccharum officinarum"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Look up Biosamples for 'R570 cultivar'.",
+    "expected_tools": [
+      {
+        "name": "search_biosample",
+        "input_parameters": {
+          "query": "R570 cultivar"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Resolve the taxonomy for 'Sugarcane'.",
+    "expected_tools": [
+      {
+        "name": "resolve_taxonomy",
+        "input_parameters": {
+          "query": "Sugarcane"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Fetch the nucleotide sequence for accession EF123456.",
+    "expected_tools": [
+      {
+        "name": "fetch_nucleotide_sequence",
+        "input_parameters": {
+          "accession": "EF123456"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Create a BLAST task for genome 53 using the sequence 'ATGCATGCATGC'.",
+    "expected_tools": [
+      {
+        "name": "create_blast_task",
+        "input_parameters": {
+          "genome_id": 53,
+          "sequence": "ATGCATGCATGC"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Retrieve the results for BLAST task 554433.",
+    "expected_tools": [
+      {
+        "name": "get_blast_result",
+        "input_parameters": {
+          "task_id": 554433
+        }
+      }
+    ]
+  },
+  {
+    "input": "Run CRISPR guide RNA design for gene SoffiXsponR570.10Ag000400.v2.1 in genome 53.",
+    "expected_tools": [
+      {
+        "name": "run_crispor",
+        "input_parameters": {
+          "genome_id": 53,
+          "gene_id": "SoffiXsponR570.10Ag000400.v2.1"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Check the status of CRISPOR task 223344.",
+    "expected_tools": [
+      {
+        "name": "get_crispor_result",
+        "input_parameters": {
+          "task_id": 223344
+        }
+      }
+    ]
+  },
+  {
+    "input": "Design polyploid primers for the sequence 'GCTAGCTAGCTA' in genome 53.",
+    "expected_tools": [
+      {
+        "name": "design_polyploid_primer",
+        "input_parameters": {
+          "genome_id": 53,
+          "query": "GCTAGCTAGCTA"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Get the result for primer design task 778899.",
+    "expected_tools": [
+      {
+        "name": "get_primer_task",
+        "input_parameters": {
+          "task_id": 778899
+        }
+      }
+    ]
+  },
+  {
+    "input": "Compare the genomic neighborhood around Chr10A:220000-230000 in genome 53 with genome 45.",
+    "expected_tools": [
+      {
+        "name": "compare_neighborhoods",
+        "input_parameters": {
+          "gid_a": 53,
+          "region_a": "Chr10A:220000-230000",
+          "gid_b": 45
+        }
+      }
+    ]
+  },
+  {
+    "input": "Trigger a new ETL process for the genome assembly located at s3://my-bucket/genome.fasta.",
+    "expected_tools": [
+      {
+        "name": "trigger_genome_etl",
+        "input_parameters": {
+          "s3_uri": "s3://my-bucket/genome.fasta"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Search for genes with the exact ID SoffiXsponR570.10Ag000500.v2.1 in genome 53.",
+    "expected_tools": [
+      {
+        "name": "search_genes_full",
+        "input_parameters": {
+          "genome_id": 53,
+          "gene_id_exact": "SoffiXsponR570.10Ag000500.v2.1"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Find genes in the range 220622 to 275952 on Chr10A of genome 53.",
+    "expected_tools": [
+      {
+        "name": "search_genes_full",
+        "input_parameters": {
+          "genome_id": 53,
+          "chromosome": "Chr10A",
+          "start": 220622,
+          "end": 275952
+        }
+      }
+    ]
+  },
+  {
+    "input": "Get the sample information for genome 53 on chromosome Chr10A.",
+    "expected_tools": [
+      {
+        "name": "get_genome_samples",
+        "input_parameters": {
+          "genome_id": 53,
+          "chrom": "Chr10A"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Search for the cultivar 'GCA_038087645.1' in the NCBI genome database.",
+    "expected_tools": [
+      {
+        "name": "search_ncbi_genome",
+        "input_parameters": {
+          "organism_or_cultivar": "GCA_038087645.1"
+        }
+      }
+    ]
+  },
+  {
+    "input": "What are the common genes responsible for sugar content in Saccharum based on the knowledge graph?",
+    "expected_tools": [
+      {
+        "name": "search_knowledge_graph",
+        "input_parameters": {
+          "query": "genes responsible for sugar content in Saccharum"
+        }
+      }
+    ]
+  },
+  {
+    "input": "List genes in genome 53 starting from page 5 with a limit of 50 per page.",
+    "expected_tools": [
+      {
+        "name": "get_genes_list",
+        "input_parameters": {
+          "genome_id": 53,
+          "page": 5,
+          "limit": 50
+        }
+      }
+    ]
+  },
+  {
+    "input": "Find the CDS sequences for gene SoffiXsponR570.10Ag000100.v2.1.",
+    "expected_tools": [
+      {
+        "name": "get_batch_sequences",
+        "input_parameters": {
+          "id": 53,
+          "type": "cds",
+          "gene_ids": [
+            "SoffiXsponR570.10Ag000100.v2.1"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "input": "Show me the distribution of GO terms for genome 53.",
+    "expected_tools": [
+      {
+        "name": "get_functional_distribution",
+        "input_parameters": {
+          "id": 53
+        }
+      }
+    ]
+  },
+  {
+    "input": "Search for NCBI Biosamples linked to the bioproject PRJNA12345.",
+    "expected_tools": [
+      {
+        "name": "search_biosample",
+        "input_parameters": {
+          "query": "PRJNA12345"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Find the promoter region for putative Caffeoylshikimate esterase (SoffiXsponR570.10Ag000400.v2.1).",
+    "expected_tools": [
+      {
+        "name": "get_gene_promoter",
+        "input_parameters": {
+          "id": 53,
+          "gene_id": "SoffiXsponR570.10Ag000400.v2.1"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Investigate genes within 50kb of SoffiXsponR570.10Ag000400.v2.1 on Chr10A.",
+    "expected_tools": [
+      {
+        "name": "investigate_region",
+        "input_parameters": {
+          "genome_id": 53,
+          "chrom": "Chr10A",
+          "start": 218658,
+          "end": 323080
+        }
+      }
+    ]
+  },
+  {
+    "input": "Check if there is any literature about secondary metabolism in Sugarcane.",
+    "expected_tools": [
+      {
+        "name": "search_literature_for_traits",
+        "input_parameters": {
+          "organism": "Sugarcane",
+          "primary_concept": "secondary metabolism"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Fetch the metadata for chromosome Chr10A of genome 53.",
+    "expected_tools": [
+      {
+        "name": "get_chromosome_detail",
+        "input_parameters": {
+          "id": 53,
+          "name": "Chr10A"
+        }
+      }
+    ]
+  },
+  {
+    "input": "Resolve the taxonomy for the cultivar 'R570'.",
+    "expected_tools": [
+      {
+        "name": "resolve_taxonomy",
+        "input_parameters": {
+          "query": "R570"
+        }
+      }
+    ]
+  }
+]

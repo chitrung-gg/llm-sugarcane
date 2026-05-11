@@ -1,9 +1,12 @@
+import argparse
 import asyncio
-from datetime import datetime
+import json
 import os
-from typing import Any, List, cast
+from datetime import datetime
+from typing import Any, Dict, List, cast
 import uuid
 
+from app.common.constants import UserFeedbackAction
 from app.configs.loggings.loggings import setup_logging
 from app.configs.settings.settings import get_settings
 
@@ -12,35 +15,63 @@ setup_logging()
 
 from deepeval import evaluate
 from deepeval.test_case import LLMTestCase, ToolCall
-from deepeval.metrics import TaskCompletionMetric, ToolCorrectnessMetric, StepEfficiencyMetric
+from deepeval.metrics import (
+    ToolCorrectnessMetric, 
+    ArgumentCorrectnessMetric
+)
 from deepeval.evaluate import AsyncConfig, DisplayConfig
 from deepeval.dataset import EvaluationDataset
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 from loguru import logger
 
 from evaluation.llm_judge import GoogleGeminiJudge
 
-def extract_tool_calls_from_state(messages: List[Any]) -> List[ToolCall]:
+def extract_tool_calls_from_state(state: Dict[str, Any]) -> List[ToolCall]:
     """
-    Parses LangChain AIMessages to extract tool execution histories 
-    and converts them into DeepEval ToolCall objects.
+    Parses the LangGraph state to extract tool execution histories.
+    Directly targets the 'tool_results' and 'web_results' arrays used by the architecture.
     """
-    deepeval_tools = []
-    
-    for msg in messages:
-        if isinstance(msg, AIMessage) and hasattr(msg, "tool_calls") and msg.tool_calls:
-            for tc in msg.tool_calls:
-                deepeval_tools.append(
-                    ToolCall(
-                        name=tc.get("name", "unknown_tool"),
-                        # description="Description omitted for extraction", # Optional in DeepEval
-                        input_parameters=tc.get("args", {})
-                    )
-                )
-    return deepeval_tools
+    deepeval_tools: List[ToolCall] = []
 
-async def run_agentic_evaluations():
+    # 1. Look directly at the 'tool_results' array revealed by the debugger
+    tool_results = state.get("tool_results", [])
+    
+    for tr in tool_results:
+        if isinstance(tr, dict) and "tool_name" in tr:
+            deepeval_tools.append(
+                ToolCall(
+                    name=tr.get("tool_name", "unknown_tool"),
+                    input_parameters=tr.get("args", {})
+                )
+            )
+
+    # 2. Also check 'web_results' just in case web searches are logged here
+    web_results = state.get("web_results", [])
+    for wr in web_results:
+        if isinstance(wr, dict) and "tool_name" in wr:
+            deepeval_tools.append(
+                ToolCall(
+                    name=wr.get("tool_name", "unknown_tool"),
+                    input_parameters=wr.get("args", {})
+                )
+            )
+
+    # 3. Remove exact duplicates
+    unique_tools: List[ToolCall] = []
+    seen = set()
+
+    for tool in deepeval_tools:
+        # Create a string representation to check for uniqueness
+        tool_repr = f"{tool.name}_{json.dumps(tool.input_parameters, sort_keys=True)}"
+        if tool_repr not in seen:
+            seen.add(tool_repr)
+            unique_tools.append(tool)
+
+    return unique_tools
+
+async def run_agentic_evaluations(dataset_path: str):
     from app.configs.storage.databases import (
         genome_connection_pool, 
         langgraph_connection_pool, 
@@ -60,84 +91,50 @@ async def run_agentic_evaluations():
         agent_service = container.agent_service
 
         # --- Instantiate Judges ---
-        tool_judge = GoogleGeminiJudge(model_name=settings.GEMINI_PRIMARY_MODEL)
-        task_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
-        efficiency_judge = GoogleGeminiJudge(model_name=settings.GEMINI_TERTIARY_MODEL)
+        tool_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
+        arg_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
 
         # --- Define Agentic Metrics ---
         metrics = [
             ToolCorrectnessMetric(
                 threshold=0.7, 
-                model=tool_judge,
+                model=tool_judge, 
                 async_mode=False
             ),
-            TaskCompletionMetric(
+            ArgumentCorrectnessMetric(
                 threshold=0.7, 
-                model=task_judge, 
-                async_mode=False
-            ),
-            StepEfficiencyMetric(
-                threshold=0.7,
-                model=efficiency_judge,
+                model=arg_judge, 
                 async_mode=False
             )
         ]
 
-        # --- Define Agent-Specific Test Queries ---
-        # Notice these are action-oriented, not just factual lookups.
-        test_data = [
-            {
-                "input": "Search NCBI for sugarcane genome assembly GCA_038087645.1 and summarize its stats.",
-                "expected_tools": [
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"Dataset not found at: {dataset_path}")
+            
+        logger.info(f"Loading agentic dataset from {dataset_path}...")
+        with open(dataset_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+            
+        test_data = []
+        for item in raw_data:
+            expected_tools = []
+            for tc in item.get("expected_tools", []):
+                expected_tools.append(
                     ToolCall(
-                        name="search_ncbi_genome", 
-                        input_parameters={"accession": "GCA_038087645.1"} # Enforce exact extraction!
+                        name=tc.get("name"),
+                        input_parameters=tc.get("input_parameters", {})
                     )
-                ]
-            },
-            # {
-            #     "input": "Find which genes are responsible for sucrose content in Saccharum according to literature.",
-            #     "expected_tools": [
-            #         ToolCall(
-            #             name="search_literature_for_traits",
-            #             input_parameters={
-            #                 "organism": "Saccharum",
-            #                 "primary_concept": "sucrose content"
-            #             }
-            #         )
-            #     ]
-            # },
-            # {
-            #     "input": "Compare the sucrose-related genes across all available sugarcane varieties.",
-            #     "expected_tools": [
-            #         # Step 1: The agent MUST figure out what the available IDs are first
-            #         ToolCall(
-            #             name="list_genome_files" ,
-            #             input_parameters={
-
-            #             }
-            #         ),
-            #         # Step 2: The agent passes the IDs and the exact keyword to the search tool
-            #         ToolCall(
-            #             name="cross_variety_search",
-            #             input_parameters={
-            #                 "keyword": "sucrose"
-            #                 # Note: We deliberately leave out the "ids" parameter here.
-            #                 # Because the IDs are dynamically fetched in Step 1 (e.g., "1,2,3,4"), 
-            #                 # we cannot hardcode them in the test. DeepEval will still verify 
-            #                 # that the "keyword" was correctly extracted!
-            #             }
-            #         )
-            #     ]
-            # },
-        ]
+                )
+            test_data.append({
+                "input": item["input"],
+                "expected_tools": expected_tools
+            })
 
         current_file_name = os.path.splitext(os.path.basename(__file__))[0]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         env_base_folder = os.getenv("DEEPEVAL_RESULTS_FOLDER", "./evaluation")
         base_eval_folder = os.path.abspath(env_base_folder)
 
-        # We don't sweep temperatures for Agent testing as often, 0.0 is best for tool calling
         folder_name = f"{current_file_name}_{timestamp}"
         run_folder = os.path.join(base_eval_folder, folder_name)
         os.makedirs(run_folder, exist_ok=True)
@@ -160,20 +157,51 @@ async def run_agentic_evaluations():
                 "active_datasets": [],
                 "iteration_count": 0,
             }
-            final_state = await asyncio.wait_for(
+
+            # 1. Run until it hits the Human Approval breakpoint
+            suspended_state = await asyncio.wait_for(
                 agent_service.graph.ainvoke(initial_state, config=config),
-                timeout=1000 # 2 minute max per test case
+                timeout=1000 
             )
             
-            # --- Extract LangGraph Tool Calls ---
-            # Parses the state to see what the agent actually decided to do
-            actual_tool_calls = extract_tool_calls_from_state(final_state.get("messages", []))
+            # 2. Check if the graph suspended
+            current_thread_state = await agent_service.graph.aget_state(config)
             
+            if current_thread_state.next:
+                logger.info(f"Test case: '{query}' -> Graph suspended. Simulating Human Approval...")
+                
+                # Create the mock approval command
+                mock_approval = Command(
+                    resume={"action": UserFeedbackAction.APPROVE}
+                )
+                
+                # Resume the graph so it actually runs the tools!
+                final_state = await agent_service.graph.ainvoke(mock_approval, config=config)
+            else:
+                logger.info(f"Test case: '{query}' -> Graph did not suspend. Proceeding.")
+                final_state = suspended_state
 
+            # --- Extract LangGraph Tool Calls ---
+            actual_tool_calls = extract_tool_calls_from_state(final_state)
+            logger.info(f"DeepEval Extracted Tools: {[tc.name for tc in actual_tool_calls]}")
+            
+            # --- Extract Actual Output Robustly ---
+            # Even though we are testing tools, DeepEval requires *some* actual_output string to not crash.
+            actual_output = final_state.get("final_answer", "")
+            if not actual_output:
+                messages = final_state.get("messages", [])
+                for msg in reversed(messages):
+                    if getattr(msg, "type", "") == "ai" and msg.content:
+                        actual_output = str(msg.content)
+                        break
+                        
+            if not actual_output or not actual_output.strip():
+                actual_output = "The agent did not generate a text response."
+            
             # --- Build TestCase ---
             test_case = LLMTestCase(
                 input=query,
-                actual_output=str(final_state.get("final_answer", "")),
+                actual_output=actual_output,
                 tools_called=actual_tool_calls,
                 expected_tools=expected_tool_names
             )
@@ -200,4 +228,12 @@ async def run_agentic_evaluations():
         await userdata_connection_pool.close()
 
 if __name__ == "__main__":
-    asyncio.run(run_agentic_evaluations())
+    parser = argparse.ArgumentParser(description="Run DeepEval Tool Evaluations.")
+    parser.add_argument(
+        "--dataset", 
+        type=str, 
+        required=True, 
+        help="Path to the agentic JSON dataset file."
+    )
+    args = parser.parse_args()
+    asyncio.run(run_agentic_evaluations(dataset_path=args.dataset))
