@@ -74,7 +74,7 @@ class WorkspaceService:
             if owner_id:
                 query += " WHERE owner_id = %s"
                 params.append(owner_id)
-            
+
             cursor = await conn.execute(query, tuple(params))
             rows = await cursor.fetchall()
             return [UserProject(**row) for row in rows]
@@ -211,6 +211,21 @@ class WorkspaceService:
                     all_datasets.append(UserDataset(**row))
                     
             return all_datasets
+
+    async def get_user_datasets(self, user_id: uuid.UUID) -> List[UserDataset]:
+        """Returns all datasets owned by a specific user across all their projects."""
+        async with userdata_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT d.id, d.project_id, d.name, d.description, d.dataset_metadata, d.is_public, d.created_at 
+                FROM user_datasets d
+                JOIN user_projects p ON d.project_id = p.id
+                WHERE p.owner_id = %s
+                """,
+                (user_id,)
+            )
+            rows = await cursor.fetchall()
+            return [UserDataset(**row) for row in rows]
 
     async def get_public_dataset_ids(self) -> List[uuid.UUID]:
         """Returns IDs of all datasets marked as public."""

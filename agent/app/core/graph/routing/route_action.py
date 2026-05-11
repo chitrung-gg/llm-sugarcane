@@ -24,7 +24,7 @@ def get_routing_destinations(intent: str) -> Union[AgentGraphNode, List[AgentGra
             AgentGraphNode.WEB_SEARCH
         ] 
     elif intent == AgentIntent.DIRECT_ANSWER: 
-        return AgentGraphNode.SYNTHESIZER
+        return AgentGraphNode.INNER_SYNTHESIZER
     else:
         # Fallback for "unclear" or any unexpected intent
-        return AgentGraphNode.SYNTHESIZER
+        return AgentGraphNode.INNER_SYNTHESIZER

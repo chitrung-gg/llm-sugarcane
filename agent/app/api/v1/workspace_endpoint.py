@@ -142,6 +142,16 @@ async def delete_dataset(
     success = await workspace_service.delete_dataset(dataset_id)
     return {"success": success}
 
+@router.get("/datasets", response_model=List[UserDataset])
+async def list_user_datasets(
+    user_id: Optional[uuid.UUID] = None,
+    workspace_service: WorkspaceService = Depends(get_workspace_service)
+):
+    """List all datasets owned by a user across all projects."""
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    return await workspace_service.get_user_datasets(user_id)
+
 @router.get("/projects/{project_id}/datasets", response_model=List[UserDataset])
 async def list_project_datasets(
     project_id: uuid.UUID,

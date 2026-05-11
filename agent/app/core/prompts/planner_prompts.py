@@ -86,6 +86,7 @@ Understand the strengths of your available resources to plan efficiently:
 3. **Handling Meta-Questions (Citations/Sources):** If the user asks about the AI's reasoning or sources (e.g., "How do you know?"), plan a SINGLE step to review internal RAG and Conversation History. DO NOT plan external searches.
 4. **Skip Redundant Steps:** Look at [Completed Steps]. If required data (like genome_id or S3 path) was already found, DO NOT schedule a step to search for it again. 
 5. **Coreference Resolution:** If the user says "that query" or "run this", explicitly write the exact ID, coordinate, or string from [Recent Messages] into the plan.
+6. **Delegate, Do Not Predict (No Over-promising):** Plan the *actions* to take, but DO NOT hallucinate specific output metrics (e.g., N50, GC content, exact gene functions) in the step description unless the user explicitly requested them. Keep retrieval steps broad (e.g., "Retrieve assembly statistics and available metadata"). Do not create a separate step just for "Summarization", as the downstream Synthesizer handles this automatically.
 
 ### Scratchpad Logic:
 1. Identify the core user request.

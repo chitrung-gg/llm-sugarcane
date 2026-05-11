@@ -13,16 +13,11 @@ _EX_PIVOT_ON_FAILURE = RouteDecision(
     web_query="sugarcane ZZ1 genome assembly traits"
 )
 
-_EX_INTERNAL_FIRST = RouteDecision(
-    intent=AgentIntent.TOOL_ONLY,
-    reasoning="The task requires resolving a specific biological identifier (DOI 10.1007/s12355). Based on my capabilities map, I will prioritize internal structured tools before falling back to the web.",
-    required_tools=[
-        ToolCallRequest(
-            name="search_knowledge_graph",
-            args={"query": "10.1007/s12355"}
-        )
-    ],
-    rag_query=None,
+_EX_RAG_FIRST = RouteDecision(
+    intent=AgentIntent.RAG_ONLY,
+    reasoning="The task requires finding information about a specific sugarcane trait. According to my heuristics, I must prioritize 'rag_only' to search the high-fidelity internal documents before attempting to use the secondary Knowledge Graph.",
+    required_tools=[],
+    rag_query="Sugarcane drought resistance traits and associated genes",
     web_query=None
 )
 
@@ -46,7 +41,7 @@ _FEW_SHOTS = f"""
 <example name="heuristic_internal_priority">
   <reason>Shows capability-based routing for exact biological identifiers.</reason>
   <ideal_response>
-{_EX_INTERNAL_FIRST.model_dump_json(**_JSON_OPTS)}
+{_EX_RAG_FIRST.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
 </example>
 
@@ -70,9 +65,9 @@ You are the Execution Router for a Sugarcane Genomics intelligence system. Your 
 </system_context>
 
 ### Intent Selection Heuristics (Capabilities Map):
-- **`direct_answer` (Resolution):** FASTEST. Use this if the `<extracted_knowledge>`, `<workspace_state>`, or `<conversation_summary>` ALREADY contains the exact answer needed. Also use this for simple conversational pleasantries or meta-questions ("What files do I have?").
-- **`rag_only` (Unstructured Internal Memory):** Use this to search vector databases for unstructured text inside user-uploaded PDFs, FASTA descriptions, or general biological context. 
-- **`tool_only` / `all` (Structured Bioinformatics):** PRECISE. Use this when the task explicitly requires APIs (NCBI, SCOD) or Knowledge Graphs (Neo4j) to resolve exact identifiers (Genes, DOIs, Accessions) or trigger pipelines (e.g., Crispor).
+- **`direct_answer` (Resolution):** FASTEST. Use this if the `<extracted_knowledge>`, `<workspace_state>`, or `<conversation_summary>` ALREADY contains the exact answer needed.
+- **`rag_only` (Primary Internal Memory):** PRIORITY SEARCH. Always prefer this FIRST when looking up biological context, trait data, or literature. It queries high-fidelity vector databases.
+- **`tool_only` / `all` (Secondary Structured Bioinformatics):** SECONDARY. Use this (e.g., Knowledge Graph, NCBI APIs) ONLY IF `rag_only` previously failed, or if the task explicitly requires querying an external API with an exact identifier (DOIs, Accessions).
 - **`web_search` (Broad Discovery):** FALLBACK. Use this for general scientific literature searches, recent news, or if internal tools/databases explicitly failed.
 """
 
@@ -91,10 +86,11 @@ ROUTER_FINAL_STATE_ENFORCEMENT_STR = """
 </available_intents>
 
 ### Execution & Self-Correction Guidelines:
-1. **Argument Precision (No Guessing):** If you choose `tool_only` or `all`, you MUST pull the exact IDs, DOIs, or Accession numbers from the `<extracted_knowledge>` or `<conversation_summary>` to populate your tool `args`. Do not invent or guess parameters.
-2. **Learn from History (Anti-Loop):** Read the `<execution_history>`. If a specific intent or tool failed (e.g., "not found", "timeout", "empty"), YOU MUST PIVOT. Do not repeat the exact same tool with the same arguments. Switch capabilities entirely (e.g., from `tool_only` to `web_search`).
-3. **Trust the State:** The `<workspace_state>` represents ground truth for user files. If a file is there, it exists. If it is not there, it does not exist. Do not use external tools to look for local user uploads.
-4. **Think Aloud:** Use your `reasoning` field to explicitly state *why* you chose this intent based on your Capabilities Map.
+1. **RAG-First Priority:** Unless the user explicitly asks to run a specific computational pipeline, always route to `rag_only` before attempting to use the `search_knowledge_graph` tool.
+2. **Argument Precision (No Guessing):** If you choose `tool_only` or `all`, you MUST pull the exact IDs, DOIs, or Accession numbers from the `<extracted_knowledge>` or `<conversation_summary>`. Do not invent parameters.
+3. **Learn from History (Anti-Loop):** Read the `<execution_history>`. If a specific intent (like `rag_only`) failed to find data, YOU MUST PIVOT to a new capability (like `tool_only` or `web_search`). Do not repeat the exact same search.
+4. **Trust the State:** The `<workspace_state>` represents ground truth for user files. Do not use external tools to look for local user uploads.
+5. **Think Aloud:** Use your `reasoning` field to explicitly state *why* you chose this intent based on your Capabilities Map.
 
 ### Examples of how to respond:
 {few_shots}
