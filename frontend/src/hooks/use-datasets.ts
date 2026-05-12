@@ -14,6 +14,17 @@ export function useProjectDatasets(projectId: string) {
   });
 }
 
+export function useUserDatasets(userId: string) {
+  return useQuery({
+    queryKey: ["users", userId, "datasets"],
+    queryFn: async () => {
+      const response = await api.get<Dataset[]>("/workspace/datasets", { params: { user_id: userId } });
+      return response.data;
+    },
+    enabled: !!userId,
+  });
+}
+
 export function useLibraryDatasets() {
   return useQuery({
     queryKey: ["library-datasets"],
@@ -61,6 +72,7 @@ export function useCreateDataset() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["projects", variables.projectId, "datasets"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 }
@@ -81,6 +93,7 @@ export function useUpdateDataset() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["datasets", variables.datasetId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["library-datasets"] });
     },
   });
@@ -96,6 +109,7 @@ export function useDeleteDataset() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["library-datasets"] });
     },
   });
@@ -172,5 +186,16 @@ export function useDetachDataset() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["projects", variables.projectId, "datasets"] });
     },
+  });
+}
+
+export function useDownloadFile() {
+  return useMutation({
+    mutationFn: async (fileId: string) => {
+      const response = await api.get<{ download_url: string }>('/workspace/files/download', {
+        params: { file_id: fileId }
+      });
+      return response.data.download_url;
+    }
   });
 }

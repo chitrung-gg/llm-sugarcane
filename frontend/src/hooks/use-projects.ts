@@ -3,12 +3,15 @@ import { api } from "@/lib/api-client";
 import { Project } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth";
 
-export function useProjects() {
+export function useProjects(includeAll: boolean = false) {
   return useQuery({
-    queryKey: ["projects"],
+    queryKey: ["projects", includeAll],
     queryFn: async () => {
       const user = getCurrentUser();
-      const params = user ? { user_id: user.uuid } : {};
+      const params: any = {};
+      if (user && !includeAll) {
+        params.user_id = user.uuid;
+      }
       const response = await api.get<Project[]>("/workspace/projects", { params });
       return response.data;
     },

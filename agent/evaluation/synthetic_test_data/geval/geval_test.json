@@ -1,6 +1,202 @@
 [
     {
-        "input": "Summarize the genome assembly GCA_038087645.1 based on the retrieved data.",
-        "expected_output": "The genome assembly GCA_038087645.1 has a total sequence length of approximately 5.03 Gb and a GC percentage of roughly 44.5%."
+        "input": "What is the total length of the R570.v2023 genome (ID 53)?",
+        "expected_output": "The total length of the R570.v2023 genome is 5,037,187,377 bp, which is approximately 5.03 Gb."
+    },
+    {
+        "input": "How many genes are identified in the genome ID 53?",
+        "expected_output": "There are 194,593 genes in the R570.v2023 genome."
+    },
+    {
+        "input": "What is the GC content of the R570.v2023 genome?",
+        "expected_output": "The GC content is 44.65%."
+    },
+    {
+        "input": "What is the percentage of genes in subgenome A of R570.v2023?",
+        "expected_output": "Subgenome A contains 18.86% of the genes."
+    },
+    {
+        "input": "List the gene distribution across subgenomes A to G for genome ID 53.",
+        "expected_output": "The gene distribution is: A (18.86%), B (16.78%), C (17.44%), D (16.18%), E (14.93%), F (9.97%), and G (5.84%)."
+    },
+    {
+        "input": "How many mRNA features are counted in the genome ID 53?",
+        "expected_output": "There are 299,731 mRNA features."
+    },
+    {
+        "input": "What is the count for CDS features in R570.v2023?",
+        "expected_output": "There are 1,601,936 CDS features."
+    },
+    {
+        "input": "How many exon features are present in genome ID 53?",
+        "expected_output": "There are 1,772,112 exon features."
+    },
+    {
+        "input": "How many genes are involved in Sugar Metabolism in R570.v2023?",
+        "expected_output": "There are 6,462 Sugar Metabolism genes."
+    },
+    {
+        "input": "What is the count of Transporter genes in the R570.v2023 genome?",
+        "expected_output": "There are 7,218 Transporter genes."
+    },
+    {
+        "input": "How many genes are categorized under Signaling & Regulation in genome ID 53?",
+        "expected_output": "There are 46,729 Signaling & Regulation genes."
+    },
+    {
+        "input": "What is the N50 value for the R570.v2023 genome assembly?",
+        "expected_output": "The N50 value is 79,221,035."
+    },
+    {
+        "input": "Which pest is known as the African stalk borer and is a major issue in Senegal?",
+        "expected_output": "Eldana saccharina is the African stalk borer, a major pest in Senegal."
+    },
+    {
+        "input": "When did the yellow sugarcane aphid (Sipha flava) become a major pest in Tanzania?",
+        "expected_output": "Sipha flava has been a major pest in Tanzania since 2016."
+    },
+    {
+        "input": "Which mite species is a suspected vector for the sugarcane streak mosaic virus (SCSMV)?",
+        "expected_output": "Aceria sacchari is the suspected vector for SCSMV."
+    },
+    {
+        "input": "What soil factors influence the presence of white grub (Cochliotis melolonthoides) in Tanzania?",
+        "expected_output": "White grub presence is influenced by soil pH and sodicity."
+    },
+    {
+        "input": "Which tools are used for sugarcane ancestry analysis according to Garsmeur et al. 2026?",
+        "expected_output": "KmerCity and AdmixKmer are used for ancestry analysis."
+    },
+    {
+        "input": "What is the primary function of the DECIPESTS tool?",
+        "expected_output": "DECIPESTS is used for yellow sugarcane aphid (YSA) management."
+    },
+    {
+        "input": "Which tool is used for nitrogen dynamics modeling in sugarcane?",
+        "expected_output": "STICS is used for modeling nitrogen dynamics."
+    },
+    {
+        "input": "What does the MOSICAS tool provide for sugarcane cultivation?",
+        "expected_output": "MOSICAS provides yield projections."
+    },
+    {
+        "input": "What type of cultivar is R570?",
+        "expected_output": "R570 is a hybrid cultivar."
+    },
+    {
+        "input": "How did the R583 cultivar perform in Corsica?",
+        "expected_output": "R583 performed well in the temperate zone of Corsica."
+    },
+    {
+        "input": "What is the goal of the CanécoH V2 project on Réunion Island?",
+        "expected_output": "The goal is herbicide reduction in sugarcane cultivation."
+    },
+    {
+        "input": "What environmental challenge is associated with volcanic soils in Réunion regarding nitrogen?",
+        "expected_output": "Nitrogen leaching is a significant challenge in volcanic soils."
+    },
+    {
+        "input": "What are the three climate scenarios used for yield projections in Réunion?",
+        "expected_output": "The scenarios are RCP 2.6, 4.5, and 8.5."
+    },
+    {
+        "input": "According to climate scenarios, which part of Réunion Island is expected to see yield losses?",
+        "expected_output": "The South of Réunion Island is expected to face yield losses."
+    },
+    {
+        "input": "Which areas of Réunion Island might see yield gains under future climate scenarios?",
+        "expected_output": "The East and high-altitude areas are projected to see yield gains."
+    },
+    {
+        "input": "What is the scientific name for the causal agent of Leaf scald in sugarcane?",
+        "expected_output": "Leaf scald is caused by Xanthomonas albilineans."
+    },
+    {
+        "input": "Name four common diseases affecting sugarcane mentioned in the context.",
+        "expected_output": "Leaf scald, smut, orange rust, and ratoon stunt."
+    },
+    {
+        "input": "What are two diagnostic methods used for sugarcane diseases?",
+        "expected_output": "LAMP and qPCR are used for diagnostics."
+    },
+    {
+        "input": "Which subgenome of R570.v2023 has the lowest percentage of genes?",
+        "expected_output": "Subgenome G has the lowest at 5.84%."
+    },
+    {
+        "input": "What is the approximate total length of genome ID 53 in Gigabases?",
+        "expected_output": "Approximately 5.03 Gb."
+    },
+    {
+        "input": "In the context of Tanzania, which pest's management is linked to the DECIPESTS tool?",
+        "expected_output": "The yellow sugarcane aphid (Sipha flava)."
+    },
+    {
+        "input": "What is the relationship between Aceria sacchari and SCSMV?",
+        "expected_output": "Aceria sacchari is a suspected vector for the sugarcane streak mosaic virus (SCSMV)."
+    },
+    {
+        "input": "What does the acronym SCSMV stand for?",
+        "expected_output": "Sugarcane streak mosaic virus."
+    },
+    {
+        "input": "Which subgenome of R570.v2023 contains 16.78% of the genes?",
+        "expected_output": "Subgenome B."
+    },
+    {
+        "input": "What is the specific focus of the STICS model in the context of Réunion's volcanic soils?",
+        "expected_output": "Modeling nitrogen dynamics and leaching."
+    },
+    {
+        "input": "How many gene counts are there for subgenome F in genome ID 53?",
+        "expected_output": "Subgenome F contains 9.97% of the total genes."
+    },
+    {
+        "input": "Which cultivar is noted for its suitability in temperate zones like Corsica?",
+        "expected_output": "R583."
+    },
+    {
+        "input": "What is the role of AdmixKmer in sugarcane research?",
+        "expected_output": "It is used for ancestry analysis."
+    },
+    {
+        "input": "Which subgenome of R570.v2023 has 16.18% genes?",
+        "expected_output": "Subgenome D."
+    },
+    {
+        "input": "What scientific name is associated with the white grub in Tanzania?",
+        "expected_output": "Cochliotis melolonthoides."
+    },
+    {
+        "input": "What is the percentage of genes in subgenome C of R570.v2023?",
+        "expected_output": "17.44%."
+    },
+    {
+        "input": "How many genes are in subgenome E of R570.v2023?",
+        "expected_output": "14.93%."
+    },
+    {
+        "input": "Which pest is a major problem specifically in Tanzania since 2016?",
+        "expected_output": "Sipha flava (yellow sugarcane aphid)."
+    },
+    {
+        "input": "What diagnostic method is qPCR used for in sugarcane?",
+        "expected_output": "Disease diagnostics."
+    },
+    {
+        "input": "What is the percentage of genes in subgenome G of R570.v2023?",
+        "expected_output": "5.84%."
+    },
+    {
+        "input": "Which climate scenario is the most extreme mentioned for yield projections?",
+        "expected_output": "RCP 8.5."
+    },
+    {
+        "input": "What is the primary target of herbicide reduction on Réunion Island?",
+        "expected_output": "CanécoH V2 project targets herbicide reduction."
+    },
+    {
+        "input": "What is the N50 for the latest R570 genome assembly?",
+        "expected_output": "79,221,035."
     }
 ]

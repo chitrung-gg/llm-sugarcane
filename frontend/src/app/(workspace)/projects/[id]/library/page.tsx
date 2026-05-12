@@ -11,7 +11,8 @@ import {
   Library, 
   Globe,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Settings
 } from "lucide-react"
 import {
   Card,
@@ -24,10 +25,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useLibraryDatasets, useProjectDatasets, useAttachDataset, useDetachDataset } from "@/hooks/use-datasets"
+import { getCurrentUser } from "@/lib/auth"
+import Link from "next/link"
 
 export default function ProjectLibraryPage() {
   const params = useParams()
   const projectId = params.id as string
+  const user = getCurrentUser()
   
   const { data: libraryDatasets = [], isLoading: libraryLoading } = useLibraryDatasets()
   const { data: projectDatasets = [], isLoading: projectDatasetsLoading } = useProjectDatasets(projectId)
@@ -67,6 +71,14 @@ export default function ProjectLibraryPage() {
             Attach global genomic datasets and knowledge bases to your project to enhance agent intelligence.
           </p>
         </div>
+        
+        {user?.role === 'admin' && (
+          <Button variant="outline" asChild className="h-10 px-4 rounded-xl border-stone-200 text-stone-600 font-bold text-xs shadow-sm hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all">
+            <Link href="/admin/knowledge-base">
+              <Settings className="mr-2 size-4" /> Manage Global Base
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card className="border-stone-200 shadow-sm rounded-2xl overflow-hidden bg-white">
@@ -104,7 +116,7 @@ export default function ProjectLibraryPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-stone-900">{dataset.name}</h3>
-                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[9px] font-black uppercase tracking-widest px-1.5 py-0">Global</Badge>
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] font-black uppercase tracking-widest px-1.5 py-0">Global</Badge>
                           {isAttached && (
                              <Badge className="bg-blue-50 text-blue-700 border-blue-100 text-[9px] font-black uppercase tracking-widest px-1.5 py-0 flex items-center gap-1">
                                <CheckCircle2 className="size-2.5" /> Connected

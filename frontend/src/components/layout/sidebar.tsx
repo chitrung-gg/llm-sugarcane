@@ -8,6 +8,7 @@ import {
   Dna,
   File as LucideFile,
   LayoutDashboard,
+  Library,
   Plus,
   Settings,
   LogOut,
@@ -202,13 +203,13 @@ function DatasetMenuItem({ dataset, projectId }: { dataset: Dataset; projectId: 
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter()
+  const user = getCurrentUser()
   const { activeProject, activeProjectId } = useWorkspace()
-  const { data: projects = [] } = useProjects()
+  const { data: projects = [] } = useProjects(user?.role === 'admin')
   
   const { data: datasets = [] } = useProjectDatasets(activeProjectId || "")
   const { data: threads = [] } = useProjectThreads(activeProjectId || "")
 
-  const user = getCurrentUser()
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -290,6 +291,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   }
                 />
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  tooltip="Data Library"
+                  className="font-bold text-stone-600"
+                  render={
+                    <Link href="/library">
+                      <Library aria-hidden="true" />
+                      <span>Data Library</span>
+                    </Link>
+                  }
+                />
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -308,18 +321,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <Link href="/admin/projects">
                         <FolderKanban aria-hidden="true" className="text-emerald-700" />
                         <span>Global Projects</span>
-                      </Link>
-                    }
-                  />
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    tooltip="System References"
-                    className="font-bold text-emerald-700 hover:bg-emerald-50"
-                    render={
-                      <Link href="/admin/knowledge-base">
-                        <Dna aria-hidden="true" className="text-emerald-700" />
-                        <span>Global Knowledge Base</span>
                       </Link>
                     }
                   />

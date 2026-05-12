@@ -122,10 +122,10 @@ const ChatMessageItem = React.memo(({
                               key={uIdx}
                               variant="outline" 
                               size="sm" 
-                              className="h-6 px-2 text-[9px] gap-1 bg-white border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+                              className="h-8 px-3 text-xs gap-2 bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 font-bold shadow-sm transition-all"
                               onClick={() => onDownload({ s3Uri: uri })}
                             >
-                              <FileDown className="h-3 w-3" />
+                              <FileDown className="h-4 w-4" />
                               Download Result
                             </Button>
                           ))}
@@ -418,11 +418,13 @@ export function ChatWindow() {
     return rawText;
   }, [currentStream]);
 
-  const activeStreamInterrupt = useMemo(() => 
-    currentStream
-      .find(e => e.event === 'interrupt')?.data?.interrupt_payload,
-    [currentStream]
-  );
+  const activeStreamInterrupt = useMemo(() => {
+    const interruptEvent = currentStream.find(e => e.event === 'interrupt');
+    if (interruptEvent && typeof interruptEvent.data === 'object' && interruptEvent.data !== null) {
+      return (interruptEvent.data as any).interrupt_payload;
+    }
+    return undefined;
+  }, [currentStream]);
 
   return (
     <div className="flex flex-col h-full bg-stone-50/50">
@@ -479,7 +481,9 @@ export function ChatWindow() {
             (() => {
               // Avoid duplicate answer if it's already in history (by checking execution_id if available)
               const streamAnswerEvent = currentStream.find(e => e.event === 'answer');
-              const streamExecutionId = streamAnswerEvent?.data?.execution_id;
+              const streamExecutionId = (streamAnswerEvent && typeof streamAnswerEvent.data === 'object' && streamAnswerEvent.data !== null) 
+                ? (streamAnswerEvent.data as any).execution_id 
+                : undefined;
               const isDuplicate = streamExecutionId && localMessages.some(m => m.execution_id === streamExecutionId);
               
               if (isDuplicate) return null;
@@ -532,12 +536,13 @@ export function ChatWindow() {
                     {activeStreamTools.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {activeStreamTools.map((t, idx) => {
-                          const s3Uris = extractS3Uris(t.data.output || "");
+                          const toolData = (typeof t.data === 'object' && t.data !== null) ? (t.data as any) : {};
+                          const s3Uris = extractS3Uris(toolData.output || "");
                           return (
                             <div key={idx} className="flex flex-col gap-1">
                                 <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
                                     <Wrench className="h-3 w-3" />
-                                    {t.data.tool}: {t.event === 'tool_start' ? 'Running...' : 'Complete'}
+                                    {toolData.tool}: {t.event === 'tool_start' ? 'Running...' : 'Complete'}
                                 </div>
                                 {t.event === 'tool_end' && s3Uris.length > 0 && (
                                     <div className="flex flex-wrap gap-1">

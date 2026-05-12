@@ -303,17 +303,20 @@ export function UploadZone() {
         </CardContent>
         <CardFooter>
           <Button 
-            className="w-full font-bold" 
+            className="w-full font-bold h-12 bg-emerald-700 hover:bg-emerald-800 shadow-lg shadow-emerald-700/20 rounded-xl transition-all" 
             disabled={files.length === 0 || !datasetId || uploadMutation.isPending}
             onClick={handleUpload}
           >
             {uploadMutation.isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading {files.length} {files.length === 1 ? 'file' : 'files'}...
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Processing {files.length} {files.length === 1 ? 'File' : 'Files'}...
               </>
             ) : (
-              `Upload ${files.length} ${files.length === 1 ? 'File' : 'Files'} to Project`
+              <>
+                <Upload className="mr-2 h-5 w-5" />
+                Confirm & Upload {files.length} {files.length === 1 ? 'File' : 'Files'}
+              </>
             )}
           </Button>
         </CardFooter>

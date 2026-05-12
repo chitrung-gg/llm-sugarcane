@@ -14,7 +14,7 @@ import { useProjects } from "@/hooks/use-projects"
 import Link from "next/link"
 
 export default function AdminProjectsPage() {
-  const { data: projects = [], isLoading } = useProjects()
+  const { data: projects = [], isLoading } = useProjects(true)
 
   if (isLoading) {
     return (
