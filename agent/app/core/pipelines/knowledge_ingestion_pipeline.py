@@ -71,39 +71,45 @@ def knowledge_ingestion_pipeline():
             logging.info("No text provided. Exiting.")
             return "SKIPPED"
 
-        async def async_runner():
+        async def async_run():
             from app.common.constants import SYSTEM_OWNER_ID
             from app.core.app_container import get_container
             from app.configs.storage.databases import genome_connection_pool, langgraph_connection_pool, userdata_connection_pool
             
-            await genome_connection_pool.open()
-            await userdata_connection_pool.open()
-            await langgraph_connection_pool.open()
             
-            container = get_container()
-            await container.initialize()
-            
-            # Extract common parameters from the first item
-            first_meta = batch[0].get("source_metadata", {})
-            owner_id_str = first_meta.get("owner_id")
-            owner_id = uuid.UUID(owner_id_str) if owner_id_str and owner_id_str != "SYSTEM" else SYSTEM_OWNER_ID
-            
-            source_texts = [item.get("source_text") for item in batch]
+            try:
+                await genome_connection_pool.open()
+                await userdata_connection_pool.open()
+                await langgraph_connection_pool.open()
 
-            await container.graph_ingestion_service.ingest_knowledge(
-                source_texts=source_texts,
-                source_metadata=first_meta, # Attach baseline metadata
-                owner_id=owner_id,
-                is_public=first_meta.get("is_public")
-            )
-            
-            await genome_connection_pool.close()
-            await userdata_connection_pool.close()
-            await langgraph_connection_pool.close()
+                container = get_container()
+                await container.initialize()
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(async_runner())
+                # Extract common parameters from the first item
+                first_meta = batch[0].get("source_metadata", {})
+                owner_id_str = first_meta.get("owner_id")
+                owner_id = uuid.UUID(owner_id_str) if owner_id_str and owner_id_str != "SYSTEM" else SYSTEM_OWNER_ID
+                
+                source_texts = [item.get("source_text") for item in batch]
+
+                await container.graph_ingestion_service.ingest_knowledge(
+                    source_texts=source_texts,
+                    source_metadata=first_meta, # Attach baseline metadata
+                    owner_id=owner_id,
+                    is_public=first_meta.get("is_public")
+                )
+
+            finally:    
+                await genome_connection_pool.close()
+                await userdata_connection_pool.close()
+                await langgraph_connection_pool.close()
+                
+
+        try:
+            asyncio.run(async_run())
+        except Exception as e:
+            logging.error(f"Ingestion failed with error: {e}")
+            raise e
         
         return "SUCCESS"
 
@@ -137,19 +143,19 @@ def knowledge_ingestion_pipeline():
             
             settings = get_settings()
             
-            await genome_connection_pool.open()
-            await userdata_connection_pool.open()
-            await langgraph_connection_pool.open()
-            
-            container = get_container()
-            await container.initialize()
-
             local_file_path = target_uri
             is_remote = target_uri.startswith("s3://")
             s3_bucket, s3_key = "", ""
             chunks = None
 
             try:
+                await genome_connection_pool.open()
+                await userdata_connection_pool.open()
+                await langgraph_connection_pool.open()
+
+                container = get_container()
+                await container.initialize()
+
                 if is_remote:
                     logging.info(f"Downloading remote file: {target_uri}")
                     parts = target_uri.replace("s3://", "").split("/", 1)
@@ -226,9 +232,11 @@ def knowledge_ingestion_pipeline():
                 await userdata_connection_pool.close()
                 await langgraph_connection_pool.close()
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(async_run())
+        try:
+            asyncio.run(async_run())
+        except Exception as e:
+            logging.error(f"Ingestion failed with error: {e}")
+            raise e
         
         return "SUCCESS"
 
