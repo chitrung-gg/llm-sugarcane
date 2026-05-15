@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     #     validation_alias="GEMINI_PRIMARY_MODEL"
     # )
     GEMINI_PRIMARY_MODEL: str = Field(
-        default="gemini-3-flash-preview", 
+        default="gemini-3-flash-preview",           # "gemini-3-flash-preview"
         validation_alias="GEMINI_PRIMARY_MODEL"
     )
     # GEMINI_SECONDARY_MODEL: str = Field(
@@ -53,15 +53,15 @@ class Settings(BaseSettings):
     #     validation_alias="GEMINI_SECONDARY_MODEL"
     # )
     GEMINI_SECONDARY_MODEL: str = Field(
-        default="gemini-2.5-flash", 
+        default="gemini-3.1-flash-lite",             # "gemini-2.5-flash"
         validation_alias="GEMINI_SECONDARY_MODEL"
     )
     GEMINI_TERTIARY_MODEL: str = Field(
-        default="gemini-3.1-flash-lite-preview", 
+        default="gemini-2.5-flash-lite", 
         validation_alias="GEMINI_TERTIARY_MODEL"
     )
     GEMINI_QUATERNARY_MODEL: str = Field(
-        default="gemma-4-31b-it", 
+        default="gemini-3.1-flash-lite", 
         validation_alias="GEMINI_QUATERNARY_MODEL"
     )
     GEMINI_QUINARY_MODEL: str = Field(
@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     )
 
     GEMINI_EMBEDDING_MODEL: str = Field(
-        default="gemini-embedding-2-preview",   # "gemini-embedding-001"
+        default="gemini-embedding-001",   # "gemini-embedding-2":"gemini-embedding-001"
         validation_alias="GEMINI_EMBEDDING_MODEL"
     ) 
     GEMINI_MAX_INPUT_TOKEN: int = 200000
@@ -84,19 +84,20 @@ class Settings(BaseSettings):
     QDRANT_URL: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
     QDRANT_API_KEY: SecretStr | None = Field(default=None, validation_alias="QDRANT_API_KEY")
     QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME: str = Field(
-        default="sugarcane_docs",
+        default="sugarcane_docs",       # "sugarcane_docs_new"
         validation_alias="QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME"
     )
     QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME: str = Field(
         default="sugarcane_external_context",
         validation_alias="QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME"
     )
+    VECTOR_STORE_SCORE_THRESHOLD: float = 0.5
 
     QDRANT_VECTOR_SIZE: int = 3072   # 768 to save storage
     QDRANT_PREFER_GRPC: bool = True
 
-    QDRANT_SOLID_TOP_K: int = 5
-    QDRANT_VOLATILE_TOP_K: int = 3
+    QDRANT_SOLID_TOP_K: int = 15
+    QDRANT_VOLATILE_TOP_K: int = 5
     QDRANT_FINAL_TOP_K: int = 5
     QDRANT_MAX_QUERY_LENGTH: int = 200
 
@@ -226,8 +227,8 @@ class Settings(BaseSettings):
     )
 
     # Pipelines
-    INGESTION_BATCH_SIZE: int = 10
-    INGESTION_DELAY_BETWEEN_BATCHES: int = 5
+    INGESTION_BATCH_SIZE: int = 20
+    INGESTION_DELAY_BETWEEN_BATCHES: int = 10
 
     # Graph Nodes
     REPLANNER_MAX_PLANNER_ITERATION: int = 10
@@ -243,6 +244,7 @@ class Settings(BaseSettings):
     WEB_SEARCH_TIMEOUT_SEC: float = 15.0
     WEB_SEARCH_MAX_QUERY_LENGTH: int = 150
     WEB_SEARCH_NUM_RESULTS: int = 10
+    WEB_SEARCH_SCORE_THRESHOLD: float = 0.5
 
     SUMMARIZER_SUMMARY_TRIGGER_THRESHOLD: int = 10
     SUMMARIZER_SUMMARY_KEEP_LAST_N: int = 2

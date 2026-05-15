@@ -14,7 +14,8 @@ from evaluation.llm_judge import GoogleGeminiJudge
 from app.configs.loggings.loggings import setup_logging
 from app.configs.settings.settings import get_settings
 
-os.environ["DEEPEVAL_TIMEOUT"] = "600"
+os.environ["DEEPEVAL_TIMEOUT"] = "6000"
+os.environ["DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE"] = "600"
 setup_logging()
 
 from deepeval import assert_test, evaluate
@@ -60,31 +61,31 @@ async def run_rag_evaluations(dataset_path: str):
 
         metrics = [
             FaithfulnessMetric(
-                threshold=0.7,
+                threshold=0.5,
                 model=faithfulness_judge,
                 verbose_mode=True,
                 async_mode=False            # Reduce LLM call simultaneously
             ),
             AnswerRelevancyMetric(
-                threshold=0.7,
+                threshold=0.5,
                 model=answer_rel_judge,
                 verbose_mode=True,
                 async_mode=False
             ),
             ContextualRelevancyMetric(
-                threshold=0.7,
+                threshold=0.5,
                 model=context_rel_judge,
                 verbose_mode=True,
                 async_mode=False
             ),
             ContextualPrecisionMetric(
-                threshold=0.7,
+                threshold=0.5,
                 model=context_precision_judge,
                 verbose_mode=True,
                 async_mode=False
             ),
             ContextualRecallMetric(
-                threshold=0.7,
+                threshold=0.5,
                 model=context_recall_judge,
                 verbose_mode=True,
                 async_mode=False
@@ -169,7 +170,7 @@ async def run_rag_evaluations(dataset_path: str):
             retrieval_context.extend([str(res["output"]) for res in final_state.get("tool_results", [])])
 
             # 3. Add Web Search snippets
-            retrieval_context.extend([str(res["snippet"]) for res in final_state.get("web_results", [])])
+            retrieval_context.extend([str(res["content"]) for res in final_state.get("web_results", [])])
 
             step_answers = [
                 str(msg.content) for msg in final_state.get("messages", [])

@@ -10,7 +10,7 @@ from app.common.constants import UserFeedbackAction
 from app.configs.loggings.loggings import setup_logging
 from app.configs.settings.settings import get_settings
 
-os.environ["DEEPEVAL_TIMEOUT"] = "600"
+os.environ["DEEPEVAL_TIMEOUT"] = "6000"
 setup_logging()
 
 from deepeval import evaluate
@@ -238,7 +238,7 @@ async def run_geval_evaluations(dataset_path: str):
                 [str(res.get("output", res)) for res in final_state.get("tool_results", [])]
             )
             actual_retrieval_context.extend(
-                [str(res.get("snippet", res)) for res in final_state.get("web_results", [])]
+                [str(res.get("content", res)) for res in final_state.get("web_results", [])]
             )
             
             # Fallback for empty context

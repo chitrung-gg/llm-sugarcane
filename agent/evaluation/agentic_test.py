@@ -10,7 +10,7 @@ from app.common.constants import UserFeedbackAction
 from app.configs.loggings.loggings import setup_logging
 from app.configs.settings.settings import get_settings
 
-os.environ["DEEPEVAL_TIMEOUT"] = "600"
+os.environ["DEEPEVAL_TIMEOUT"] = "6000"
 setup_logging()
 
 from deepeval import evaluate

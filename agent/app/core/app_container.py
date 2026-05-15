@@ -11,6 +11,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 from types_aiobotocore_s3 import S3Client
 
+from app.services.llm.reranker_service import RerankerService
 from app.core.graph.graph import build_super_agent_graph
 from app.core.tools.registry.registry_tool import get_agent_tools, register_agent_tool
 from app.services.knowledge.knowledge_service import KnowledgeService
@@ -37,6 +38,7 @@ class AppContainer:
     def __init__(self):
         self._langfuse_client: Langfuse | None = None
         self._llm_service: LLMService | None = None
+        self._reranker_service: RerankerService | None = None
         self._agent_service: AgentService | None = None
         self._knowledge_service: KnowledgeService | None = None
         self._storage_service: StorageService | None = None
@@ -58,6 +60,7 @@ class AppContainer:
         # 1. Base Services & APIs
         await self._init_langfuse_client()
         await self._init_llm_service() 
+        await self._init_reranker_service() 
         await self._init_rustfs_session()
         await self._init_storage_service()
         await self._init_searx_wrapper()
@@ -101,6 +104,10 @@ class AppContainer:
     async def _init_llm_service(self):
         """Initialize LLM models with fallback chain."""
         self._llm_service = LLMService()
+    
+    async def _init_reranker_service(self):
+        """Initialize LLM models with fallback chain."""
+        self._reranker_service = RerankerService()
 
     async def _init_storage_service(self):
         """Initialize StorageService."""
@@ -197,7 +204,8 @@ class AppContainer:
             self._knowledge_graph = Neo4jGraph(
                 url=settings.NEO4J_URI,
                 username=settings.NEO4J_USERNAME,
-                password=settings.NEO4J_PASSWORD.get_secret_value()
+                password=settings.NEO4J_PASSWORD.get_secret_value(),
+                database="neo4j"        # "neo4j"
             )
             
             # Extract the schema immediately so it's cached in memory
@@ -224,6 +232,7 @@ class AppContainer:
 
         self._agent_graph = await build_super_agent_graph(
             llm_service=self.llm_service,
+            reranker_service=self.reranker_service,
             # graph_ingestion_service=self.graph_ingestion_service,
             vector_store_solid=self.vector_store_solid,
             vector_store_volatile=self.vector_store_volatile,
@@ -258,6 +267,11 @@ class AppContainer:
     def llm_service(self) -> LLMService:
         assert self._llm_service, "Container not initialized (LLMService missing)"
         return self._llm_service
+    
+    @property
+    def reranker_service(self) -> RerankerService:
+        assert self._reranker_service, "Container not initialized (rerankerService missing)"
+        return self._reranker_service
     
     @property
     def agent_service(self) -> AgentService:

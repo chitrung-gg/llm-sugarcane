@@ -33,7 +33,7 @@ class GeminiEmbeddingModel(BaseModel, Embeddings):
             # 1. Try the native LangChain batch embedding first (Faster)
             embeddings = self._embeddings.embed_documents(texts)
             
-            # 2. If the API squashes the batch (the bug you are experiencing)
+            # 2. If the API squashes the batch
             if len(embeddings) != len(texts):
                 logger.warning(
                     f"Mismatched length (Gemini): {len(texts)} input, {len(embeddings)} output. "

@@ -10,6 +10,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
+from app.services.llm.reranker_service import RerankerService
 from app.core.graph.nodes.components.outer_synthesizer_node import make_outer_synthesizer_node
 from app.utils.graph.context_utils import format_tools_for_prompt
 from app.core.graph.nodes.components.human_review_node import make_human_review_node
@@ -37,6 +38,7 @@ from app.services.ingestion.graph_ingestion_service import GraphIngestionService
 
 async def build_super_agent_graph(
     llm_service: LLMService,
+    reranker_service: RerankerService,
     vector_store_solid: QdrantVectorStore,
     vector_store_volatile: QdrantVectorStore,
     searx_wrapper: SearxSearchWrapper,
@@ -47,6 +49,7 @@ async def build_super_agent_graph(
     # 1. Build the INNER ReAct Graph exactly as it is today
     inner_react_graph = await _build_agent_graph(
         llm_service=llm_service,
+        reranker_service=reranker_service,
         vector_store_solid=vector_store_solid,
         vector_store_volatile=vector_store_volatile,
         searx_wrapper=searx_wrapper,
@@ -108,6 +111,7 @@ async def build_super_agent_graph(
 
 async def _build_agent_graph(
     llm_service: LLMService,
+    reranker_service: RerankerService,
     vector_store_solid: QdrantVectorStore,
     vector_store_volatile: QdrantVectorStore,
     searx_wrapper: SearxSearchWrapper,
@@ -130,11 +134,11 @@ async def _build_agent_graph(
     )
     workflow.add_node(
         AgentGraphNode.RAG,
-        make_rag_node(vector_store_solid, vector_store_volatile, llm_service)
+        make_rag_node(vector_store_solid, vector_store_volatile, llm_service, reranker_service)
     )
     workflow.add_node(
         AgentGraphNode.WEB_SEARCH,
-        make_web_search_node(searx_wrapper, llm_service)
+        make_web_search_node(searx_wrapper, llm_service, reranker_service)
     )
     workflow.add_node(
         AgentGraphNode.TOOL,
