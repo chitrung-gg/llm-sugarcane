@@ -10,9 +10,9 @@ from langchain_core.embeddings import Embeddings
 from app.configs.settings.settings import get_settings
 
 
-class GeminiEmbeddingModel(BaseModel, Embeddings):
+class GeminiEmbeddingModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    _embeddings: Any = PrivateAttr()
+    _embeddings: Embeddings = PrivateAttr()
 
     def model_post_init(self, __context: Any) -> None:
         settings = get_settings()

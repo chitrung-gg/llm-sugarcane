@@ -41,7 +41,7 @@ class PlanExecuteState(TypedDict):
     # Recycled Unified Context
     active_project: Optional[AgentProject]
     active_datasets: List[AgentDataset]
-    system_datasets: List[AgentDataset]
+    # system_datasets: List[AgentDataset]
 
     # Plan state
     plan: List[AgentStepPlan] 

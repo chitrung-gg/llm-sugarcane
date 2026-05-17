@@ -75,7 +75,7 @@ class AgentState(TypedDict):
     # --- Hierarchy & Organization ---
     active_project: Optional[AgentProject]
     active_datasets: Optional[List[AgentDataset]]
-    system_datasets: Optional[List[AgentDataset]]
+    # system_datasets: Optional[List[AgentDataset]]
 
     # Plan state (for inner agent visibility)
     past_steps: List[Any] 

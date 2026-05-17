@@ -159,14 +159,14 @@ class AppContainer:
             collection_name=settings.QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME,
             vector_size=settings.QDRANT_VECTOR_SIZE, # 768
             url=settings.QDRANT_URL,
-            dense_embedding=self.embedding_model 
+            dense_embedding=self.embedding_model.get_embeddings()
         )
 
         qdrant_config_volatile = VectorStore(
             collection_name=settings.QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME,
             vector_size=settings.QDRANT_VECTOR_SIZE, # 768
             url=settings.QDRANT_URL,
-            dense_embedding=self.embedding_model 
+            dense_embedding=self.embedding_model.get_embeddings()
         )
 
         self._vector_store_solid = qdrant_config_solid.get_vector_store()

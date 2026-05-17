@@ -66,13 +66,13 @@ async def build_super_agent_graph(
 
     inner_agent_capabilities = [
         "Semantic Search (RAG): Automatically search Vector Databases (Qdrant) and Knowledge Graphs (Neo4j) for literature, trait-gene associations, and general bioinformatics knowledge.",
-        "Web Search: Search the internet for current events, updated papers, or general knowledge."
+        "Web Search: Search the Internet for current events, updated papers, or general knowledge."
     ]
     
     # Only append the tool capability if tools actually exist
     if planner_tools_str.strip():
         inner_agent_capabilities.append(
-            f"Tool Execution: Execute specialized bioinformatics tools. The current specialized tools available are:\n{planner_tools_str}"
+            f"Tool Execution: Execute specialized bioinformatics tools (only for local genome). The current specialized tools available are:\n{planner_tools_str}"
         )
 
     # 2. Initialize the OUTER Plan-and-Execute Graph
