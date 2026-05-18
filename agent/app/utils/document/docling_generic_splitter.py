@@ -43,12 +43,12 @@ class DoclingGenericSplitter(AbstractDocumentSplitter):
         if self._converter is not None:
             return self._converter
 
-        # Issue 6 & 13: Explicitly configure the PDF pipeline.
-        # By binding this to InputFormat.PDF, Docling will natively route images to OCR 
-        # and .md/.csv/.docx to their lightweight parsers (Fixing Issue 5 & 7).
         pdf_pipeline = PdfPipelineOptions()
         pdf_pipeline.do_ocr = False  
         pdf_pipeline.do_table_structure = True  
+        pdf_pipeline.do_formula_enrichment = True
+        pdf_pipeline.do_chart_extraction = True
+        pdf_pipeline.do_code_enrichment = True
 
         self._converter = DocumentConverter(
             format_options={

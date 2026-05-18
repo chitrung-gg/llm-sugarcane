@@ -139,3 +139,22 @@ class EventKind(StrEnum):
 class StreamingTag(StrEnum):
     STREAM_PLANNER = "stream_planner"
     STREAM_SYNTHESIZER = "stream_synthesizer"
+
+class MessageRole(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+class MessageType(StrEnum):
+    QUERY = "query"
+    ANSWER = "answer"
+    THOUGHT = "thought"
+    ERROR = "error"
+
+class GraphIngestionAllowedLabels(StrEnum):
+    GENE = "gene"
+    CULTIVAR = "cultivar"
+    PAPER = "paper"
+    TRAIT = "trait"
+    DISEASE = "disease"
+    TISSUE = "tissue"
+    ENVIRONMENTAL_STRESS = "environmental_stress"

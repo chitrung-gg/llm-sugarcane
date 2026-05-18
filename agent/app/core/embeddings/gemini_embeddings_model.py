@@ -10,7 +10,7 @@ from langchain_core.embeddings import Embeddings
 from app.configs.settings.settings import get_settings
 
 
-class GeminiEmbeddingModel(BaseModel):
+class GeminiEmbeddingModel(BaseModel, Embeddings):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     _embeddings: Embeddings = PrivateAttr()
 
@@ -26,34 +26,37 @@ class GeminiEmbeddingModel(BaseModel):
             model=model_name,
             api_key=embedding_google_api_key
         )
+        logger.info(f"[Gemini Embed] Initialized with model: {model_name}")
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        logger.debug(f"Embedding {len(texts)} documents with Gemini...")
+        logger.debug(f"[Gemini Embed] Embedding batch of {len(texts)} documents...")
         try:
             # 1. Try the native LangChain batch embedding first (Faster)
             embeddings = self._embeddings.embed_documents(texts)
             
-            # 2. If the API squashes the batch
+            # 2. If the API squashes the batch, trigger self-healing fallback
             if len(embeddings) != len(texts):
                 logger.warning(
-                    f"Mismatched length (Gemini): {len(texts)} input, {len(embeddings)} output. "
+                    f"[Gemini Embed] Mismatched length: {len(texts)} input, {len(embeddings)} output. "
                     "Underlying API squashed the batch. Falling back to sequential embedding..."
                 )
-                # Fallback: Process them 1-by-1 to guarantee a 1:1 input/output mapping
+                # Fallback: Process them 1-by-1 to guarantee a 1:1 mapping
                 embeddings = [self._embeddings.embed_query(text) for text in texts]
+                logger.info(f"[Gemini Embed] ✅ Sequential fallback completed successfully. Generated {len(embeddings)} vectors.")
+                return embeddings
                 
+            logger.info(f"[Gemini Embed] ✅ Native batch processing completed successfully. Generated {len(embeddings)} vectors.")
             return embeddings
             
         except Exception as e:
-            logger.error(f"Gemini embedding failed for batch of {len(texts)}: {e}")
-            logger.error(f"Batch content: {texts}")
+            logger.error(f"[Gemini Embed] Critical failure for batch of {len(texts)}: {e}")
             raise e
 
     def embed_query(self, text: str) -> List[float]:
         return self._embeddings.embed_query(text)
 
     async def aembed_documents(self, texts: List[str]) -> List[List[float]]:
-        logger.debug(f"Async embedding {len(texts)} documents with Gemini...")
+        logger.debug(f"[Gemini Embed Async] Async embedding batch of {len(texts)} documents...")
         try:
             # 1. Try native async batch
             embeddings = await self._embeddings.aembed_documents(texts)
@@ -61,17 +64,20 @@ class GeminiEmbeddingModel(BaseModel):
             # 2. Self-healing fallback if the API squashes the batch
             if len(embeddings) != len(texts):
                 logger.warning(
-                    f"Mismatched async length: {len(texts)} input, {len(embeddings)} output. "
+                    f"[Gemini Embed Async] Mismatched async length: {len(texts)} input, {len(embeddings)} output. "
                     "Falling back to concurrent async embedding..."
                 )
-                # Run them concurrently using asyncio.gather for blazing fast speed
+                # Run concurrently using asyncio.gather
                 tasks = [self._embeddings.aembed_query(text) for text in texts]
-                embeddings = await asyncio.gather(*tasks)
+                embeddings = list(await asyncio.gather(*tasks))
+                logger.info(f"[Gemini Embed Async] ✅ Concurrent fallback completed successfully. Generated {len(embeddings)} vectors.")
+                return embeddings
                 
+            logger.info(f"[Gemini Embed Async] ✅ Native async batch processing completed successfully. Generated {len(embeddings)} vectors.")
             return embeddings
             
         except Exception as e:
-            logger.error(f"Async Gemini embedding failed for batch of {len(texts)}: {e}")
+            logger.error(f"[Gemini Embed Async] Async failure for batch of {len(texts)}: {e}")
             raise e
 
     async def aembed_query(self, text: str) -> List[float]:

@@ -55,7 +55,7 @@ class AppContainer:
         self._rustfs_session: aioboto3.Session | None = None
 
     async def initialize(self):
-        logger.info(" Initializing app container...")
+        logger.info("🚀 Initializing app container...")
         
         # 1. Base Services & APIs
         await self._init_langfuse_client()
@@ -64,27 +64,31 @@ class AppContainer:
         await self._init_rustfs_session()
         await self._init_storage_service()
         await self._init_searx_wrapper()
-        # await self._init_ncbi_tools()
         
         # 2. Databases & Storage
+        logger.info("📡 Connecting to Databases...")
         await self._init_embedding_model()
+        logger.info("✅ Embedding model initialized.")
         await self._init_vector_store()
+        logger.info("✅ Qdrant initialized.")
         await self._init_knowledge_graph()
+        logger.info("✅ Neo4j initialized.")
         
-        # 3. Middlewares & Processors (Depends on Storage)
+        # 3. Middlewares & Processors
         await self._init_document_processor()
         await self._init_graph_ingestion_service()
         await self._init_workspace_service()
 
-        
-        # 4. The Graph (Depends on ALL of the above)
+        # 4. The Graph
+        logger.info("🗺️ Compiling Agent Graph...")
         await self._init_agent_graph()
+        logger.info("✅ Agent Graph compiled.")
         
-        # 5. The Top-Level Service (Depends on the Graph)
+        # 5. Top-Level Services
         await self._init_knowledge_service() 
         await self._init_agent_service() 
         
-        logger.info(" App container ready.")
+        logger.info("✨ App container ready.")
 
     async def _init_langfuse_client(self):
         """Initialize the Langfuse singleton client with explicit Pydantic settings."""
@@ -159,14 +163,14 @@ class AppContainer:
             collection_name=settings.QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME,
             vector_size=settings.QDRANT_VECTOR_SIZE, # 768
             url=settings.QDRANT_URL,
-            dense_embedding=self.embedding_model.get_embeddings()
+            dense_embedding=self.embedding_model
         )
 
         qdrant_config_volatile = VectorStore(
             collection_name=settings.QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME,
             vector_size=settings.QDRANT_VECTOR_SIZE, # 768
             url=settings.QDRANT_URL,
-            dense_embedding=self.embedding_model.get_embeddings()
+            dense_embedding=self.embedding_model
         )
 
         self._vector_store_solid = qdrant_config_solid.get_vector_store()
@@ -221,7 +225,8 @@ class AppContainer:
         self._graph_rag_tool = make_graph_rag_tool(
             self.vector_store_solid,
             self.vector_store_volatile,
-            self.knowledge_graph
+            self.knowledge_graph,
+            self.llm_service
         )
 
         register_agent_tool(self._graph_rag_tool)
