@@ -1,68 +1,100 @@
-from typing import List
+import threading
+from typing import List, Optional
 from loguru import logger
-from flashrank import Ranker
-from langchain_community.document_compressors.flashrank_rerank import FlashrankRerank
 from langchain_core.documents import Document
+from sentence_transformers import CrossEncoder
+import torch 
+
 from app.configs.settings.settings import get_settings
 
 class RerankerService:
     def __init__(self):
-        self._reranker_instance = None
+        self._model_instance = None
+        self._lock = threading.Lock()
         self.settings = get_settings()
 
-    def _get_reranker(self, top_n: int) -> FlashrankRerank:
-        """Returns a singleton instance of the FlashRank compressor."""
-        if self._reranker_instance is None:
-            logger.info("Initializing FlashRank model... (This only happens once)")
-            try:
-                flashrank_client = Ranker(
-                    model_name="ms-marco-MultiBERT-L-12"
-                ) 
-
-                self._reranker_instance = FlashrankRerank(
-                    client=flashrank_client,
-                    top_n=top_n
-                )
-
-                logger.info("FlashRank successfully loaded into memory.")
-            except Exception as e:
-                logger.error(f"Failed to load FlashRank: {e}")
-                raise
-                
-        return self._reranker_instance
+    def _get_model(self) -> CrossEncoder:
+        """Returns a thread-safe singleton instance of the HuggingFace CrossEncoder."""
+        if self._model_instance is None:
+            with self._lock:
+                if self._model_instance is None:
+                    logger.info("Initializing HuggingFace Cross-Encoder model... (This only happens once)")
+                    try:
+                        model_name = "BAAI/bge-reranker-base"
+                        self._model_instance = CrossEncoder(model_name)
+                        logger.info(f"Cross-Encoder ({model_name}) successfully loaded into memory.")
+                    except Exception as e:
+                        logger.error(f"Failed to load Cross-Encoder: {e}")
+                        raise
+            
+        return self._model_instance
 
     def rerank_documents(
         self, 
         query: str, 
         documents: List[Document], 
-        threshold: float, 
-        top_k: int
+        absolute_floor: float = 0.65, 
+        relative_tolerance: float = 0.85, 
+        top_k: Optional[int] = None
     ) -> List[Document]:
         """
-        Compresses documents using FlashRank, filters by threshold, 
-        and enforces the exact top_k limit.
+        Scores documents using a Cross-Encoder, normalizes via native PyTorch Sigmoid,
+        and applies a Hybrid Threshold (Absolute Floor + Relative Drop-off).
         """
         if not documents:
             return []
-        if not top_k:
+            
+        if top_k is None:
             top_k = self.settings.QDRANT_FINAL_TOP_K
 
-        reranker = self._get_reranker(top_k)
+        model = self._get_model()
         
-        compressed_docs = reranker.compress_documents(
-            documents=documents,
-            query=query
-        )
+        # 1. Prepare pairs
+        text_pairs = [[query, doc.page_content] for doc in documents]
+        
+        # 2. Get raw logits (Linter is happy because we only pass the text)
+        raw_scores = model.predict(text_pairs)
 
-        filtered_docs = []
-        for doc in compressed_docs:
-            score = doc.metadata.get("relevance_score", 0.0)
+        # 3. Apply PyTorch's highly optimized native Sigmoid to the entire array at once!
+        scores = torch.sigmoid(torch.tensor(raw_scores)).tolist()
+
+        # 3. Attach scores to metadata
+        processed_docs = []
+        normalized_scores = []
+        
+        for doc, score in zip(documents, scores):
+            # Convert NumPy float32 to standard Python float for JSON serialization downstream
+            clean_score = float(score) 
+            doc.metadata["relevance_score"] = clean_score
+            processed_docs.append(doc)
+            normalized_scores.append(clean_score)
+
+        if not normalized_scores:
+            return []
             
-            # if score < threshold:
-            #     logger.debug(f"[Reranker] Chunk (Score: {score:.5f} < {threshold})")
-            #     continue
-                
-            filtered_docs.append(doc)
+        best_score = max(normalized_scores)
 
-        # 3. Return the exact number of top results requested
+        # 4. THE HYBRID CHECK
+        if best_score < absolute_floor:
+            logger.warning(
+                f"[Reranker] ALL documents failed the absolute floor "
+                f"({best_score:.4f} < {absolute_floor}). Returning empty list."
+            )
+            return []
+        
+        dynamic_threshold = best_score * relative_tolerance 
+
+        logger.debug(f"[Reranker] Best: {best_score:.4f} | Dynamic Cutoff: {dynamic_threshold:.4f} | Floor: {absolute_floor}")
+
+        # 5. Filter and Sort
+        filtered_docs = []
+        for doc in processed_docs:
+            score = doc.metadata["relevance_score"]
+            if score >= dynamic_threshold and score >= absolute_floor:
+                filtered_docs.append(doc)
+            else:
+                logger.debug(f"[Reranker] Dropped Chunk (Score {score:.4f} failed cutoff/floor)")
+
+        filtered_docs.sort(key=lambda x: x.metadata["relevance_score"], reverse=True)
+        
         return filtered_docs[:top_k]

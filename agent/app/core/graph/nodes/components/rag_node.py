@@ -1,14 +1,15 @@
 import time
 import re
-from typing import List, Literal, TypeAlias, cast
+import hashlib
+from typing import List, Literal, cast
 from langfuse import observe
 from loguru import logger
+from qdrant_client.http import models
 from langchain_qdrant import QdrantVectorStore
-from langchain_community.retrievers import BM25Retriever
 from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage
 from langgraph.types import Command
-from pydantic import BaseModel, Field
 
+from app.services.llm.reranker_service import RerankerService
 from app.core.vector_store.vector_store import build_metadata_filter
 from app.common.constants import ObservationType
 from app.utils.observability.tracing import tracing
@@ -23,26 +24,24 @@ from app.utils.graph.context_utils import get_recent_messages
 def make_rag_node(
     vector_store_solid: QdrantVectorStore,
     vector_store_volatile: QdrantVectorStore,
-    llm_service: LLMService
+    llm_service: LLMService,
+    reranker_service: RerankerService 
 ):
     @tracing(observation_type=ObservationType.RETRIEVER)
-    async def rag(state: AgentState) -> Command[
-        Literal[AgentGraphNode.INNER_SYNTHESIZER]
-    ]:
+    async def rag(state: AgentState) -> dict:
         settings = get_settings()
 
-        logger.debug("[RAG] 🔎 Starting vector search")
+        logger.debug("[RAG] 🔎 Starting vector search with FlashRank Integration")
         start_time = time.time()
         
         original_query = state["query"]
         optimized_query = state.get("rag_query")
 
-        solid_k = settings.QDRANT_SOLID_TOP_K
+        # Use larger K for the broad fetch to give Reranker more options
+        solid_k = settings.QDRANT_SOLID_TOP_K 
         volatile_k = settings.QDRANT_VOLATILE_TOP_K
-        final_top_k = settings.QDRANT_FINAL_TOP_K
         max_query_length = settings.QDRANT_MAX_QUERY_LENGTH
-                                   
-        # 1. Query Optimization (Skip if Router already provided one)
+
         if not optimized_query:
             logger.info("[RAG] No pre-optimized query found. Rewriting...")
             system_prompt = RAG_QUERY_OPTIMIZATION_PROMPT.format(
@@ -50,7 +49,6 @@ def make_rag_node(
                 user_question=original_query
             )
 
-            # Include recent messages for better query rewriting
             recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=3)
 
             messages: List[BaseMessage] = [
@@ -75,39 +73,78 @@ def make_rag_node(
         else:
             logger.info(f"[RAG] Using pre-optimized query from Router: '{optimized_query}'")
 
-        # 2. Extract active context
         active_datasets = state.get("active_datasets") or []
         dataset_ids = [ds.get("dataset_id") for ds in active_datasets if ds.get("dataset_id")]
 
-        # 3. Qdrant Hybrid Search
         logger.debug(f"Executing Qdrant search with query: {optimized_query}")
         
-        solid_results = await vector_store_solid.asimilarity_search_with_score(query=optimized_query, k=solid_k)
-        for doc, score in solid_results:
-            doc.page_content = f"[SOURCE TIER: CURATED (High Trust)] {doc.page_content}"
-            doc.metadata["source_tier"] = "CURATED"
+        # 2. Broad Qdrant Search
+        solid_results = await vector_store_solid.asimilarity_search(
+            query=optimized_query, 
+            k=solid_k
+        )
 
-        volatile_results = []
+        # 3. Native Deduplication
+        seen_payloads = set()
+        solid_docs = []
+        for doc in solid_results:
+            # Hash the actual content to ensure we only drop 100% exact duplicates
+            doc_hash = hashlib.md5(doc.page_content.strip().encode('utf-8')).hexdigest()
+            
+            if doc_hash not in seen_payloads:
+                seen_payloads.add(doc_hash)
+                doc.metadata["source_tier"] = doc.metadata.get("source_tier", "CURATED")
+                solid_docs.append(doc)
+            else:
+                logger.debug("[RAG] 🗑️ Dropped exact duplicate Qdrant chunk.")
+
+        volatile_docs = []
         if dataset_ids:
-            volatile_filter = build_metadata_filter({"dataset_id": dataset_ids})
-            volatile_results = await vector_store_volatile.asimilarity_search_with_score(
+            # Combine filters
+            volatile_filter = [
+                models.FieldCondition(
+                    key="metadata.dataset_id",
+                    match=models.MatchAny(any=dataset_ids)
+                )
+            ]
+ 
+            volatile_results = await vector_store_volatile.asimilarity_search(
                 query=optimized_query, 
                 k=volatile_k,
                 filter=volatile_filter
             )
+            
+            for doc in volatile_results:
+                doc_hash = hashlib.md5(doc.page_content.encode('utf-8')).hexdigest()
+                if doc_hash not in seen_payloads:
+                    seen_payloads.add(doc_hash)
+                    doc.metadata["source_tier"] = doc.metadata.get("source_tier", "INFERRED")
+                    volatile_docs.append(doc)
+                else:
+                    logger.debug("[RAG] 🗑️ Dropped duplicate Qdrant chunk (VOLATILE).")
 
-            for doc, score in volatile_results:
-                doc.page_content = f"[SOURCE TIER: INFERRED/PROVISIONAL (Agent Discovery)] {doc.page_content}"
-                doc.metadata["source_tier"] = "INFERRED"
+        # 3. Multi-Store Fusion & Reranking
+        combined_docs = solid_docs + volatile_docs
+        
+        if not combined_docs:
+            logger.warning("[RAG] No documents retrieved from databases.")
+            final_docs = []
+        else:
+            logger.debug(f"[RAG] Reranking {len(combined_docs)} total chunks using FlashRank...")
+            final_docs = reranker_service.rerank_documents(
+                query=original_query,
+                documents=combined_docs,
+                top_k=settings.QDRANT_FINAL_TOP_K
+            )
 
-        combined_results = solid_results + volatile_results
-        combined_results.sort(key=lambda x: x[1], reverse=True)
-        top_semantic_results = combined_results[:final_top_k]
-
+        # 5. Output Formatting & Thresholding
         new_rag_results = []
         new_sources = []
 
-        for idx, (doc, score) in enumerate(top_semantic_results):
+        for idx, doc in enumerate(final_docs):
+            raw_score = doc.metadata.get("relevance_score", 0.0)
+            relevance_score = float(raw_score)      
+
             raw_filename = doc.metadata.get("original_filename") or doc.metadata.get("source_filename") or doc.metadata.get("source", "unknown")
             source_name = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', str(raw_filename))
             source_tier = doc.metadata.get("source_tier", "unknown_tier")
@@ -116,26 +153,26 @@ def make_rag_node(
                 content=doc.page_content,
                 source_file=source_name,
                 page_number=doc.metadata.get("page"),
-                relevance_score=score,
+                relevance_score=relevance_score, 
             )
             new_rag_results.append(rag_item)
 
             new_sources.append({
                 "document_id": doc.metadata.get("_id", f"doc_{idx}"),
+                "file_id": doc.metadata.get("file_id"),         
+                "entities": doc.metadata.get("entities", []),   
                 "source_file": source_name,
                 "chunk_index": idx,
-                "score": score,
+                "score": relevance_score, 
                 "source_tier": source_tier
             })
 
         elapsed = int((time.time() - start_time) * 1000)
+        logger.info(f"[RAG] 🎯 Final top {len(new_rag_results)} chunks extracted in {elapsed}ms.")
 
-        return Command(
-            goto=AgentGraphNode.INNER_SYNTHESIZER,
-            update={
-                "rag_results": new_rag_results,
-                "sources_used": new_sources,
-            }
-        )
+        return {
+            "rag_results": new_rag_results,
+            "sources_used": new_sources,
+        }
 
     return rag

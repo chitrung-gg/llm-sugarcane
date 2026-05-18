@@ -95,8 +95,7 @@ def knowledge_ingestion_pipeline():
                 await container.graph_ingestion_service.ingest_knowledge(
                     source_texts=source_texts,
                     source_metadata=first_meta, # Attach baseline metadata
-                    owner_id=owner_id,
-                    is_public=first_meta.get("is_public")
+                    owner_id=owner_id
                 )
 
             finally:    
@@ -213,8 +212,7 @@ def knowledge_ingestion_pipeline():
                                 "tool": "manual_document_upload",
                                 "batch_size": len(texts)
                             },
-                            owner_id=owner_id,
-                            is_public=is_public
+                            owner_id=owner_id
                         )
                     except Exception as e:
                         logging.error(f"Batch ingestion failed: {e}")

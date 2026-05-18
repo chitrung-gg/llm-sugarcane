@@ -7,9 +7,11 @@ from loguru import logger
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 from langgraph.types import Command
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.documents import Document
 
 from pydantic import BaseModel, Field
 
+from app.services.llm.reranker_service import RerankerService
 from app.common.constants import ObservationType
 from app.configs.settings.settings import get_settings
 from app.utils.observability.tracing import tracing
@@ -22,19 +24,19 @@ from app.utils.graph.context_utils import get_recent_messages
 
 def make_web_search_node(
     searx_wrapper: SearxSearchWrapper,
-    llm_service: LLMService
+    llm_service: LLMService,
+    reranker_service: RerankerService
 ):
     """Factory to create the web search node with injected dependency."""
     @tracing(observation_type=ObservationType.RETRIEVER)
-    async def web_search(state: AgentState) -> Command[
-        Literal[AgentGraphNode.INNER_SYNTHESIZER]
-    ]:
+    async def web_search(state: AgentState) -> dict:
         settings = get_settings()
 
         logger.debug("--- 🌐 TRIGGERING SEARXNG WEB SEARCH ---")
         start_time = time.time()
 
         # Check if the Router provided a specific search query
+        original_query = state["query"]
         optimized_query = state.get("web_query")
         
         if not optimized_query:
@@ -48,13 +50,14 @@ def make_web_search_node(
         if optimized_query:
             logger.info(f"[Web Search] 💡 Using pre-optimized query: '{optimized_query}'")
         else:
-            original_query = state["query"]
+            
             max_query_length = settings.WEB_SEARCH_MAX_QUERY_LENGTH
 
             # 1. Query Optimization (Skip if already provided)
             logger.info("[Web Search] No pre-optimized query found. Rewriting...")
             system_prompt = WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT.format(
-                conversation_summary=state.get("summary", "No prior context.")
+                conversation_summary=state.get("summary", "No prior context."),
+                user_question=original_query
             )
 
             # Include recent messages for context
@@ -81,7 +84,6 @@ def make_web_search_node(
                 optimized_query = original_query
 
         # 2. Execute search
-        new_web_results = []
         num_results_to_fetch = settings.WEB_SEARCH_NUM_RESULTS
 
         try:
@@ -90,46 +92,56 @@ def make_web_search_node(
                 optimized_query, 
                 num_results=num_results_to_fetch
             )
-
-            for res in raw_results:
-                web_item = WebResult(
-                    snippet=res.get("snippet", "No snippet available"),
-                    title=res.get("title", "No Title"),
-                    link=res.get("link", ""),
-                    engines=res.get("engines", []),
-                    category=res.get("category", "general")
-                )
-                new_web_results.append(web_item)
         except asyncio.TimeoutError:
             logger.error(f"SearXNG search timed out after {settings.WEB_SEARCH_TIMEOUT_SEC} seconds.")
-            new_web_results.append(
-                WebResult(
-                    snippet="Web search failed: The search engine took too long to respond.",
-                    title="Search Timeout",
-                    link="", engines=[], category="error"
-                )
-            )
+            raw_results = []
         except Exception as e:
             logger.error("SearXNG search failed: {error}", error=str(e))
-            new_web_results.append(
-                WebResult(
-                    snippet=f"Web search failed due to an error: {str(e)}",
-                    title="Search Error",
-                    link="",
-                    engines=[],
-                    category="error"
+            raw_results = []
+
+        web_docs = []
+        for res in raw_results:
+            snippet = res.get("snippet", "")
+            if snippet:
+                web_docs.append(
+                    Document(
+                        page_content=f"[WEB SEARCH] {snippet}",
+                        metadata={
+                            "url": res.get("link", ""),
+                            "title": res.get("title", "")
+                        }
+                    )
                 )
-            )
+
+        # 4. Rerank the Web Snippets (High Precision)
+        logger.debug(f"[Web Search] Reranking {len(web_docs)} web snippets...")
+        
+        if not web_docs:
+            return {"web_results": []}
+            
+        reranked_docs = reranker_service.rerank_documents(
+            documents=web_docs,
+            query=original_query,
+            top_k=settings.WEB_SEARCH_NUM_RESULTS,
+            # absolute_floor=settings.WEB_SEARCH_SCORE_THRESHOLD
+        )
+
+        final_web_results = []
+
+        for doc in reranked_docs:
+            raw_score = doc.metadata.get("relevance_score", 0.0)
+            relevance_score = float(raw_score) 
+
+            final_web_results.append({
+                "content": doc.page_content,
+                "url": doc.metadata.get("url"),
+                "score": relevance_score
+            })
+
+        logger.info(f"[Web Search] Kept {len(final_web_results)} highly relevant snippets.")
 
         execution_time = int((time.time() - start_time) * 1000)
-        logger.debug(
-            "[Web Search] ✅ Completed in {execution_time} ms | Found {count} items", 
-            execution_time=execution_time, count=len(new_web_results)
-        )
 
-        return Command(
-            goto=AgentGraphNode.INNER_SYNTHESIZER,
-            update={"web_results": new_web_results}
-        )
+        return {"web_results": [final_web_results]}
 
     return web_search

@@ -17,9 +17,7 @@ from app.core.graph.state.agent_state import AgentState, ToolResult
 
 def make_tools_node(available_tools: dict[str, BaseTool]):
     @tracing(observation_type=ObservationType.TOOL)
-    async def tools(state: AgentState) -> Command[
-        Literal[AgentGraphNode.ENRICHMENT]
-    ]:
+    async def tools(state: AgentState) -> dict:
         settings = get_settings()
         tools_to_run = state.get("required_tools", [])
 
@@ -30,10 +28,9 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
 
         if not tools_to_run:
             logger.debug("[Tools] No tools required.")
-            return Command(
-                goto=AgentGraphNode.ENRICHMENT,
-                update={"tool_results": []}
-            )
+            return {
+                "tool_results": []
+            }
 
         overall_start = time.time()
 
@@ -118,9 +115,9 @@ def make_tools_node(available_tools: dict[str, BaseTool]):
             total_tools=len(new_tool_results), total_latency=total_elapsed
         )
 
-        return Command(
-            goto=AgentGraphNode.ENRICHMENT,
-            update={"tool_results": new_tool_results}
-        )
+        return {
+            "tool_results": new_tool_results
+        }
+        
     
     return tools

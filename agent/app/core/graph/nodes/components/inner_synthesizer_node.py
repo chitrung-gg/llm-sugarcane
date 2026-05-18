@@ -20,29 +20,25 @@ from app.schemas.agent.synthesizer import SynthesizerOutput
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.types import Command
-from app.utils.graph.context_utils import get_recent_messages, format_optimized_workspace
+from app.utils.graph.context_utils import format_optimized_context, get_recent_messages
 
 def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
     @tracing(observation_type=ObservationType.CHAIN)
-    async def synthesizer(state: AgentState) -> Command[
-        Literal[AgentGraphNode.END_NODE, AgentGraphNode.ROUTER]
-    ]:
+    async def synthesizer(state: AgentState) -> dict:
         logger.debug("[Synthesizer] ✍️ Generating final response")
         
         settings = get_settings()
         synthesizer_timeout = settings.SYNTHESIZER_TIMEOUT_SEC
 
         current_iteration = state.get("iteration_count", 0)
-        max_iterations = state.get("max_iterations", 3)
+        max_iterations = state.get("max_iterations", 1)
         query = state["query"]
-        messages = state.get("messages", [])
 
         # 1. Unified Workspace Context (Project + Datasets)
         active_project = state.get("active_project")
         active_datasets = state.get("active_datasets", [])
-        system_datasets = state.get("system_datasets", [])
         
-        workspace_context = format_optimized_workspace(active_project, active_datasets, system_datasets)
+        workspace_context = format_optimized_context(active_project, active_datasets)
 
         # 2. Format execution context (with truncation)
         rag_results = state.get("rag_results", [])[:5]
@@ -109,25 +105,21 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
         except asyncio.TimeoutError:
             logger.error(f"[Synthesizer] ❌ LLM generation timed out after {synthesizer_timeout} seconds.")
             error_text = "I apologize, but synthesizing this massive amount of data took too long and timed out. Could you please narrow down your question?"
-            return Command(
-                goto=AgentGraphNode.END_NODE,
-                update={
-                    "final_answer": error_text,
-                    "is_complete": True,
-                    "messages": [AIMessage(content=error_text, additional_kwargs={"execution_id": str(state.get("execution_id"))})]
-                }
-            )
+            return {
+                "final_answer": error_text,
+                "is_complete": True,
+                "iteration_count": 0,
+                "messages": [AIMessage(content=error_text, additional_kwargs={"execution_id": str(state.get("execution_id"))})]
+            }
         except Exception as e:
             logger.error(f"[Synthesizer] ❌ LLM Generation failed: {e}")
             error_text = "I apologize, but I encountered an error while formatting the synthesized information."
-            return Command(
-                goto=AgentGraphNode.END_NODE,
-                update={
-                    "final_answer": error_text,
-                    "is_complete": True,
-                    "messages": [AIMessage(content=error_text, additional_kwargs={"execution_id": str(state.get("execution_id"))})]
-                }
-            )
+            return {
+                "final_answer": error_text,
+                "is_complete": True,
+                "iteration_count": 0,
+                "messages": [AIMessage(content=error_text, additional_kwargs={"execution_id": str(state.get("execution_id"))})]
+            }
 
         logger.debug(
             "[Synthesizer] Complete? {is_complete} | Missing: {missing}", 
@@ -147,9 +139,10 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
         }
         
         # Determine destination
-        if not result.is_complete and not is_final_attempt and state.get("last_intent") != AgentIntent.DIRECT_ANSWER:
+        if not result.is_complete and not is_final_attempt:
             # 1. Step failed or needs more info -> Loop back to ROUTER
             logger.warning("⚠️ Answer incomplete. Sending back to ROUTER.")
+            updates["iteration_count"] = current_iteration + 1
             updates["messages"] = [
                 AIMessage(
                     content=f"Thought: I am still missing info: {result.missing_info}",
@@ -160,13 +153,12 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
         else:
             # 2. Inner task is complete. We update the final_answer and exit the INNER graph.
             # The Outer Executor will catch this answer, update past_steps, and decide what to do next.
+            
             logger.info("[Synthesizer] Answer complete. Exiting inner graph.")
+            updates["iteration_count"] = 0
             destination = AgentGraphNode.END_NODE
 
 
-        return Command(
-            goto=destination,
-            update=updates
-        )
+        return updates
 
     return synthesizer

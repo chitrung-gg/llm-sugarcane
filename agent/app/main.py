@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 from app.core.app_container import get_container
-from app.api.v1 import chat_endpoint, ingestion_endpoint, workspace_endpoint
+from app.api.v1 import agent_endpoint, ingestion_endpoint, workspace_endpoint
 
 
 @asynccontextmanager
@@ -69,7 +69,7 @@ app.add_middleware(
 
 FastAPIInstrumentor.instrument_app(app)
 
-app.include_router(chat_endpoint.router, prefix="/api/v1/agent")
+app.include_router(agent_endpoint.router, prefix="/api/v1/agent")
 app.include_router(ingestion_endpoint.router, prefix="/api/v1/ingest")
 app.include_router(workspace_endpoint.router, prefix="/api/v1/workspace")
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app", 
         host="0.0.0.0", 
-        port=8000, 
+        port=8008, 
         reload=True,
         log_config=None 
     )

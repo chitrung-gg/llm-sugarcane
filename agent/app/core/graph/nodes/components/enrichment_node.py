@@ -12,9 +12,7 @@ def make_enrichment_node(
     tool_registry: Dict[str, IngestionConfig]
 ):
     @tracing(observation_type=ObservationType.CHAIN)
-    async def enrichment(state: AgentState) -> Command[
-        Literal[AgentGraphNode.INNER_SYNTHESIZER]
-    ]:
+    async def enrichment(state: AgentState) -> dict:
         logger.debug("[Enrichment] Analyzing tool results for knowledge graph ingestion...")
 
         tool_results = state.get("tool_results", [])
@@ -22,9 +20,9 @@ def make_enrichment_node(
         
         if not tool_results:
             logger.debug("[Enrichment] No tool results to ingest.")
-            return Command(
-                goto=AgentGraphNode.INNER_SYNTHESIZER
-            )
+            return {
+                
+            }
 
         # Only process the results for tools just executed in this turn
         num_new = len(required_tools)
@@ -49,21 +47,31 @@ def make_enrichment_node(
                     "source_text": output,
                     "source_metadata": {
                         "tool": tool_name,
-                        "project_name": project_name,
                         "project_id": project_id
                     }
                 })
 
+        # try:
+        #     # We use asyncio.to_thread to prevent the `requests` library from 
+        #     # blocking the entire FastAPI/LangGraph event loop.
+        #     await asyncio.to_thread(
+        #         trigger_airflow_dag,
+        #         conf_payload=batch_payloads,
+        #         dag_id="knowledge_ingestion_pipeline"
+        #     )
+        # except Exception as e:
+        #     logger.error(f"[Enrichment] Failed to trigger Airflow DAG via custom lib: {e}")
+
         if batch_payloads:
             logger.info(f"[Enrichment] Staging {len(batch_payloads)} items for deferred ingestion.")
             
-            return Command(
-                goto=AgentGraphNode.INNER_SYNTHESIZER,
-                update={"extracted_knowledge": batch_payloads}
-            )
+            return {
+                "extracted_knowledge": batch_payloads
+            }
+            
 
-        return Command(
-            goto=AgentGraphNode.INNER_SYNTHESIZER
-        )
+        return {
+
+        }
 
     return enrichment

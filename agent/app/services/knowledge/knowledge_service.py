@@ -41,7 +41,7 @@ class KnowledgeService:
         user_id: uuid.UUID = SYSTEM_OWNER_ID,
         project_id: Optional[uuid.UUID] = None,
         dataset_id: Optional[uuid.UUID] = None,
-        files_metadata: Optional[Dict[str, Any]] = None # Mapping of filename -> metadata dict
+        files_metadata: Optional[Dict[str, Any]] = None
     ) -> dict:
         """
         Loops through uploaded files, validates, uploads to Storage, 
@@ -60,11 +60,12 @@ class KnowledgeService:
             file_id = uuid.uuid4()
             original_filename = Path(file.filename).name
             safe_filename = f"{file_id}_{original_filename}"
-            temp_path = temp_dir / safe_filename
+            temp_path = temp_dir / safe_filename        # Operator of Path
             
             try:
                 # 1. Save locally for validation
                 async with aiofiles.open(temp_path, 'wb') as out_file:
+                    # Read file in 1MB, read and assign to `chunk`
                     while chunk := await file.read(1024 * 1024):
                         await out_file.write(chunk)
 
@@ -159,7 +160,6 @@ class KnowledgeService:
                         dag_id="knowledge_ingestion_pipeline"
                     )
                     
-                    # Airflow 2/3 returns the `dag_run_id` in the JSON response
                     dag_run_id = airflow_response.get("dag_run_id", "unknown_run_id")
                     
                     dispatched_tasks.append({
@@ -221,7 +221,7 @@ class KnowledgeService:
             def _sync_compress(in_path: Path, out_path: Path):
                 with open(in_path, 'rb') as f_in:
                     with gzip.open(out_path, 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
+                        shutil.copyfileobj(f_in, f_out, length=1024 * 1024)
 
             await asyncio.to_thread(_sync_compress, temp_path, compressed_temp_path)
             upload_path = compressed_temp_path
@@ -235,7 +235,9 @@ class KnowledgeService:
         
         # Cleanup compressed file if created
         if needs_compression and upload_path.exists():
-            try: os.unlink(upload_path)
-            except Exception: pass
+            try: 
+                os.unlink(upload_path)
+            except Exception as e: 
+                logger.warning(f"Failed to cleanup temp file {upload_path}: {e}")
 
         return target_uri, final_filename

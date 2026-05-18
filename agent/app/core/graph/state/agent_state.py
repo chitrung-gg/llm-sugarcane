@@ -87,9 +87,9 @@ class AgentState(TypedDict):
     web_query: Optional[str] # Pre-optimized query for Web Search
 
     # Execution tracking
-    rag_results: Annotated[List[RAGResult], operator.add]
+    rag_results: List[RAGResult]
     tool_results: Annotated[List[ToolResult], operator.add] 
-    web_results: Annotated[List[WebResult], operator.add]
+    web_results: List[WebResult]
     extracted_knowledge: List[Dict[str, Any]]
     iteration_count: int
     max_iterations: int         # Circuit breaker
