@@ -10,6 +10,7 @@ from langchain_core.tools import BaseTool
 from loguru import logger
 
 
+from app.configs.settings.settings import get_settings
 from app.services.llm.reranker_service import RerankerService
 from app.core.graph.nodes.components.outer_synthesizer_node import make_outer_synthesizer_node
 from app.utils.graph.context_utils import format_tools_for_prompt
@@ -119,6 +120,7 @@ async def _build_agent_graph(
     # graph_ingestion_service: GraphIngestionService,
     available_tools: dict[str, BaseTool]
 ):
+    settings = get_settings()
     # Initialize graph
     workflow = StateGraph(AgentState)
 
@@ -155,21 +157,57 @@ async def _build_agent_graph(
     
     # 1. Entry Point
     workflow.add_edge(START, AgentGraphNode.INPUT_ANALYZER)
-    # workflow.add_edge(AgentGraphNode.INPUT_ANALYZER, AgentGraphNode.ROUTER)
+    workflow.add_edge(AgentGraphNode.INPUT_ANALYZER, AgentGraphNode.ROUTER)
     
     # # 2. Router Fan-out (Allowed destinations)
+    def route_after_analysis(state: AgentState):
+        intent = state["intent"]
+        if intent == "all":
+            return [AgentGraphNode.RAG, AgentGraphNode.WEB_SEARCH, AgentGraphNode.TOOL]
+        elif intent == "web_search":
+            return [AgentGraphNode.WEB_SEARCH]
+        elif intent == "rag_only":
+            return [AgentGraphNode.RAG]
+        elif intent == "tool_only":
+            return [AgentGraphNode.TOOL]
+        else:
+            return [AgentGraphNode.INNER_SYNTHESIZER]
+
+    workflow.add_conditional_edges(
+        AgentGraphNode.ROUTER,
+        route_after_analysis,
+        {
+            AgentGraphNode.RAG: AgentGraphNode.RAG,
+            AgentGraphNode.WEB_SEARCH: AgentGraphNode.WEB_SEARCH,
+            AgentGraphNode.TOOL: AgentGraphNode.TOOL,
+            AgentGraphNode.INNER_SYNTHESIZER: AgentGraphNode.INNER_SYNTHESIZER
+        }
+    )
     # workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.RAG)
     # workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.TOOL)
     # workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.WEB_SEARCH)
     # workflow.add_edge(AgentGraphNode.ROUTER, AgentGraphNode.SYNTHESIZER)
     
     # # 3. Execution Branches converge on Synthesizer (Fan-in pattern)
-    # workflow.add_edge(AgentGraphNode.RAG, AgentGraphNode.SYNTHESIZER)
-    # workflow.add_edge(AgentGraphNode.TOOL, AgentGraphNode.ENRICHMENT)
-    # workflow.add_edge(AgentGraphNode.ENRICHMENT, AgentGraphNode.SYNTHESIZER)
-    # workflow.add_edge(AgentGraphNode.WEB_SEARCH, AgentGraphNode.SYNTHESIZER)
+    workflow.add_edge(AgentGraphNode.RAG, AgentGraphNode.INNER_SYNTHESIZER)
+    workflow.add_edge(AgentGraphNode.TOOL, AgentGraphNode.ENRICHMENT)
+    workflow.add_edge(AgentGraphNode.ENRICHMENT, AgentGraphNode.INNER_SYNTHESIZER)
+    workflow.add_edge(AgentGraphNode.WEB_SEARCH, AgentGraphNode.INNER_SYNTHESIZER)
     
     # # 4. Synthesis and Feedback Loop
+    def route_after_synthesis(state: AgentState):
+        if state.get("is_complete") or state.get("iteration_count") >= settings.INNER_AGENT_MAX_ITERATION:
+            return END
+        return AgentGraphNode.ROUTER
+
+    workflow.add_conditional_edges(
+        AgentGraphNode.INNER_SYNTHESIZER,
+        route_after_synthesis,
+        {
+            END: END,
+            AgentGraphNode.ROUTER: AgentGraphNode.ROUTER
+        }
+    )
     # workflow.add_edge(AgentGraphNode.SYNTHESIZER, AgentGraphNode.SUMMARIZER)
     # workflow.add_edge(AgentGraphNode.SYNTHESIZER, AgentGraphNode.ROUTER) # Loop-back for incomplete answers
     

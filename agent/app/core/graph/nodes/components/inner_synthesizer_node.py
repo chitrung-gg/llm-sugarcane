@@ -31,7 +31,7 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
         synthesizer_timeout = settings.SYNTHESIZER_TIMEOUT_SEC
 
         current_iteration = state.get("iteration_count", 0)
-        max_iterations = state.get("max_iterations", 1)
+        max_iterations = state.get("max_iterations", settings.INNER_AGENT_MAX_ITERATION)
         query = state["query"]
 
         # 1. Unified Workspace Context (Project + Datasets)
