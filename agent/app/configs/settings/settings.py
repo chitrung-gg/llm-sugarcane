@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     )
 
     GEMINI_EMBEDDING_MODEL: str = Field(
-        default="gemini-embedding-001",   # "gemini-embedding-2":"gemini-embedding-001"
+        default="gemini-embedding-2",   # "gemini-embedding-2":"gemini-embedding-001"
         validation_alias="GEMINI_EMBEDDING_MODEL"
     ) 
     GEMINI_MAX_INPUT_TOKEN: int = 200000
@@ -84,24 +84,24 @@ class Settings(BaseSettings):
     QDRANT_URL: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
     QDRANT_API_KEY: SecretStr | None = Field(default=None, validation_alias="QDRANT_API_KEY")
     QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME: str = Field(
-        default="sugarcane_docs",       # "sugarcane_docs_new"
+        default="sugarcane_docs_new",       # "sugarcane_docs_new"
         validation_alias="QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME"
     )
     QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME: str = Field(
-        default="sugarcane_external_context",
+        default="sugarcane_external_context_new",
         validation_alias="QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME"
     )
-    VECTOR_STORE_SCORE_THRESHOLD: float = 0.5
+    KNOWLEDGE_GRAPH_SCORE_THRESHOLD: float = 0.5
 
     QDRANT_VECTOR_SIZE: int = 3072   # 768 to save storage
     QDRANT_PREFER_GRPC: bool = True
 
-    QDRANT_SOLID_TOP_K: int = 15
-    QDRANT_VOLATILE_TOP_K: int = 5
-    QDRANT_FINAL_TOP_K: int = 5
+    QDRANT_SOLID_TOP_K: int = 20
+    QDRANT_VOLATILE_TOP_K: int = 10
+    QDRANT_FINAL_TOP_K: int = 2
     QDRANT_MAX_QUERY_LENGTH: int = 200
 
-    QDRANT_BATCH_SIZE: int = 16
+    QDRANT_BATCH_SIZE: int = 100
 
     # --- Neo4j ---
     NEO4J_URI: str = Field(
@@ -116,9 +116,6 @@ class Settings(BaseSettings):
         default=SecretStr("neo4j"), 
         validation_alias="NEO4J_PASSWORD"
     )
-
-    # --- InMemory Store ---
-    INMEMORY_RETRIEVER_TOP_K: int = 3
 
     # --- Genome Postgres ---
     GENOME_POSTGRES_URL: str = Field(
@@ -162,9 +159,6 @@ class Settings(BaseSettings):
 
     # --- Langchain Docling ---
     DOCLING_ALLOW_EXTERNAL_PLUGINS: str = Field(default="1", validation_alias="DOCLING_ALLOW_EXTERNAL_PLUGINS")
-    
-    # --- HuggingFaceTokenizer for DocumentProcessor ---
-    HUGGING_FACE_TOKENIZER: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", validation_alias="HUGGING_FACE_TOKENIZER")
 
     # --- RustFS ---
     RUSTFS_ENDPOINT_URL: str = Field(
@@ -227,8 +221,8 @@ class Settings(BaseSettings):
     )
 
     # Pipelines
-    INGESTION_BATCH_SIZE: int = 20
-    INGESTION_DELAY_BETWEEN_BATCHES: int = 10
+    INGESTION_BATCH_SIZE: int = 10
+    INGESTION_DELAY_BETWEEN_BATCHES: int = 30
 
     # Graph Nodes
     REPLANNER_MAX_PLANNER_ITERATION: int = 10
@@ -242,7 +236,7 @@ class Settings(BaseSettings):
     TOOLS_MAX_TOOL_OUTPUT_LENGTH: int = 20000
 
     WEB_SEARCH_TIMEOUT_SEC: float = 15.0
-    WEB_SEARCH_MAX_QUERY_LENGTH: int = 150
+    WEB_SEARCH_MAX_QUERY_LENGTH: int = 200
     WEB_SEARCH_NUM_RESULTS: int = 10
     WEB_SEARCH_SCORE_THRESHOLD: float = 0.5
 
@@ -260,6 +254,6 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     """
-    Returns cached Settings singleton. It is a static class, then we can cache
+    Returns cached Settings singleton.
     """
     return Settings()

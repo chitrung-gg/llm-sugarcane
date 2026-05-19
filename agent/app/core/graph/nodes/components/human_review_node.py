@@ -63,14 +63,14 @@ def make_human_review_node():
 
                 return Command(
                     goto=AgentGraphNode.EXECUTOR,
-                    update={"plan": final_steps, "iteration_count": 0}
+                    update={"plan": final_steps}
                 )
 
         # SCENARIO C: User Approved (or default fallback)
         logger.info("Plan approved. Proceeding to EXECUTOR.")
         return Command(
             goto=AgentGraphNode.EXECUTOR,
-            update={"iteration_count": 0}
+            update={}
         )
 
     return human_review

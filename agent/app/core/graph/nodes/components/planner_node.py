@@ -1,19 +1,17 @@
-from typing import Any, Dict, List, Literal, Optional
+from typing import List, Literal
 from loguru import logger
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, HumanMessage
-from langgraph.types import Command, interrupt
-from pydantic import BaseModel, Field
+from langgraph.types import Command
 
 from app.core.prompts.planner_prompts import PLANNER_HUMAN_PROMPT, PLANNER_SYSTEM_PROMPT
 from app.utils.observability.tracing import tracing
-from app.common.constants import ObservationType, PlanStatus, InterruptAction, StreamingTag, UserFeedbackAction
-from app.core.graph.state.planner_state import AgentStepPlan, PlanExecuteState
+from app.common.constants import ObservationType, StreamingTag
+from app.core.graph.state.planner_state import PlanExecuteState
 from app.schemas.agent.planner import PlanOutput
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.services.llm.llm_service import LLMService
-from app.utils.graph.context_utils import get_recent_messages, format_optimized_workspace
+from app.utils.graph.context_utils import format_optimized_context, get_recent_messages
 
-# Notice we now accept `agent_capabilities: List[str]` instead of `available_tools`
 def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
     @tracing(observation_type=ObservationType.CHAIN)
     async def planner(state: PlanExecuteState) -> Command[
@@ -22,28 +20,24 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
         logger.info("🧠 [Planner] Drafting research plan...")
 
         query = state["query"]
+        
         project = state.get("active_project")
         active_datasets = state.get("active_datasets", [])
-        system_datasets = state.get("system_datasets", [])
 
-        # 1. Block A: Workspace Context
-        workspace_context = format_optimized_workspace(project, active_datasets, system_datasets)
-        p_name = project.get("project_name", "Default Project") if project else "Default Project"
-        p_desc = project.get("description", "No description provided.") if project else ""
-
-        # 2. Block B: Dynamic Agent Capabilities (Passed down from graph.py)
+        # 2. Format it into a string
+        active_project_context = format_optimized_context(project, active_datasets)
+ 
+        # Formatting Agent Capabilities
         agent_capabilities_str = "\n".join([f"{i+1}. {cap}" for i, cap in enumerate(agent_capabilities)])
 
-        # 3. Block C: Recent Message History for Coreference Resolution
+        # Formatting Recent Messages
         raw_recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=3)
-
-        # Filter out internal planner thoughts/announcements
         recent_messages = [
             msg for msg in raw_recent_messages 
             if not msg.additional_kwargs.get("is_thought")
         ]
 
-        # Remove the latest message from history to avoid duplication with the HumanMessage(query)
+        # Don't add latest query into recent_messages
         if recent_messages and recent_messages[-1].content == query:
             recent_messages = recent_messages[:-1]
             
@@ -51,12 +45,12 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
             [f"{msg.type.capitalize()}: {msg.content}" for msg in recent_messages]
         ) if recent_messages else "No prior context."
 
+        # Formatting Past Steps
         past_steps = state.get("past_steps", [])
         if past_steps:
             formatted_steps = []
             for s in past_steps:
-                # Safely handle both dicts and Pydantic models
-                step_summary = s.get('summary') if isinstance(s, dict) else getattr(s, 'summary', '')
+                step_summary = s.summary
                 formatted_steps.append(f"- {step_summary}")
             past_steps_str = "\n".join(formatted_steps)
         else:
@@ -64,49 +58,52 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
             
         conv_summary = state.get("summary", "No summary available.")
 
-        # 4. Format System Prompt
+        # 3. Format the Prompt using `active_datasets`
         system_msg = SystemMessage(content=PLANNER_SYSTEM_PROMPT.format(
-            project_name=p_name,
-            project_description=p_desc,
-            datasets=workspace_context,
+            active_project_context=active_project_context,
             agent_capabilities_str=agent_capabilities_str,
             chat_history_str=chat_history_str,
             past_steps_str=past_steps_str, 
             conv_summary=conv_summary            
         ))
 
-        # 5. The Current Task
         task_msg = HumanMessage(content=PLANNER_HUMAN_PROMPT.format(query=f"### NEW REQUEST ###\n{query}"))
-
         messages: List[BaseMessage] = [system_msg] + recent_messages + [task_msg]
 
-        # 6. Execute Model
+        # Execute Model
         llm = llm_service.get_structured_primary_model(PlanOutput).with_config(
             {"tags": [StreamingTag.STREAM_PLANNER]}
         )
+        
         try:
             result: PlanOutput = await llm.ainvoke(messages)
         except Exception as e:
             logger.error(f"[Planner] Failed to generate plan: {e}")
             raise e
         
-        # 7. Route Output
+        # Route Output Based on Direct Responses vs Multi-Step Plans
         if not result.steps:
-            logger.info("[Planner] No steps generated. Routing directly to Summarizer.")
-            final_text = result.direct_response or "I don't think any specific research steps are needed."
+            logger.info("[Planner] No steps generated. Routing directly to Synthesizer.")
+            
+            final_text = result.direct_response or "I reviewed your request, but no specific research steps are needed right now."
+            
             return Command(
                 goto=AgentGraphNode.OUTER_SYNTHESIZER,
-                update={"plan": [], "final_answer": final_text, "messages": [AIMessage(content=final_text)]}
+                update={
+                    "plan": [], 
+                    "final_answer": final_text, 
+                    "messages": [AIMessage(content=final_text)]
+                }
             )
 
+        # Standard Multi-Step Routing
         plan_preview = "\n".join([f"{s.step_id}. {s.description}" for s in result.steps])
         announcement = f"I've drafted a research plan for you:\n\n{plan_preview}\n\nPlease review and approve it to proceed."
         
         return Command(
             goto=AgentGraphNode.HUMAN_REVIEW,
             update={
-                "plan": result.steps, 
-                "iteration_count": 0,
+                "plan": result.steps,
                 "past_steps": [], 
                 "messages": [AIMessage(content=announcement, additional_kwargs={"is_thought": True})]
             }

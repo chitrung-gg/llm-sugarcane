@@ -1,3 +1,4 @@
+import asyncio
 from typing import Literal
 from loguru import logger
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -11,7 +12,7 @@ from app.core.prompts.outer_synthesizer_prompts import OUTER_SYNTHESIZER_SYSTEM_
 from app.services.llm.llm_service import LLMService
 
 def make_outer_synthesizer_node(llm_service: LLMService):
-    async def outer_synthesizer(state: PlanExecuteState) -> Command[Literal[AgentGraphNode.END_NODE]]:
+    async def outer_synthesizer(state: PlanExecuteState) -> Command[Literal[AgentGraphNode.SUMMARIZER]]:
         logger.info("========== [Outer Synthesizer] Writing Terminal Response ==========")
         
         query = state["query"]
@@ -37,16 +38,24 @@ def make_outer_synthesizer_node(llm_service: LLMService):
             HumanMessage(content=query)
         ]
         
-        # 3. Final Invocation
-        result = await llm.ainvoke(messages)
+        # 3. Final Invocation with Error Handling
+        try:
+            # Adding a reasonable timeout to prevent hanging the pipeline
+            result = await llm.ainvoke(messages)
+            final_answer = result.answer
+        except asyncio.TimeoutError:
+            logger.error("[Outer Synthesizer] ❌ LLM generation timed out.")
+            final_answer = "I apologize, but synthesizing the final report took too long and timed out."
+        except Exception as e:
+            logger.error(f"[Outer Synthesizer] ❌ Final Synthesis failed: {e}")
+            final_answer = "I apologize, but I encountered an error while formatting the final answer."
         
-        # 4. Force Termination (No Replanning)
-        # We ignore result.is_complete for routing and always go to END.
+        # 4. Route to Summarizer
         return Command(
-            goto=AgentGraphNode.END_NODE, 
+            goto=AgentGraphNode.SUMMARIZER, 
             update={
-                "final_answer": result.answer,
-                "messages": [AIMessage(content=result.answer)]
+                "final_answer": final_answer,
+                "messages": [AIMessage(content=final_answer)]
             }
         )
         

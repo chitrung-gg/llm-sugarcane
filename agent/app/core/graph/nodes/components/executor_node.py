@@ -49,8 +49,6 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
         inner_state_input = {
             "query": current_step.description,
             "messages": recent_messages + [HumanMessage(content=inner_query)],
-            "iteration_count": 0,
-            "max_iterations": 5,
             "active_project": state.get("active_project"), 
             "active_datasets": state.get("active_datasets", []),
             "system_datasets": state.get("system_datasets", []),
