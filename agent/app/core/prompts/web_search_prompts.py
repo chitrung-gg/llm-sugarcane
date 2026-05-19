@@ -1,9 +1,9 @@
 from langchain_core.prompts import PromptTemplate
 from app.schemas.agent.web_search import OptimizedSearchQuery
 
-# 1. Define examples as Pydantic objects 
-_EX_METABOLIC = OptimizedSearchQuery(
-    search_query="sugarcane Saccharum SP80-3280 metabolic response drought stress research study"
+# 1. Define examples showing the LLM actively targeting trusted sources
+_EX_INCIDENCE = OptimizedSearchQuery(
+    search_query="ScYLV incidence leaf Group A sugarcane data filetype:pdf"
 )
 
 _EX_COMPARATIVE = OptimizedSearchQuery(
@@ -12,15 +12,15 @@ _EX_COMPARATIVE = OptimizedSearchQuery(
 
 _JSON_OPTS = {"indent": 2, "exclude_none": True}
 _FEW_SHOTS = f"""
-<example name="metabolic_research">
-  <conversation_summary>Discussing drought resistance in sugarcane cultivar SP80-3280.</conversation_summary>
-  <user_question>Find more recent papers on its metabolic response.</user_question>
+<example name="incidence_data_lookup">
+  <conversation_summary>User is looking for specific incidence rates.</conversation_summary>
+  <user_question>What is A.SCYlV incidence.leaf for Group A?</user_question>
   <ideal_response>
-{_EX_METABOLIC.model_dump_json(**_JSON_OPTS)}
+{_EX_INCIDENCE.model_dump_json(**_JSON_OPTS)}
   </ideal_response>
 </example>
 
-<example name="comparative_genomics">
+<example name="comparative_genomics_study">
   <conversation_summary>User is researching the R570 genome assembly.</conversation_summary>
   <user_question>Are there any studies comparing it to the sorghum genome?</user_question>
   <ideal_response>
@@ -31,24 +31,23 @@ _FEW_SHOTS = f"""
 
 # 2. The Heuristic-Driven System Prompt
 WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT_STR = """
-You are the Web Search Architect for a Bioinformatics Intelligence System. Your objective is to transform conversational user input into a highly targeted search engine query (for tools like Google Scholar, PubMed, or SearxNG).
+You are the Web Search Architect for a Bioinformatics Intelligence System. Your objective is to generate highly targeted search engine queries that ONLY retrieve trusted, primary source data.
 
 <input_data>
   <conversation_summary>{conversation_summary}</conversation_summary>
   <user_question>{user_question}</user_question>
 </input_data>
 
-### Web Search Optimization Heuristics:
-1. **Domain Anchoring (Avoid Web Noise):** The public web is vast and contains human medical data, pop culture, and generic botany. You MUST anchor every query with explicit domain keywords (e.g., "sugarcane", "Saccharum") so the search engine filters out unrelated organisms.
-2. **Entity Resolution (Context Preservation):** Search engines cannot read our chat history. Replace all ambiguous pronouns (e.g., "this gene", "that paper", "the variety") in the user's question with explicit identifiers from the `<conversation_summary>`.
-3. **Search Engine Dynamics (Keywords over Syntax):** Search engines rely on exact word matching and frequency. Strip all conversational filler ("I would like to know", "What does the literature say about"). Prioritize dense biological nouns, cultivar names, and technical metrics (e.g., "synteny", "polyploidy", "QTL mapping").
-4. **Academic Targeting:** If the user implies finding literature or studies, include functional keywords that surface academic papers (e.g., "research", "study", "analysis", "genomics").
+### Search Optimization Heuristics:
+1. **Target Primary Sources (Trust Anchoring):** You must actively direct the search engine to trusted academic, institutional, and government databases.
+2. **Force Raw Data (Avoid Aggregators):** Search aggregators (like ResearchGate or Semantic Scholar) return useless SEO metadata. To bypass them and get actual research data, append `filetype:pdf` or `filetype:xls` when looking for specific metrics or studies.
+3. **Domain Anchoring:** Always include explicitly biological keywords (e.g., "sugarcane", "Saccharum") to prevent matching general web noise.
+4. **Keyword Density:** Strip all conversational filler ("I would like to know"). Use dense biological nouns, cultivars, and technical metrics.
 
 ### Examples of how to respond:
 {few_shots}
 """
 
-# Schema injection removed; LangChain handles it natively.
 WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT = PromptTemplate(
     template=WEB_SEARCH_QUERY_OPTIMIZATION_PROMPT_STR,
     input_variables=["conversation_summary", "user_question"],

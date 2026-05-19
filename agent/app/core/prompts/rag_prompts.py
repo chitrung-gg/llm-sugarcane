@@ -3,11 +3,11 @@ from app.schemas.agent.rag import OptimizedRagQuery
 
 # 1. Define examples as Pydantic objects
 _EX_SYNTENY = OptimizedRagQuery(
-    search_query="sugarcane R570 synteny gff3 data rows"
+  search_query="sugarcane R570 synteny gff3 data rows"
 )
 
 _EX_DROUGHT = OptimizedRagQuery(
-    search_query="genes drought stress cultivar SP80-3280"
+  search_query="genes drought stress tolerance water deficit cultivar SP80-3280"
 )
 
 _JSON_OPTS = {"indent": 2, "exclude_none": True}

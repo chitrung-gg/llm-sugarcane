@@ -1,6 +1,6 @@
 import uuid
 from langchain_core.prompts import PromptTemplate
-from app.schemas.agent.pruning import PruningOutput
+from app.schemas.agent.input_analyzer import PruningOutput
 
 # 1. Define examples as Pydantic objects
 _EX_RELEVANT_MATCH = PruningOutput(
