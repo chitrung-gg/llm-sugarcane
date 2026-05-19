@@ -11,7 +11,7 @@ class KnowledgeEntity(SQLModel, table=True):
     """Replaces global_markers. Stores universal traits, diseases, and genes."""
     __tablename__: ClassVar[Any] = "knowledge_entities"
     __table_args__ = (
-        UniqueConstraint("name", "owner_id", name="unique_name_per_owner"),
+        UniqueConstraint("name", "entity_type", "owner_id", name="uq_knowledge_entity_name_type_owner"),
     )
     
     global_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

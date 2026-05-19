@@ -1,13 +1,50 @@
+import re
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.common.constants import GraphIngestionAllowedLabels
+
+_ALLOWED_LABELS_STR = ", ".join([f"'{label.value}'" for label in GraphIngestionAllowedLabels])
+PREFERRED_RELATIONSHIP_TYPES = [
+    # Molecular / Genetic
+    "ENCODES",          # Gene -> Protein
+    "REGULATES",        # Gene -> Gene/Trait  
+    "INHIBITS",         # Protein -> Gene/Pathway
+    "ACTIVATES",        # Protein -> Gene/Pathway
+    "INTERACTS_WITH",   # Protein <-> Protein
+    "MAPPED_TO",        # Gene -> Locus/QTL
+
+    # Expression / Location
+    "EXPRESSED_IN",     # Gene -> Tissue
+    "LOCATED_IN",       # Gene -> Tissue/Cultivar
+    "FOUND_IN",         # Entity -> Cultivar/Sample
+    "PRODUCED_BY",      # Metabolite -> Enzyme
+
+    # Disease / Stress
+    "RESISTANT_TO",     # Cultivar -> Disease
+    "SUSCEPTIBLE_TO",   # Cultivar -> Disease
+    "RESPONDS_TO",      # Gene/Cultivar -> Environmental_Stress  
+    "HAS_SYMPTOM",      # Disease -> Trait (plant symptom)       
+    "CAUSED_BY",        # Disease -> Pathogen/Stress 
+
+    # Trait / Phenotype
+    "AFFECTS",          # Gene/Stress -> Trait
+    "CONTRIBUTES_TO",   # Gene -> Trait
+    "CONFERS",          # Gene/Allele -> Resistance/Trait        
+
+    # General
+    "ASSOCIATED_WITH",  # fallback generic
+]
+_PREFERRED_REL_STR = ", ".join([f"'{r}'" 
+for r in PREFERRED_RELATIONSHIP_TYPES])
 
 class KnowledgeGraphNode(BaseModel):
     name: str = Field(
         description="The primary name of the entity."
     )
-    label: str = Field(
-        description="Strictly one of: 'Gene', 'Cultivar', 'Paper', 'Trait', 'Disease', 'Tissue', 'Stress'"
+    label: GraphIngestionAllowedLabels = Field(
+        description=f"Strictly one of: {_ALLOWED_LABELS_STR}"
     )
     description: Optional[str] = Field(
         default=None, 
@@ -23,8 +60,13 @@ class KnowledgeGraphRelationship(BaseModel):
     source_name: str = Field(description="The exact name of the source node.")
     target_name: str = Field(description="The exact name of the target node.")
     type: str = Field(
-        description="The relationship type. MUST be UPPER_SNAKE_CASE (e.g., 'AFFECTS', 'EXPRESSED_IN', 'ASSOCIATED_WITH')."
-    )
+        description=(
+            f"Relationship type in UPPER_SNAKE_CASE. "
+            f"STRONGLY PREFER these established types: {_PREFERRED_REL_STR}. "
+            f"Only invent a NEW type if none of the above accurately captures the relationship. "
+            f"Do NOT create synonyms of existing types (e.g., use 'RESISTANT_TO', not 'SHOWS_RESISTANCE_TO')."
+        )
+      )
     evidence: str = Field(
         description="The exact short snippet of text that proves this relationship exists."
     )
@@ -38,6 +80,15 @@ class KnowledgeGraphRelationship(BaseModel):
                     "0.6-0.8: Strongly implied or secondary information. "
                     "0.0-0.5: Speculative, ambiguous, or unverified claim."
     )
+
+    @field_validator("type")
+    @classmethod
+    def normalize_type(cls, v: str) -> str:
+        normalized = v.strip().upper()
+        normalized = re.sub(r'[\s\-]+', '_', normalized)
+        normalized = re.sub(r'[^A-Z0-9_]', '', normalized)
+        normalized = re.sub(r'_+', '_', normalized).strip('_')
+        return normalized
 
 
 class KnowledgeGraphComponents(BaseModel):

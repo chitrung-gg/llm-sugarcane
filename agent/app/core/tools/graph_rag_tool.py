@@ -1,19 +1,28 @@
 import asyncio
+import re
 from typing import List, Dict, Any
 from langchain_core.tools import tool
 from langchain_neo4j import Neo4jGraph
 from langchain_qdrant import QdrantVectorStore
 from loguru import logger
+from qdrant_client.http import models
 
+from app.core.prompts.knowledge_graph_prompts import GRAPH_PRUNING_PROMPT
+from app.schemas.agent.knowledge_graph import GraphPruningResult
+from app.services.llm.llm_service import LLMService
+from app.schemas.tool.knowledge_graph_schema import KnowledgeGraphInput
+from app.configs.settings.settings import get_settings
 from app.core.tools.registry.registry_tool import register_agent_tool
 
 def make_graph_rag_tool(
     vector_store_solid: QdrantVectorStore,
     vector_store_volatile: QdrantVectorStore,
-    knowledge_graph: Neo4jGraph
+    knowledge_graph: Neo4jGraph,
+    llm_service: LLMService
 ):
     @register_agent_tool
-    @tool("search_knowledge_graph")
+    @tool(args_schema=KnowledgeGraphInput)
+    # Add owner_id to the function signature!
     async def search_knowledge_graph(query: str, top_k: int = 5) -> str:
         """
         Searches the internal knowledge graph for biological entities and relationships.
@@ -21,101 +30,122 @@ def make_graph_rag_tool(
         """
         logger.info(f"Searching Knowledge Graph for: {query}")
         
+        settings = get_settings()
         try:
             # 1. Concurrent Semantic Search on BOTH Qdrant collections
-            solid_task = vector_store_solid.asimilarity_search_with_score(query, k=top_k)
-            volatile_task = vector_store_volatile.asimilarity_search_with_score(query, k=top_k)
+            
+            solid_task = vector_store_solid.asimilarity_search_with_score(
+                query, 
+                k=top_k
+            )
+            volatile_task = vector_store_volatile.asimilarity_search_with_score(
+                query, 
+                k=top_k
+            )
             
             solid_results, volatile_results = await asyncio.gather(solid_task, volatile_task)
 
-            # Combine, tag, and sort by Hybrid score (No hardcoded thresholds!)
+            # Combine, tag, and sort by Hybrid score
             combined_results = []
             for doc, score in solid_results:
                 combined_results.append((doc, score, "SOLID"))
             for doc, score in volatile_results:
                 combined_results.append((doc, score, "VOLATILE"))
                 
-            # Sort descending by score and slice the top_k absolute best matches
             combined_results.sort(key=lambda x: x[1], reverse=True)
             top_results = combined_results[:top_k]
 
-            # Extract unique global_ids, prioritizing the solid database
+            # Extract the Natural Keys instead of global_id
             entity_ids = set()
-            fallback_docs = []
+            file_ids = set()
 
             for doc, score, tier in top_results:
-                if "global_id" in doc.metadata:
-                    entity_ids.add(doc.metadata["global_id"])
+                if score < settings.KNOWLEDGE_GRAPH_SCORE_THRESHOLD:
+                    logger.debug(f"[GraphRAG] Dropping chunk {tier} due to low score: {score:.2f}")
+                    continue
                 
-                # Extract and clean filename if available
-                source_info = ""
-                raw_filename = doc.metadata.get("original_filename") or doc.metadata.get("source_filename") or doc.metadata.get("source")
-                if raw_filename:
-                    import re
-                    clean_filename = re.sub(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_', '', str(raw_filename))
-                    source_info = f" | File: {clean_filename}"
+                # Collect the specific files Qdrant found
+                if "file_id" in doc.metadata:
+                    file_ids.add(doc.metadata["file_id"])
 
-                fallback_docs.append(f"[{tier}{source_info} | Score: {score:.2f}] {doc.page_content}")
-                logger.debug(f"[GraphRAG] Kept entity from {tier} with score {score:.2f}")
+                # Unpack the "Label::Name" array we created during ingestion
+                e_ids = doc.metadata.get("entity_ids", [])
+                for eid in e_ids:
+                    entity_ids.add(eid)
 
-            if not entity_ids:
-                return "Found no relevant starting entities in the vector stores to query the Knowledge Graph."
+            if not entity_ids or not file_ids:
+                return ""
 
-            # 2. Graph Retrieval from Neo4j (With Trust Filtering)
-            # COALESCE(property, default_value) returns the property if it exists, otherwise the default.
-            # We assume legacy data (pre-update) was curated/safe, so we default confidence to 1.0.
-            # We filter out edges with < 0.4 confidence to protect the LLM from hallucinations
+            # 2. Graph Retrieval from Neo4j (Dynamically filtering by Natural Keys & File ID)
             cypher_query = """
-                MATCH (e)-[r1]-(n1)
-                WHERE e.global_id IN $entity_ids
-                  AND COALESCE(r1.confidence, 1.0) >= 0.4
+                MATCH (e)
+                WHERE e.id IN $entity_ids
                   
-                OPTIONAL MATCH (n1)-[r2]-(n2)
-                WHERE COALESCE(r2.confidence, 1.0) >= 0.4
+                // Traverse 1 to 2 hops
+                MATCH p = (e)-[r*1..2]-(connected)
                 
-                RETURN e.name AS e_name, 
-                       type(r1) AS r1_type, 
-                       COALESCE(r1.confidence, 1.0) AS r1_conf, 
-                       COALESCE(r1.source_tier, 'curated') AS r1_tier,
-                       n1.name AS n1_name, 
-                       type(r2) AS r2_type, 
-                       COALESCE(r2.confidence, 1.0) AS r2_conf, 
-                       COALESCE(r2.source_tier, 'curated') AS r2_tier,
-                       n2.name AS n2_name
-                LIMIT 50
+                // Strict Scoping: Only grab Edges in allowed files
+                WHERE ALL(rel IN relationships(p) WHERE rel.source_file_id IN $file_ids)
+                  AND ALL(rel IN relationships(p) WHERE COALESCE(rel.confidence, 1.0) >= 0.7)
+                  
+                RETURN [n IN nodes(p) | n.name] AS nodes, 
+                       [rel IN relationships(p) | type(rel)] AS rels,
+                       [rel IN relationships(p) | COALESCE(rel.confidence, 1.0)] AS confs
+                LIMIT 15
             """
 
-            # Execute query using the collected UUIDs
-            records = knowledge_graph.query(cypher_query, params={"entity_ids": list(entity_ids)})
+            # Execute query using the Natural Keys
+            records = knowledge_graph.query(
+                cypher_query, 
+                params={
+                    "entity_ids": list(entity_ids),
+                    "file_ids": list(file_ids)
+                }
+            )
                 
             subgraph = []
             for record in records:
-                # Parse Node 1 to Node 2
-                e_name = record.get("e_name", "Unknown")
-                rel1_type = record.get("r1_type", "RELATED_TO")
-                n1_name = record.get("n1_name", "Unknown")
+                nodes = record["nodes"]
+                rels = record["rels"]
+                confs = record["confs"]
                 
-                # Format the edge with its provenance tags so the LLM knows how much to trust it!
-                r1_conf = record.get("r1_conf") or 1.0
-                r1_tier = record.get("r1_tier") or "curated"
-                subgraph.append(f"({e_name}) -[{rel1_type} | Conf:{r1_conf} | Tier:{r1_tier}]-> ({n1_name})")
-                
-                # Parse Node 2 to Node 3 (if it exists)
-                if record.get("r2_type") and record.get("n2_name"):
-                    rel2_type = record.get("r2_type")
-                    n2_name = record.get("n2_name", "Unknown")
-                    r2_conf = record.get("r2_conf") or 1.0
-                    r2_tier = record.get("r2_tier") or "curated"
-                    subgraph.append(f"({n1_name}) -[{rel2_type} | Conf:{r2_conf} | Tier:{r2_tier}]-> ({n2_name})")
+                # Reconstruct string: (A) -[CAUSES | Conf:0.9]-> (B)
+                path_str = f"({nodes[0]})"
+                for i, rel in enumerate(rels):
+                    path_str += f" -[{rel} | Conf:{confs[i]}]-> ({nodes[i+1]})"
+                subgraph.append(path_str)
 
             # 3. Format result
             if not subgraph:
-                # If Neo4j has no edges, fall back to returning the raw Qdrant chunks
-                logger.debug("[GraphRAG Tool] Found entities but no edges. Falling back to vector chunks.")
-                return "Found entities but no graph relationships. Raw context:\n" + "\n---\n".join(fallback_docs[:top_k])
+                logger.debug("[GraphRAG Tool] Found entities but no edges inside target files. Returning empty.")
+                return ""
                 
-            # Deduplicate
             unique_edges = list(set(subgraph))
+
+            if len(unique_edges) > 3:
+                logger.debug(f"[GraphRAG] Pruning {len(unique_edges)} raw graph paths via LLM...")
+                
+                raw_paths_str = "\n".join(unique_edges)
+                
+                pruner_llm = llm_service.get_structured_tertiary_model(GraphPruningResult)
+                
+                prune_messages = GRAPH_PRUNING_PROMPT.format(
+                    user_query=query,
+                    raw_paths=raw_paths_str
+                )
+                
+                try:
+                    pruned_result: GraphPruningResult = await pruner_llm.ainvoke(prune_messages)
+                    unique_edges = pruned_result.relevant_paths
+                    logger.debug(f"[GraphRAG] Pruned down to {len(unique_edges)} highly relevant paths.")
+                except Exception as e:
+                    logger.warning(f"[GraphRAG] Pruning LLM failed, using raw edges. Error: {e}")
+
+            # 3. Format result
+            if not unique_edges:
+                logger.debug("[GraphRAG] All edges were pruned as irrelevant. Falling back to vector chunks.")
+                return ""
+                
             formatted_context = "Knowledge Graph Context:\n" + "\n".join(unique_edges)
             return formatted_context
 

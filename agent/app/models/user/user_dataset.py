@@ -32,7 +32,7 @@ class UserDataset(SQLModel, table=True):
     is_public: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=datetime.now)
 
-    # 🌟 SQLAlchemy Relationships
+    # SQLAlchemy Relationships
     project: Optional["UserProject"] = Relationship(back_populates="datasets")
     files: List["UserDatasetFile"] = Relationship(
         back_populates="dataset", 
