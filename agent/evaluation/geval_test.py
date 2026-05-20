@@ -63,7 +63,7 @@ async def run_geval_evaluations(dataset_path: str):
         agent_service = container.agent_service
 
         # --- Instantiate Judges ---
-        task_judge = GoogleGeminiJudge(model_name=settings.GEMINI_PRIMARY_MODEL)
+        task_judge = GoogleGeminiJudge(model_name=settings.GEMINI_SECONDARY_MODEL)
         efficiency_judge = GoogleGeminiJudge(model_name=settings.GEMINI_TERTIARY_MODEL)
 
         # --- Define GEval Metrics ---
@@ -78,8 +78,9 @@ async def run_geval_evaluations(dataset_path: str):
                 "Score 1.0 for a perfect, logical, sequential scientific research plan."
             ],
             evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+            threshold=0.5,
             model=task_judge,
-            threshold=0.7
+            async_mode=False
         )
 
         step_efficiency_geval = GEval(
@@ -91,8 +92,9 @@ async def run_geval_evaluations(dataset_path: str):
                 "Penalize if the agent got stuck in a loop or used a long sequence of tools when a single tool would have sufficed."
             ],
             evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+            threshold=0.5,
             model=efficiency_judge,
-            threshold=0.7
+            async_mode=False
         )
 
         plan_adherence_geval = GEval(
@@ -105,8 +107,9 @@ async def run_geval_evaluations(dataset_path: str):
                 "Score 1.0 if the executed tools perfectly align with the intended plan."
             ],
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            threshold=0.5,
             model=efficiency_judge,
-            threshold=0.7
+            async_mode=False
         )
 
         coherence_geval = GEval(
@@ -119,8 +122,9 @@ async def run_geval_evaluations(dataset_path: str):
                 "Penalize disjointed sentences or abrupt topic changes."
             ],
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            threshold=0.5,
             model=efficiency_judge,
-            threshold=0.7
+            async_mode=False
         )
 
         tonality_geval = GEval(
@@ -133,8 +137,9 @@ async def run_geval_evaluations(dataset_path: str):
                 "Reward clear, objective, and academic communication styles."
             ],
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            threshold=0.5,
             model=efficiency_judge,
-            threshold=0.7
+            async_mode=False
         )
 
         metrics: List[BaseMetric] = [
@@ -177,8 +182,7 @@ async def run_geval_evaluations(dataset_path: str):
             initial_state = {
                 "query": query,
                 "messages": [HumanMessage(content=query)],
-                "active_datasets": [],
-                "iteration_count": 0,
+                "active_datasets": []
             }
             
             # 1. Run until it hits the Human Approval breakpoint

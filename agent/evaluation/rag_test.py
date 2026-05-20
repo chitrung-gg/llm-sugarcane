@@ -63,31 +63,31 @@ async def run_rag_evaluations(dataset_path: str):
             FaithfulnessMetric(
                 threshold=0.5,
                 model=faithfulness_judge,
-                verbose_mode=True,
+                # verbose_mode=True,
                 async_mode=False            # Reduce LLM call simultaneously
             ),
             AnswerRelevancyMetric(
                 threshold=0.5,
                 model=answer_rel_judge,
-                verbose_mode=True,
+                # verbose_mode=True,
                 async_mode=False
             ),
             ContextualRelevancyMetric(
                 threshold=0.5,
                 model=context_rel_judge,
-                verbose_mode=True,
+                # verbose_mode=True,
                 async_mode=False
             ),
             ContextualPrecisionMetric(
                 threshold=0.5,
                 model=context_precision_judge,
-                verbose_mode=True,
+                # verbose_mode=True,
                 async_mode=False
             ),
             ContextualRecallMetric(
                 threshold=0.5,
                 model=context_recall_judge,
-                verbose_mode=True,
+                # verbose_mode=True,
                 async_mode=False
             ),
         ]
@@ -135,8 +135,7 @@ async def run_rag_evaluations(dataset_path: str):
             initial_state = {
                 "query": query,
                 "messages": [HumanMessage(content=query)],
-                "active_datasets": [],
-                "iteration_count": 0,
+                "active_datasets": []
             }
             logger.info(f"Test case: '{query}' -> Starting initial graph run...")
 

@@ -154,8 +154,7 @@ async def run_agentic_evaluations(dataset_path: str):
             initial_state = {
                 "query": query,
                 "messages": [HumanMessage(content=query)],
-                "active_datasets": [],
-                "iteration_count": 0,
+                "active_datasets": []
             }
 
             # 1. Run until it hits the Human Approval breakpoint

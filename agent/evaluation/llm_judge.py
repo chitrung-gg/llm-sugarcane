@@ -1,17 +1,50 @@
 import re
-from typing import Any, Optional, Type
+from typing import Any, List, Optional, Type
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.runnables import Runnable
 from loguru import logger
-from deepeval.models.base_model import DeepEvalBaseLLM
+from deepeval.models.base_model import DeepEvalBaseEmbeddingModel, DeepEvalBaseLLM
 from google.api_core import exceptions as google_exceptions
 from pydantic import BaseModel
 
 
 from app.configs.settings.settings import get_settings
 
+class DeepEvalEmbedderWrapper(DeepEvalBaseEmbeddingModel):
+    def __init__(self):
+        settings = get_settings()
+        api_key = settings.SECONDARY_GOOGLE_API_KEY if settings.SECONDARY_GOOGLE_API_KEY else None
 
+        _model_name = settings.GEMINI_EMBEDDING_MODEL
+
+        if not api_key:
+            raise ValueError("No Google API Keys found! Please set EMBEDDING_GOOGLE_API_KEY in .env.")
+
+        self.model_name = _model_name        
+        self._embeddings = GoogleGenerativeAIEmbeddings(
+            model=_model_name,
+            api_key=api_key
+        )
+
+    def load_model(self) -> Any:
+        return self._embeddings
+
+    def get_model_name(self):
+        return self.model_name
+
+    def embed_text(self, text: str) -> List[float]:
+        return self._embeddings.embed_query(text)
+
+    def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        return self._embeddings.embed_documents(texts)
+
+    async def a_embed_text(self, text: str) -> List[float]:
+        return await self._embeddings.aembed_query(text)
+
+    async def a_embed_texts(self, texts: List[str]) -> List[List[float]]:
+        return await self._embeddings.aembed_documents(texts)
+    
 class GoogleGeminiJudge(DeepEvalBaseLLM):
     def __init__(self, model_name: str):
         settings = get_settings()
