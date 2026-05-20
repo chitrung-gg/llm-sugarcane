@@ -61,7 +61,7 @@ class StorageService:
         """
         Generates a pre-signed URL for a specific S3 object.
         """
-        bucket, key = self._parse_s3_uri(s3_uri)
+        bucket, key = await self._parse_s3_uri(s3_uri)
         async with self._get_client() as s3_client:
             return await s3_client.generate_presigned_url(
                 ClientMethod="get_object",
@@ -73,7 +73,7 @@ class StorageService:
         """
         Downloads a file from S3 to a local destination.
         """
-        bucket, key = self._parse_s3_uri(s3_uri)
+        bucket, key = await self._parse_s3_uri(s3_uri)
         
         async with self._get_client() as s3_client:
             logger.info(f"Downloading {s3_uri} to {local_path}")
@@ -86,12 +86,12 @@ class StorageService:
 
     async def delete_file(self, s3_uri: str):
         """Deletes an object from S3."""
-        bucket, key = self._parse_s3_uri(s3_uri)
+        bucket, key = await self._parse_s3_uri(s3_uri)
         async with self._get_client() as s3_client:
             await s3_client.delete_object(Bucket=bucket, Key=key)
             logger.info(f"Deleted {s3_uri} from storage.")
 
-    def _parse_s3_uri(self, s3_uri: str) -> tuple[str, str]:
+    async def _parse_s3_uri(self, s3_uri: str) -> tuple[str, str]:
         """Parses an s3://bucket/key URI into (bucket, key)."""
         if not s3_uri.startswith("s3://"):
             raise ValueError(f"Invalid S3 URI: {s3_uri}")

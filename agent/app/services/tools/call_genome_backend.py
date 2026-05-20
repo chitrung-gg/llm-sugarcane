@@ -6,7 +6,6 @@ from app.configs.settings.settings import get_settings
 
 TIMEOUT = 60
 
-# Raise Error instead of return an error dict, to handle at @tool_node
 async def call_genome_backend(method: str, endpoint: str, params=None, json_data=None) -> dict:
     settings = get_settings()
 

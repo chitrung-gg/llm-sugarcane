@@ -21,6 +21,7 @@ import json
 
 from pydantic import BaseModel
 
+from app.core.graph.state.agent_state import AgentProject
 from app.utils.files.files_classifier import is_genomic_file
 from app.utils.observability.tracing import tracing
 from app.services.workspace.workspace_service import WorkspaceService
@@ -164,7 +165,6 @@ class AgentService:
                         "messages": messages_to_add,      
                         "active_project_name": active_project_name,
                         "active_datasets": active_datasets,
-                        "iteration_count": 0,
                         "execution_id": execution_id,
                         "start_time": time.time(),
                         "plan": [],          # Overwrite historical plan
@@ -307,18 +307,19 @@ class AgentService:
                 event=StreamEventType.THOUGHT, 
                 data={
                     'node': 'system', 
-                    'content': '🧠 Analyzing your request...' if resume_payload else '🧠 Analyzing your biological research query...'
+                    'content': '🧠 Analyzing your request...' if resume_payload else '🧠 Analyzing your new biological research query...'
                 }
             )
             yield f"data: {initial_chunk.model_dump_json()}\n\n"
 
             state = await self.graph.aget_state(config)
 
-            # 4. Handle the Routing (We already fetched the state, so use it!)
+            # 4. Handle the Routing
             if state.next:
                 logger.info(f'Thread {thread_id} is suspended at {state.next}.')
                 
                 if resume_payload:
+                    # If user edit the plan and submit it, continue
                     logger.info(f"Resuming graph with payload: {resume_payload}")
                     input_state = Command(resume=resume_payload)
                 elif query:
@@ -336,7 +337,10 @@ class AgentService:
             
             else:
                 logger.info(f'Thread {thread_id} has no active suspension. Starting fresh.')
-                active_project = None
+                active_project: AgentProject | None = None
+                project_dataset_ids = []
+
+                # 1. Fetch Project Data & Project Dataset IDs
                 if project_id:
                     project_db = await self.workspace_service.get_project(project_id)
                     if project_db:
@@ -346,81 +350,56 @@ class AgentService:
                             "description": project_db.description,
                             "metadata": project_db.dataset_metadata
                         }
+                        project_dataset_ids = await self.workspace_service.get_project_dataset_ids(project_id)
+                else:
+                    # raise ValueError("Should we block chat if not in any project ?")
+                    pass
 
-                # 1. Fetch public dataset IDs (always included in system_datasets)
-                public_ids = await self.workspace_service.get_public_dataset_ids()
-                
-                # 2. Determine user/project dataset IDs (active_datasets)
-                selected_ids = dataset_ids or []
-                project_ids = []
-                if not selected_ids and project_id:
-                    project_ids = await self.workspace_service.get_project_dataset_ids(project_id)
-                
-                active_dataset_ids = list(set(selected_ids + project_ids))
-                
-                # Fetch all relevant datasets
-                all_ids = list(set(public_ids + active_dataset_ids))
+                # 2. Consolidate and Deduplicate Dataset IDs
+                query_dataset_ids = list(set((dataset_ids or []) + project_dataset_ids))
                 active_datasets = []
-                system_datasets = []
-                
-                if all_ids:
-                    datasets_db = await self.workspace_service.get_datasets_by_ids(all_ids)
+
+                # 3. Fetch Datasets and Categorize Files
+                if query_dataset_ids:
+                    datasets_db = await self.workspace_service.get_datasets_by_ids(query_dataset_ids)
                     
                     for ds in datasets_db:
                         genomic_files = []
                         knowledge_files = []
                         
                         for f in ds.files:
-                            # Categorize the file so the LLM knows what to do with it
                             is_genomic = is_genomic_file(f.file_name)
-                            
-                            # Filter genomic files for system datasets
-                            if ds.is_public and is_genomic and not getattr(f, "is_public", False):
-                                continue
 
                             agent_file = {
                                 "id": str(f.id),
                                 "file_name": f.file_name,
                                 "file_category": "GENOMIC" if is_genomic else "KNOWLEDGE",
-                                "file_type": str(f.file_type),
-                                "rustfs_uri": f.rustfs_uri,
-                                "local_content": None
+                                "rustfs_uri": f.rustfs_uri
                             }
                             
-                            if is_genomic:
-                                genomic_files.append(agent_file)
-                            else:
-                                knowledge_files.append(agent_file)
+                            (genomic_files if is_genomic else knowledge_files).append(agent_file)
                         
-                        agent_ds = {
+                        # Everything just goes into ONE list
+                        active_datasets.append({
                             "dataset_id": str(ds.id),
                             "dataset_name": ds.name,
-                            "source": "SYSTEM_LIBRARY" if ds.is_public else "USER_WORKSPACE",
+                            "source": "SYSTEM_LIBRARY" if ds.is_public else "USER_WORKSPACE", 
                             "genomic_files": genomic_files,
                             "knowledge_files": knowledge_files
-                        }
-                        
-                        if ds.is_public:
-                            system_datasets.append(agent_ds)
-                        
-                        elif str(ds.id) in [str(aid) for aid in active_dataset_ids]:
-                            active_datasets.append(agent_ds)
+                        })
 
                 # Build initial state
                 input_state = {
                     "query": query,
                     "messages": [HumanMessage(content=query)],
-                    "iteration_count": 0,
                     "execution_id": execution_id,
                     "start_time": time.time(),
                     # "plan": [],            
                     # "past_steps": [],      
                     "final_answer": "",
                     "active_project": active_project, 
-                    "active_datasets": active_datasets,
-                    "system_datasets": system_datasets
+                    "active_datasets": active_datasets
                 }
-
 
                 # Trigger title generation if it doesn't exist yet
                 async with langgraph_connection_pool.connection() as conn:
@@ -428,12 +407,14 @@ class AgentService:
                     row = await cursor.fetchone()
                     if row and not row["title"]:
                         asyncio.create_task(self._generate_and_update_title(thread_id, query))
+
             # Filter for specific nodes we want to stream thoughts from
             REASONING_NODES = {
                 AgentGraphNode.PLANNER, 
                 AgentGraphNode.EXECUTOR, 
                 AgentGraphNode.ROUTER, 
                 AgentGraphNode.INNER_SYNTHESIZER,
+                AgentGraphNode.OUTER_SYNTHESIZER,
                 AgentGraphNode.INPUT_ANALYZER,
                 AgentGraphNode.RAG
             }
@@ -444,7 +425,8 @@ class AgentService:
                 AgentGraphNode.ROUTER: "🧭 Determining execution pathway...",
                 AgentGraphNode.EXECUTOR: "⚙️ Executing bioinformatics tools...",
                 AgentGraphNode.RAG: "🔎 Searching genomic vector databases...",
-                AgentGraphNode.INNER_SYNTHESIZER: "✍️ Synthesizing final response..."
+                AgentGraphNode.INNER_SYNTHESIZER: "✍️ Aggregating data...",
+                AgentGraphNode.OUTER_SYNTHESIZER: "✍️ Synthesizing final response..."
             }
 
             async def _yield_interrupt_payload(status_flag: dict):
@@ -480,6 +462,7 @@ class AgentService:
                     status_flag["interrupted"] = True
                     return 
                 
+                # Fallback if no data payload sent and the graph is still paused
                 if state.next:
                     empty_interrupt_chunk = StreamChunk(
                         event=StreamEventType.INTERRUPT, 
@@ -501,34 +484,15 @@ class AgentService:
                     async for event in self.graph.astream_events(input_state, config, version="v2"):
                         kind = event["event"]
                         name = event["name"]
-                        tags = event.get("tags", [])
+                        tags = event.get("tags", [])        
+                        data = event.get("data", {})
 
                         if kind == EventKind.CHAT_MODEL_STREAM and any(t in tags for t in [StreamingTag.STREAM_PLANNER, StreamingTag.STREAM_SYNTHESIZER]):
                             data = event.get("data", {})
                             chunk = data.get("chunk")
 
-                            # 1. Use the most specific check first to satisfy Pylance & Logic
                             if isinstance(chunk, AIMessageChunk):
-                                chunk_text = ""
-
-                                # 1. Handle Content (Standard Text or Block List)
-                                if chunk.content:
-                                    if isinstance(chunk.content, str):
-                                        chunk_text = chunk.content
-                                    elif isinstance(chunk.content, list):
-                                        # Extract text from the list of blocks seen in your logs
-                                        for block in chunk.content:
-                                            if isinstance(block, dict) and block.get("type") == "text":
-                                                chunk_text += block.get("text", "")
-                                            elif isinstance(block, str):
-                                                chunk_text += block
-                                
-                                # CASE B: Handle Tool Calls (JSON fragments for Structured Output)
-                                # We append (+=) here so if a chunk has both text and tool calls, we catch both
-                                if chunk.tool_call_chunks:
-                                    for tc_chunk in chunk.tool_call_chunks:
-                                        if args := tc_chunk.get("args"):
-                                            chunk_text += args
+                                chunk_text = await self._extract_chunk_text(chunk)
 
                                 # 2. Yield the result if we captured any text
                                 if chunk_text:
@@ -539,49 +503,33 @@ class AgentService:
                                     yield f"data: {token_chunk.model_dump_json()}\n\n"
 
                         # 0. Show progress as we enter nodes
-                        if kind == EventKind.CHAIN_START and name in REASONING_NODES:
-                            try:
-                                node_key = AgentGraphNode(name)
-                                message = NODE_MESSAGES.get(node_key, f"Running {name}...")
-                            except ValueError:
-                                message = f"Running {name}..."
+                        elif name in REASONING_NODES:
+                            # 2A. Node Started
+                            if kind == EventKind.CHAIN_START:
+                                try:
+                                    msg = NODE_MESSAGES.get(AgentGraphNode(name), f"Running {name}...")
+                                except ValueError:
+                                    msg = f"Running {name}..."
 
-                            chunk = StreamChunk(
-                                event=StreamEventType.THOUGHT, 
-                                data={
-                                    'node': name, 
-                                    'content': message
-                                }
-                            )
-                            yield f"data: {chunk.model_dump_json()}\n\n"
+                                chunk = StreamChunk(
+                                    event=StreamEventType.THOUGHT, 
+                                    data={
+                                        'node': name, 
+                                        'content': msg
+                                    }
+                                )
+                                yield f"data: {chunk.model_dump_json()}\n\n"
 
-                        # 1. Thoughts & Node Transitions
-                        if kind == EventKind.CHAIN_END and name in REASONING_NODES:
-                            output = event["data"].get("output")
-                            if output:
-                                content = None
-
-                                # Case A: It's a LangGraph Command object
-                                if hasattr(output, "update") and isinstance(output.update, dict):
-                                    content = (
-                                        output.update.get("final_answer") or 
-                                        (output.update.get("messages", [{}])[-1].content if output.update.get("messages") else None)
-                                    )
-
-                                # Case B: It's a standard dictionary
-                                elif isinstance(output, dict):
-                                    content = output.get("final_answer") or output.get("content")
-
-                                # Case C: It's a LangChain Message object
-                                elif hasattr(output, "content"):
-                                    content = output.content
-
-                                if content:
+                            # 2B. Thoughts & Node Transitions
+                            elif kind == EventKind.CHAIN_END:
+                                output_text = await self._extract_node_output(data.get("output"))
+                                
+                                if output_text:
                                     chunk = StreamChunk(
                                         event=StreamEventType.THOUGHT, 
                                         data={
                                             'node': name, 
-                                            'content': str(content)
+                                            'content': str(output_text)
                                         }
                                     )
                                     yield f"data: {chunk.model_dump_json()}\n\n"
@@ -671,16 +619,15 @@ class AgentService:
                     )
                     yield f"data: {chunk.model_dump_json()}\n\n"
 
-            except GraphInterrupt as e:
-                # Catch actual LangGraph suspensions cleanly!
-                logger.info(f"Graph suspended natively. Yielding interrupt payload.")
+            # except GraphInterrupt as e:
+            #     # Catch actual LangGraph suspensions cleanly!
+            #     logger.info(f"Graph suspended natively. Yielding interrupt payload.")
                 
-                exc_status = {"interrupted": False}
-                async for chunk in _yield_interrupt_payload(exc_status):
-                    yield chunk
+            #     exc_status = {"interrupted": False}
+            #     async for chunk in _yield_interrupt_payload(exc_status):
+            #         yield chunk
                     
             except Exception as e:
-                # Catch REAL errors (e.g., API keys missing, DB connection dropped, etc.)
                 logger.error(f"Streaming Error: {e}")
                 chunk = StreamChunk(event=StreamEventType.ERROR, data=str(e))
                 yield f"data: {chunk.model_dump_json()}\n\n"
@@ -787,3 +734,59 @@ class AgentService:
                 unique_sources[file_name].highest_score = max(current_max, score)
                 
         return list(unique_sources.values())
+
+    async def _extract_chunk_text(self, chunk: AIMessageChunk) -> str:
+        """Safely extracts text and tool arguments from diverse LLM chunk formats."""
+        text_parts = []
+        
+        # 1. Handle Standard Content (String or List of Blocks)
+        if isinstance(chunk.content, str):
+            text_parts.append(chunk.content)
+        elif isinstance(chunk.content, list):
+            for block in chunk.content:
+                if isinstance(block, str):
+                    text_parts.append(block)
+                elif isinstance(block, dict) and block.get("type") == "text":
+                    text_parts.append(block.get("text", ""))
+                    
+        # 2. Handle Tool Call Arguments (JSON Streaming)
+        if chunk.tool_call_chunks:
+            for tc_chunk in chunk.tool_call_chunks:
+                if args := tc_chunk.get("args"):
+                    text_parts.append(args)
+                    
+        # Join all parts efficiently
+        return "".join(text_parts)
+    async def _extract_node_output(self, output: Any) -> Optional[str]:
+        """
+        Safely extracts text content using strict nominal typing. 
+        """
+        if not output:
+            return None
+        
+        # Case A: Strictly a LangGraph Command
+        # The IDE now knows 'output' is a Command. If LangGraph removes '.update', 
+        # your IDE will immediately flag this line with an error.
+        if isinstance(output, Command):
+            if output.update and isinstance(output.update, dict):
+                if ans := output.update.get("final_answer"):
+                    return str(ans)
+                
+                # Type-safe check for nested messages
+                if msgs := output.update.get("messages"):
+                    if isinstance(msgs, list) and len(msgs) > 0:
+                        last_msg = msgs[-1]
+                        # Ensure the nested item is actually a BaseMessage
+                        if isinstance(last_msg, BaseMessage):
+                            return str(last_msg.content)
+                            
+        # Case B: Standard Dictionary
+        elif isinstance(output, dict):
+            return str(output.get("final_answer") or output.get("content") or "")
+            
+        # Case C: Strictly a LangChain Message (AIMessage, HumanMessage, ToolMessage)
+        # The IDE now guarantees that '.content' must exist on this object.
+        elif isinstance(output, BaseMessage):
+            return str(output.content)
+            
+        return None

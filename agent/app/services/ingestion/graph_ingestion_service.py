@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Any, cast
 from langchain_neo4j import Neo4jGraph
 from loguru import logger
 
+from app.utils.graph.context_utils import generate_entity_uuid
 from app.configs.settings.settings import get_settings
 from app.core.prompts.graph_ingestion_prompts import EXTRACTION_PROMPT
 from app.core.tools.registry.ingestion_config_tool import IngestionConfig
@@ -43,9 +44,7 @@ class GraphIngestionService:
         self,
         source_texts: List[str], 
         source_metadata: Optional[Dict[str, Any]] = None,
-        project_name: Optional[str] = None,
-        owner_id: uuid.UUID = SYSTEM_OWNER_ID,
-        is_public: Optional[bool] = None
+        owner_id: uuid.UUID = SYSTEM_OWNER_ID
     ):
         source_meta = source_metadata or {}
         tool_name = source_meta.get("tool", "unknown")
@@ -60,11 +59,8 @@ class GraphIngestionService:
                     vector_store_type=VectorStoreType.SOLID if is_system else VectorStoreType.VOLATILE, 
                     source_type_label=IngestionSourceType.SYSTEM_CURATED_DOCUMENT if is_system else IngestionSourceType.USER_PRIVATE_DOCUMENT,
                     ingestion_confidence_tier=IngestionConfidenceTier.INFERRED, 
-                    skip_relevance_check=True,
-                    is_public=is_system 
+                    skip_relevance_check=True
                 )
-            
-            final_is_public = is_public if is_public is not None else tool_config.is_public
 
             # 2. Fast-fail & Deduplicate
             seen_hashes = set()
@@ -108,9 +104,7 @@ class GraphIngestionService:
                 valid_chunks=valid_chunks,
                 tool_config=tool_config,
                 source_meta=source_meta,
-                owner_id=owner_id,
-                final_is_public=final_is_public,
-                project_name=project_name
+                owner_id=owner_id
             )
         except Exception as e:
             logger.error(f"Graph ingestion batch failed: {e}")
@@ -121,12 +115,10 @@ class GraphIngestionService:
         valid_chunks: List[Dict[str, Any]],
         tool_config: IngestionConfig,
         source_meta: Dict[str, Any],
-        owner_id: uuid.UUID,
-        final_is_public: bool,
-        project_name: Optional[str] = None
+        owner_id: uuid.UUID
     ):
-        tool_name = source_meta.get("tool", "unknown")
         file_id_str = source_meta.get("file_id")
+        dataset_id_str = source_meta.get("dataset_id")
 
         # 1. Route to the Correct Vector Store
         target_vector_store = None
@@ -137,230 +129,108 @@ class GraphIngestionService:
         
         if not target_vector_store:
             raise ValueError(f"The vector store type '{tool_config.vector_store_type}' has not been configured.")
-
-        # PHASE A: PostgreSQL Entity Upserts
-        unique_nodes_registry = {}          # Key: (name, label) -> Value: {"node": ..., "confidence": ...}
         
-        # Pre-calculate relationships to inject into Qdrant summarie
-        for chunk in valid_chunks:
-            res: KnowledgeGraphComponents = chunk["components"]
-            for node in res.nodes:
-                if node.label not in self.allowed_labels:
-                    continue
-                
-                dedup_key = (node.name, node.label)
-                # Keep the highest confidence score for the entity
-                if dedup_key not in unique_nodes_registry or res.overall_confidence > unique_nodes_registry[dedup_key]["confidence"]:
-                    unique_nodes_registry[dedup_key] = {
-                        "node": node,
-                        "confidence": res.overall_confidence
-                    }
-        
-        node_db_map = {} # (name, label) -> global_id (uuid)
-
-        if unique_nodes_registry:
-            logger.info(f"Saving {len(unique_nodes_registry)} unique entities to PostgreSQL via bulk execution...")
-            
-            # Prepare arrays for bulk operation
-            names, types, owners, publics, metas, temp_ids = [], [], [], [], [], []
-            keys_in_order = []
-
-            for dedup_key, meta_data in unique_nodes_registry.items():
-                node = meta_data["node"]
-                keys_in_order.append(dedup_key)
-                temp_ids.append(uuid.uuid4())
-                names.append(node.name)
-                types.append(node.label)
-                owners.append(str(owner_id))
-                publics.append(final_is_public)
-                metas.append(json.dumps({
-                    "description": node.description,
-                    "aliases": node.aliases,
-                    "recent_source": source_meta,
-                    "llm_overall_confidence": meta_data["confidence"]
-                }))
-
-            if names:
-                async with genome_connection_pool.connection() as conn:
-                    # Using UNNEST (create a temp table with rows extracted from array)
-                    res_pg = await conn.execute(
-                        """
-                        INSERT INTO knowledge_entities (global_id, name, entity_type, owner_id, is_public, knowledge_entities_metadata)
-                        SELECT * FROM UNNEST(
-                            %(ids)s::uuid[], %(names)s::text[], %(types)s::text[], 
-                            %(owners)s::uuid[], %(publics)s::boolean[], %(metas)s::jsonb[]
-                        )
-                        ON CONFLICT (name, entity_type, owner_id) DO UPDATE 
-                        SET entity_type = EXCLUDED.entity_type,
-                            is_public = EXCLUDED.is_public,
-                            knowledge_entities_metadata = COALESCE(knowledge_entities.knowledge_entities_metadata, '{}'::jsonb) || EXCLUDED.knowledge_entities_metadata
-                        RETURNING name, entity_type, global_id
-                        """,
-                        {
-                            "ids": temp_ids, "names": names, "types": types,
-                            "owners": owners, "publics": publics, "metas": metas
-                        }
-                    )
-                    rows = await res_pg.fetchall()
-                    for row in rows:
-                        node_db_map[(row["name"], row["entity_type"])] = row["global_id"]
-
-            # Save File <-> Entity Links
-            if file_id_str and node_db_map:
-                link_entities, link_scores = [], []
-                for dedup_key, global_id in node_db_map.items():
-                    link_entities.append(str(global_id))
-                    link_scores.append(unique_nodes_registry[dedup_key]["confidence"])
-                
-                async with userdata_connection_pool.connection() as ud_conn:
-                    await ud_conn.execute(
-                        """
-                        INSERT INTO knowledge_file_links (file_id, knowledge_entity_id, relevance_score)
-                        SELECT %(file_id)s, e, s FROM UNNEST(%(entities)s::uuid[], %(scores)s::float[]) AS t(e, s)
-                        ON CONFLICT (file_id, knowledge_entity_id) DO UPDATE 
-                        SET relevance_score = GREATEST(knowledge_file_links.relevance_score, EXCLUDED.relevance_score)
-                        """,
-                        {"file_id": file_id_str, "entities": link_entities, "scores": link_scores}
-                    )
-
-        # PHASE B: Neo4j Graph Insertion
+        # Neo4j Graph Insertion
         graph_documents = []
-        global_rel_registry = set()     # Prevent collisions
+        global_rel_registry = set()
+        
         for chunk in valid_chunks:
-            res: KnowledgeGraphComponents = chunk["components"]
-            text: str = chunk["text"]
+            res = chunk["components"]
+            if not res.nodes: continue 
             
-            if not res.nodes:
-                continue # Skip Neo4j entirely if no entities were extracted from this chunk
-            
-            local_node_map = {} # Strictly scoped map to prevent Relationship cross-talk
-            
-            # 1. Build Nodes
+            local_node_map = {} 
             for node in res.nodes:
-                dedup_key = (node.name, node.label)
-                if dedup_key in node_db_map:
-                    global_id = node_db_map[dedup_key]
-                    neo4j_node_id = f"{node.label}:{node.name}:{owner_id}"
-                    
-                    lc_node = Node(
-                        id=neo4j_node_id,
-                        type=node.label,
-                        properties={
-                            "name": node.name,
-                            "global_id": str(global_id),
-                            "owner_id": str(owner_id),
-                            "is_public": final_is_public,
-                            "description": node.description
-                        }
-                    )
-                    # Map locally strictly by name so Relationships can find them
-                    local_node_map[node.name] = lc_node 
+                # Merge nodes across files by using OwnerID, not FileID!
+                node_uuid = generate_entity_uuid(node.label, node.name)
+                
+                lc_node = Node(
+                    id=node_uuid,
+                    type=node.label,
+                    properties={
+                        "id": node_uuid,
+                        "name": node.name,
+                        "description": node.description
+                    }
+                )
+                local_node_map[node.name] = lc_node 
 
-            # 2. Build Relationships using ONLY local nodes
             langchain_rels = []
             for rel in res.relationships:
-                safe_type = rel.type.strip().upper().replace(" ", "_").replace("-", "_")
-
+                safe_type = rel.type    # Already validated by Pydantic
                 rel_key = (rel.source_name, safe_type, rel.target_name)
-                if rel_key in global_rel_registry:
-                    # Already captured this edge in an earlier chunk.
-                    continue
+                
+                if rel_key in global_rel_registry: continue
 
                 s_node = local_node_map.get(rel.source_name)
                 t_node = local_node_map.get(rel.target_name)
                 
                 if s_node and t_node:
                     global_rel_registry.add(rel_key)
-                    lc_rel = Relationship(
-                        source=s_node,
-                        target=t_node,
-                        type=safe_type,
+                    langchain_rels.append(Relationship(
+                        source=s_node, target=t_node, type=safe_type,
                         properties={
-                            "evidence": rel.evidence,
                             "confidence": rel.confidence,
-                            "owner_id": str(owner_id),
-                            "source_file_id": file_id_str,
-                            "source_type": tool_config.source_type_label,
-                            "tool_used": tool_name
+                            "source_file_id": file_id_str
                         }
-                    )
-                    langchain_rels.append(lc_rel)
+                    ))
             
             if local_node_map:
                 graph_documents.append(GraphDocument(
                     nodes=list(local_node_map.values()),
                     relationships=langchain_rels,
-                    source=Document(page_content=text)
+                    source=Document(page_content=chunk["text"])
                 ))
 
         if graph_documents:
             logger.info(f"Saving {len(graph_documents)} graph components to Neo4j...")
-            await asyncio.to_thread(
-                self.knowledge_graph.add_graph_documents,
-                graph_documents,
-                baseEntityLabel=True
-            )
+            await asyncio.to_thread(self.knowledge_graph.add_graph_documents, graph_documents, baseEntityLabel=True)
 
-        # PHASE C: Qdrant Vector Search Ingestion
+        # Qdrant Vector Search Ingestion
         documents_to_embed = []
         document_ids = []
-        total_raw_text_bytes = 0
         
         for chunk in valid_chunks:
-            res: KnowledgeGraphComponents = chunk["components"]
-            raw_text: str = chunk["text"]
-            total_raw_text_bytes += len(raw_text.encode('utf-8'))
+            res = chunk["components"]
+            raw_text = chunk["text"]
 
-            # Enrich text to help Vector Semantic Search capture explicit relations
-            enrichment_text = ""
-            if res.nodes and res.relationships:
-                rels = [f"{r.source_name} -> {r.type} -> {r.target_name}" for r in res.relationships]
-                enrichment_text = f"\n\n[EXTRACTED ENTITY RELATIONSHIPS]:\n" + "\n".join(rels)
-                
-            final_embed_content = raw_text + enrichment_text
-            
-            # Generate a 1-to-1 UUID so we never overwrite other vectors!
-            unique_vector_id = str(uuid.uuid4())
-            
-            metadata = {
-                **source_meta,
+            # The Bridge: ["Gene::ScDREB2", "Disease::Smut"]
+            entity_ids = list(set([
+                generate_entity_uuid(n.label, n.name) for n in res.nodes
+            ])) if res.nodes else []
+
+            clean_metadata = {
+                "file_id": file_id_str,
+                "dataset_id": dataset_id_str,
                 "owner_id": str(owner_id),
-                "is_public": final_is_public,
-                "project_name": project_name,
-                "source_tier": tool_config.ingestion_confidence_tier.value,
-                "tool_used": tool_name,
-                "chunk_type": "text_context",
-                # Include extracted entity names as keyword tags
-                "entities": [n.name for n in res.nodes] if res.nodes else []
+                "source": source_meta.get("source", "unknown_file"),
+                "page": source_meta.get("page", 1),
+                "entity_ids": entity_ids, 
+                "entities": [f"{n.label}::{n.name}" for n in res.nodes]
             }
             
-            documents_to_embed.append(Document(page_content=final_embed_content, metadata=metadata))
-            document_ids.append(unique_vector_id)
+            clean_metadata = {k: v for k, v in clean_metadata.items() if v is not None}
+            
+            documents_to_embed.append(Document(page_content=raw_text, metadata=clean_metadata))
+            document_ids.append(str(uuid.uuid4()))
 
         # Batch insert to Qdrant
-        logger.info(f"Vector Store Verification: Packing {len(documents_to_embed)} chunks containing {total_raw_text_bytes/1024:.2f} KB of unstructured text for Qdrant...")
-
         if documents_to_embed:
-            total_docs = len(documents_to_embed)
+            logger.info(f"Packing {len(documents_to_embed)} pure text chunks into Qdrant...")
             batch_size = self.settings.QDRANT_BATCH_SIZE
-            
-            for i in range(0, total_docs, batch_size):
+            for i in range(0, len(documents_to_embed), batch_size):
                 batch_docs = documents_to_embed[i : i + batch_size]
                 batch_ids = document_ids[i : i + batch_size]
-                
                 try:
                     await target_vector_store.aadd_documents(documents=batch_docs, ids=batch_ids)
-                    if i + batch_size < total_docs:
-                        await asyncio.sleep(0.5)
                 except Exception as e:
-                    logger.warning(f"Batch {i} failed in Qdrant. Re-attempting sequentially...")
+                    logger.warning("🚨 Sparse/Dense mismatch detected for batch. Isolating chunks sequentially...")
+                    # Fallback: Insert 1-by-1 to isolate and identify the exact chunk causing FastEmbed to choke
                     for single_doc, single_id in zip(batch_docs, batch_ids):
                         try:
                             await target_vector_store.aadd_documents(documents=[single_doc], ids=[single_id])
                         except Exception as inner_e:
-                            logger.error(f"Failed embedding document {single_id}: {inner_e}")
-                            
-            logger.info("Qdrant vector ingestion complete.")
+                            logger.error(f"❌ Skipping toxic chunk that broke FastEmbed: {single_doc.page_content[:100]}... Error: {inner_e}")
+                        
 
     async def _is_ingestable_payload(self, text: str) -> bool:
         clean_text = text.strip()
