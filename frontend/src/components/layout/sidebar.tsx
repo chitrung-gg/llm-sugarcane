@@ -9,8 +9,8 @@ import {
   File as LucideFile,
   LayoutDashboard,
   Library,
+  Link2,
   Plus,
-  Settings,
   LogOut,
   Sprout,
   Check,
@@ -20,6 +20,7 @@ import {
   Upload,
   ChevronRight,
   Trash2,
+  Unlink,
   FolderKanban,
 } from "lucide-react"
 
@@ -54,28 +55,38 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { AddDatasetDialog } from "@/components/datasets/add-dataset-dialog"
 import { NewProjectDialog } from "@/components/projects/new-project-dialog"
 
 import { useProjects } from "@/hooks/use-projects"
-import { useProjectThreads } from "@/hooks/use-chat"
-import { useProjectDatasets, useDatasetFiles, useDeleteDatasetFile } from "@/hooks/use-datasets"
+import { useProjectThreads, useDeleteThread } from "@/hooks/use-chat"
+import { useProjectDatasets, useDatasetFiles, useDeleteDatasetFile, useDetachDataset } from "@/hooks/use-datasets"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { Thread, Dataset } from "@/lib/types"
 import { logout, getCurrentUser } from "@/lib/auth"
 
-function DatasetInfoDialog({ dataset }: { dataset: Dataset }) {
+function DatasetInfoDialog({ dataset, projectId, isAttached }: { dataset: Dataset; projectId: string; isAttached: boolean }) {
   const { data: files = [] } = useDatasetFiles(dataset.id)
   const [open, setOpen] = React.useState(false)
+  const [confirmFile, setConfirmFile] = React.useState<string | null>(null)
+  const [confirmDetach, setConfirmDetach] = React.useState(false)
   const deleteFileMutation = useDeleteDatasetFile()
+  const detachMutation = useDetachDataset()
 
   const genomeFiles = files.filter(f => f.file_type.includes('genome'))
   const knowledgeFiles = files.filter(f => !f.file_type.includes('genome'))
 
   const handleDeleteFile = (fileId: string) => {
-    if (confirm("Are you sure you want to delete this file?")) {
-      deleteFileMutation.mutate({ fileId, datasetId: dataset.id })
-    }
+    setConfirmFile(fileId)
+  }
+
+  const handleConfirmDelete = () => {
+    if (!confirmFile) return
+    deleteFileMutation.mutate(
+      { fileId: confirmFile, datasetId: dataset.id },
+      { onSettled: () => setConfirmFile(null) }
+    )
   }
 
   return (
@@ -83,9 +94,14 @@ function DatasetInfoDialog({ dataset }: { dataset: Dataset }) {
       <DialogTrigger
         nativeButton={true}
         render={
-          <SidebarMenuButton tooltip={dataset.name} className="font-bold text-stone-600">
-            <Database aria-hidden="true" />
-            <span>{dataset.name}</span>
+          <SidebarMenuButton
+            tooltip={dataset.name}
+            className={isAttached ? "font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50/60" : "font-bold text-stone-600"}
+          >
+            {isAttached
+              ? <Link2 aria-hidden="true" className="shrink-0 text-blue-500" />
+              : <Database aria-hidden="true" className="shrink-0" />}
+            <span className="truncate">{dataset.name}</span>
           </SidebarMenuButton>
         }
       />
@@ -96,7 +112,7 @@ function DatasetInfoDialog({ dataset }: { dataset: Dataset }) {
                <Database className="h-5 w-5 text-emerald-700" />
              </div>
              <div>
-               <DialogTitle className="text-xl font-bold text-stone-900">{dataset.name}</DialogTitle>
+               <DialogTitle className="text-xl font-bold text-stone-900 truncate">{dataset.name}</DialogTitle>
                <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest leading-none">Dataset Info</p>
              </div>
           </div>
@@ -105,25 +121,21 @@ function DatasetInfoDialog({ dataset }: { dataset: Dataset }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4 space-y-5">
+        <div className="mt-4 space-y-5 overflow-hidden min-w-0">
           <div className="bg-stone-50 p-3 rounded-xl border border-stone-100 flex items-center justify-between">
              <div>
-               <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Dataset ID</p>
-               <p className="text-[10px] font-mono text-stone-600">{dataset.id}</p>
-             </div>
-             <div className="text-right">
-                <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Files</p>
-                <p className="text-xs font-bold text-emerald-700">{files.length}</p>
+               <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Total Files</p>
+               <p className="text-xs font-bold text-emerald-700">{files.length}</p>
              </div>
           </div>
 
-          <div className="space-y-4 max-h-[300px] overflow-auto pr-1 no-scrollbar">
+          <div className="space-y-4 max-h-[300px] w-full overflow-y-auto overflow-x-hidden pr-1 no-scrollbar">
             {genomeFiles.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400 ml-1">Genomic Data ({genomeFiles.length})</h4>
                 <div className="bg-white rounded-xl border border-stone-100 divide-y divide-stone-50 overflow-hidden shadow-sm">
                   {genomeFiles.map((file) => (
-                    <div key={file.id} className="p-2.5 flex items-center gap-3 hover:bg-stone-50 transition-colors group/file">
+                    <div key={file.id} className="p-2.5 flex items-center gap-3 overflow-hidden hover:bg-stone-50 transition-colors group/file">
                       <div className="bg-emerald-50 p-1.5 rounded-lg border border-emerald-100">
                         <Dna className="size-3.5 text-emerald-600" />
                       </div>
@@ -147,7 +159,7 @@ function DatasetInfoDialog({ dataset }: { dataset: Dataset }) {
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400 ml-1">Knowledge Base ({knowledgeFiles.length})</h4>
                 <div className="bg-white rounded-xl border border-stone-100 divide-y divide-stone-50 overflow-hidden shadow-sm">
                   {knowledgeFiles.map((file) => (
-                    <div key={file.id} className="p-2.5 flex items-center gap-3 hover:bg-stone-50 transition-colors group/file">
+                    <div key={file.id} className="p-2.5 flex items-center gap-3 overflow-hidden hover:bg-stone-50 transition-colors group/file">
                       <div className="bg-blue-50 p-1.5 rounded-lg border border-blue-100">
                         <LucideFile className="size-3.5 text-blue-600" />
                       </div>
@@ -173,30 +185,64 @@ function DatasetInfoDialog({ dataset }: { dataset: Dataset }) {
             )}
           </div>
 
-          <Button asChild className="w-full bg-emerald-700 hover:bg-emerald-800 h-11 rounded-xl shadow-lg shadow-emerald-700/20" onClick={() => setOpen(false)}>
-             <Link href={`/projects/${dataset.project_id}/upload?datasetId=${dataset.id}`}>
-               <Upload className="mr-2 h-4 w-4" /> Upload New Files
-             </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild className="flex-1 bg-emerald-700 hover:bg-emerald-800 h-11 rounded-xl shadow-lg shadow-emerald-700/20" onClick={() => setOpen(false)}>
+              <Link href={`/projects/${dataset.project_id}/upload?datasetId=${dataset.id}`}>
+                <Upload className="mr-2 h-4 w-4" /> Upload Files
+              </Link>
+            </Button>
+            {dataset.project_id !== projectId && (
+              <Button
+                variant="outline"
+                className="h-11 rounded-xl border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 px-4"
+                onClick={() => setConfirmDetach(true)}
+              >
+                <Unlink className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
+      <ConfirmDialog
+        open={!!confirmFile}
+        onOpenChange={(v) => { if (!v) setConfirmFile(null) }}
+        title="Delete File"
+        description="Are you sure you want to delete this file? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        isPending={deleteFileMutation.isPending}
+      />
+      <ConfirmDialog
+        open={confirmDetach}
+        onOpenChange={setConfirmDetach}
+        title={`Remove "${dataset.name}" from project?`}
+        description="This will detach the dataset from the project. You can re-attach it from the library at any time."
+        confirmLabel="Remove"
+        onConfirm={() => detachMutation.mutate(
+          { projectId, datasetId: dataset.id },
+          { onSettled: () => { setConfirmDetach(false); setOpen(false) } }
+        )}
+        isPending={detachMutation.isPending}
+      />
     </Dialog>
   )
 }
 
 function DatasetMenuItem({ dataset, projectId }: { dataset: Dataset; projectId: string }) {
+  const isAttached = dataset.project_id !== projectId
   return (
     <SidebarMenuItem>
-      <DatasetInfoDialog dataset={dataset} />
-      <SidebarMenuAction
-        title="Upload to Dataset"
-        className="text-emerald-600 hover:bg-emerald-50"
-        render={
-          <Link href={`/projects/${projectId}/upload?datasetId=${dataset.id}`}>
-            <Upload className="size-3.5" />
-          </Link>
-        }
-      />
+      <DatasetInfoDialog dataset={dataset} projectId={projectId} isAttached={isAttached} />
+      {!isAttached && (
+        <SidebarMenuAction
+          title="Upload to Dataset"
+          className="text-emerald-600 hover:bg-emerald-50"
+          render={
+            <Link href={`/projects/${projectId}/upload?datasetId=${dataset.id}`}>
+              <Upload className="size-3.5" />
+            </Link>
+          }
+        />
+      )}
     </SidebarMenuItem>
   )
 }
@@ -207,8 +253,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { activeProject, activeProjectId } = useWorkspace()
   const { data: projects = [] } = useProjects(user?.role === 'admin')
   
+  const params = useParams()
+  const activeThreadId = params?.threadId as string | undefined
+
   const { data: datasets = [] } = useProjectDatasets(activeProjectId || "")
+  const ownedDatasets = datasets.filter(d => d.project_id === activeProjectId)
+  const attachedDatasets = datasets.filter(d => d.project_id !== activeProjectId)
   const { data: threads = [] } = useProjectThreads(activeProjectId || "")
+  const deleteThread = useDeleteThread()
+  const [confirmThreadId, setConfirmThreadId] = React.useState<string | null>(null)
 
   const [mounted, setMounted] = React.useState(false)
 
@@ -353,14 +406,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroup>
 
             <SidebarGroup>
-              <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">Datasets</SidebarGroupLabel>
+              <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">Project Datasets</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {datasets.map((dataset) => (
-                    <DatasetMenuItem 
-                      key={dataset.id} 
-                      dataset={dataset} 
-                      projectId={activeProjectId || ""} 
+                  {ownedDatasets.map((dataset) => (
+                    <DatasetMenuItem
+                      key={dataset.id}
+                      dataset={dataset}
+                      projectId={activeProjectId || ""}
                     />
                   ))}
                   <SidebarMenuItem>
@@ -374,6 +427,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+
+            {attachedDatasets.length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">Library Datasets</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {attachedDatasets.map((dataset) => (
+                      <DatasetMenuItem
+                        key={dataset.id}
+                        dataset={dataset}
+                        projectId={activeProjectId || ""}
+                      />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
 
             <SidebarGroup>
               <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">Threads</SidebarGroupLabel>
@@ -398,10 +468,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         render={
                           <Link href={`/projects/${activeProjectId}/chat/${thread.id}`}>
                             <MessageSquare className="size-4" />
-                            <span className="truncate" title={thread.title}>{thread.title}</span>
+                            <span className="truncate" title={thread.title}>{thread.title || "Untitled"}</span>
                           </Link>
                         }
                       />
+                      <SidebarMenuAction
+                        title="Delete thread"
+                        className="text-stone-300 hover:text-red-500 hover:bg-red-50"
+                        onClick={() => setConfirmThreadId(thread.id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </SidebarMenuAction>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
@@ -419,26 +496,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
           )}
           <SidebarMenuItem>
-            <DropdownMenu>
-               <DropdownMenuTrigger nativeButton={true} render={
-                 <SidebarMenuButton
-                   tooltip="Settings"
-                   className="font-bold text-stone-600"
-                 >
-                   <Settings aria-hidden="true" />
-                   <span>Settings</span>
-                 </SidebarMenuButton>
-               } />
-               <DropdownMenuContent side="top" align="start" className="w-48">
-                  <DropdownMenuItem render={
-                    <Link href="/settings" className="flex items-center gap-2">
-                       <Settings className="size-4" /> System Info
-                    </Link>
-                  } />
-               </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
             <SidebarMenuButton tooltip="Sign Out" onClick={handleSignOut} className="text-red-500 font-bold hover:text-red-600 hover:bg-red-50">
               <LogOut aria-hidden="true" />
               <span>Sign Out</span>
@@ -448,6 +505,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
 
       <SidebarRail />
+      <ConfirmDialog
+        open={!!confirmThreadId}
+        onOpenChange={(v) => { if (!v) setConfirmThreadId(null) }}
+        title="Delete Thread"
+        description="Are you sure you want to delete this chat? All messages will be permanently removed."
+        confirmLabel="Delete"
+        isPending={deleteThread.isPending}
+        onConfirm={() => {
+          if (!confirmThreadId) return
+          deleteThread.mutate(
+            { threadId: confirmThreadId, projectId: activeProjectId || "" },
+            {
+              onSuccess: () => {
+                if (activeThreadId === confirmThreadId) {
+                  router.push(`/projects/${activeProjectId}/chat`)
+                }
+                setConfirmThreadId(null)
+              },
+              onError: () => setConfirmThreadId(null),
+            }
+          )
+        }}
+      />
     </Sidebar>
   )
 }

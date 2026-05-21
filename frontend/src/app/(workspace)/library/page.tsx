@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export default function LibraryPage() {
   const [mounted, setMounted] = useState(false)
@@ -158,6 +159,7 @@ function DatasetFilesList({ datasetId, isOwner }: { datasetId: string, isOwner: 
   const { data: files = [] } = useDatasetFiles(datasetId)
   const downloadFile = useDownloadFile()
   const deleteFileMutation = useDeleteDatasetFile()
+  const [confirmFileId, setConfirmFileId] = useState<string | null>(null)
 
   const handleDownload = async (fileId: string) => {
     try {
@@ -168,11 +170,7 @@ function DatasetFilesList({ datasetId, isOwner }: { datasetId: string, isOwner: 
     }
   }
 
-  const handleDelete = (fileId: string) => {
-    if (confirm("Are you sure you want to delete this file?")) {
-      deleteFileMutation.mutate({ fileId, datasetId })
-    }
-  }
+  const handleDelete = (fileId: string) => setConfirmFileId(fileId)
 
   if (files.length === 0) return (
     <div className="py-4 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200">
@@ -181,23 +179,33 @@ function DatasetFilesList({ datasetId, isOwner }: { datasetId: string, isOwner: 
   )
 
   return (
-    <div className="space-y-2 max-h-40 overflow-auto pr-2 no-scrollbar">
-      {files.map(f => (
-        <div key={f.id} className="flex items-center justify-between bg-stone-50/50 p-2.5 rounded-xl border border-stone-100 hover:bg-stone-50 transition-colors group">
-          <span className="text-xs font-bold text-stone-600 truncate flex-1 mr-4" title={f.file_name}>{f.file_name}</span>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-stone-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all" onClick={() => handleDownload(f.id)}>
-              <Download className="h-3.5 w-3.5" />
-            </Button>
-            {isOwner && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" onClick={() => handleDelete(f.id)}>
-                <Trash2 className="h-3.5 w-3.5" />
+    <>
+      <ConfirmDialog
+        open={!!confirmFileId}
+        onOpenChange={(v) => { if (!v) setConfirmFileId(null) }}
+        title="Delete File"
+        description="Are you sure you want to delete this file? This action cannot be undone."
+        onConfirm={() => confirmFileId && deleteFileMutation.mutate({ fileId: confirmFileId, datasetId }, { onSettled: () => setConfirmFileId(null) })}
+        isPending={deleteFileMutation.isPending}
+      />
+      <div className="space-y-2 max-h-40 overflow-auto pr-2 no-scrollbar">
+        {files.map(f => (
+          <div key={f.id} className="flex items-center justify-between bg-stone-50/50 p-2.5 rounded-xl border border-stone-100 hover:bg-stone-50 transition-colors group">
+            <span className="text-xs font-bold text-stone-600 truncate flex-1 mr-4" title={f.file_name}>{f.file_name}</span>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-stone-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all" onClick={() => handleDownload(f.id)}>
+                <Download className="h-3.5 w-3.5" />
               </Button>
-            )}
+              {isOwner && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" onClick={() => handleDelete(f.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   )
 }
 

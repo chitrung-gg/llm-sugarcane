@@ -4,10 +4,9 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, User, Bot, Loader2, Database, ChevronDown, ChevronRight, ExternalLink, Wrench, Brain, Check, X, Download, FileDown, FileCode } from "lucide-react";
+import { Send, User, Bot, Loader2, Database, ChevronDown, ChevronRight, ExternalLink, Wrench, Brain, Check, X, Download, FileDown, FileCode, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
@@ -15,11 +14,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useProjectDatasets, useDatasetFiles } from "@/hooks/use-datasets";
+import { useProjectDatasets, useDatasetFiles, useDetachDataset } from "@/hooks/use-datasets";
 import { useChatHistory } from "@/hooks/use-chat";
 import { useChatStream } from "@/hooks/use-chat-stream";
 import { useDownload } from "@/hooks/use-download";
 import { PlanModificationForm } from "./plan-modification-form";
+import { AddDatasetDialog } from "@/components/datasets/add-dataset-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Message, Dataset, DatasetFile } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -28,6 +29,9 @@ const extractS3Uris = (text: string): string[] => {
   const s3Regex = /s3:\/\/[^\s"'`<>]+/g;
   return text.match(s3Regex) || [];
 };
+
+const formatToolName = (name: string): string =>
+  name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
 // Memoized Message Item Component to prevent unnecessary re-renders
 const ChatMessageItem = React.memo(({ 
@@ -67,7 +71,7 @@ const ChatMessageItem = React.memo(({
             ? "bg-stone-100 text-stone-900 border border-stone-200" 
             : "bg-white text-stone-800 border border-emerald-100"
         )}>
-          <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50">
+          <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50 prose-pre:whitespace-pre-wrap prose-pre:break-all break-words [overflow-wrap:anywhere]">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
             </ReactMarkdown>
@@ -79,19 +83,19 @@ const ChatMessageItem = React.memo(({
           <div className="space-y-2">
             {/* Reasoning / Thoughts */}
             {message.thoughts && message.thoughts.length > 0 && (
-              <div className="border border-stone-200 rounded-md bg-stone-50 overflow-hidden">
-                <button 
+              <div className="border border-stone-100 rounded-xl bg-stone-50/80 overflow-hidden">
+                <button
                   onClick={() => toggleThoughts(message.id)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-stone-500 hover:bg-stone-100 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Brain className="h-3.5 w-3.5" />
-                    Thought Process
+                    <Brain className="h-3.5 w-3.5 text-stone-400" />
+                    Reasoning
                   </div>
                   {expandedThoughts[message.id] ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                 </button>
                 {expandedThoughts[message.id] && (
-                  <div className="p-3 bg-white text-sm text-stone-600 border-t border-stone-200 space-y-2">
+                  <div className="px-4 py-3 bg-white text-xs text-stone-500 border-t border-stone-100 space-y-2 italic leading-relaxed">
                     {message.thoughts.map((thought, idx) => (
                       <div key={idx} className="prose prose-sm max-w-none prose-p:leading-relaxed">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -111,17 +115,24 @@ const ChatMessageItem = React.memo(({
                   const s3Uris = extractS3Uris(tool.output || "");
                   return (
                     <div key={idx} className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
-                        <Wrench className="h-3 w-3" />
-                        {tool.tool_name}: {tool.status}
+                      <div className={cn(
+                        "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold",
+                        tool.status === "complete"
+                          ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                          : "bg-stone-50 border border-stone-200 text-stone-500"
+                      )}>
+                        {tool.status === "complete"
+                          ? <Check className="h-3 w-3" />
+                          : <Wrench className="h-3 w-3" />}
+                        {formatToolName(tool.tool_name)}
                       </div>
                       {s3Uris.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {s3Uris.map((uri, uIdx) => (
-                            <Button 
+                            <Button
                               key={uIdx}
-                              variant="outline" 
-                              size="sm" 
+                              variant="outline"
+                              size="sm"
                               className="h-8 px-3 text-xs gap-2 bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 font-bold shadow-sm transition-all"
                               onClick={() => onDownload({ s3Uri: uri })}
                             >
@@ -181,6 +192,9 @@ export function ChatWindow() {
   
   const [input, setInput] = useState("");
   const [selectedDatasets, setSelectedDatasets] = useState<string[]>([]);
+  const [datasetsInitialized, setDatasetsInitialized] = useState(false);
+  const [confirmDetachDataset, setConfirmDetachDataset] = useState<Dataset | null>(null);
+  const detachMutation = useDetachDataset();
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
   const [activeThoughtsExpanded, setActiveThoughtsExpanded] = useState(true);
@@ -190,6 +204,13 @@ export function ChatWindow() {
 
   const { data: datasets, isLoading: datasetsLoading } = useProjectDatasets(projectId);
   const { downloadFile } = useDownload();
+
+  useEffect(() => {
+    if (datasets && datasets.length > 0 && !datasetsInitialized) {
+      setSelectedDatasets(datasets.map(ds => ds.id));
+      setDatasetsInitialized(true);
+    }
+  }, [datasets, datasetsInitialized]);
   
   // Fetch history for this thread
   const { data: history, isLoading: historyLoading } = useChatHistory(threadId);
@@ -360,11 +381,18 @@ export function ChatWindow() {
     [currentStream]
   );
   
-  const activeStreamTools = useMemo(() => 
-    currentStream
-      .filter(e => e.event === 'tool_start' || e.event === 'tool_end'),
-    [currentStream]
-  );
+  const activeToolsMap = useMemo(() => {
+    const map = new Map<string, { status: 'running' | 'done'; outputs: string[] }>();
+    currentStream.forEach(e => {
+      if (e.event === 'tool_start' || e.event === 'tool_end') {
+        const toolData = (typeof e.data === 'object' && e.data !== null) ? (e.data as any) : {};
+        const name: string = toolData.tool || 'unknown';
+        const outputs = e.event === 'tool_end' ? extractS3Uris(toolData.output || "") : [];
+        map.set(name, { status: e.event === 'tool_start' ? 'running' : 'done', outputs });
+      }
+    });
+    return map;
+  }, [currentStream]);
   
   const activeStreamAnswer = useMemo(() => {
     let rawText = "";
@@ -427,28 +455,54 @@ export function ChatWindow() {
   }, [currentStream]);
 
   return (
-    <div className="flex flex-col h-full bg-stone-50/50">
-      {/* Context Selection Bar */}
-      <div className="border-b bg-white p-3 flex items-center gap-3 overflow-x-auto min-h-[56px]">
-        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em] whitespace-nowrap ml-2">Active Context:</span>
+    <div className="flex flex-col flex-1 min-h-0 bg-stone-50/50">
+      {/* Dataset Context Bar */}
+      <ConfirmDialog
+        open={!!confirmDetachDataset}
+        onOpenChange={(v) => { if (!v) setConfirmDetachDataset(null) }}
+        title={`Remove "${confirmDetachDataset?.name}"?`}
+        description="Detach this dataset from the project. You can re-attach it from the library at any time."
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (!confirmDetachDataset) return
+          detachMutation.mutate(
+            { projectId, datasetId: confirmDetachDataset.id },
+            { onSettled: () => setConfirmDetachDataset(null) }
+          )
+        }}
+        isPending={detachMutation.isPending}
+      />
+      <div className="border-b bg-white px-3 py-2 flex items-center gap-2 overflow-x-auto shrink-0 min-h-[48px]">
+        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em] whitespace-nowrap ml-1 shrink-0">Datasets:</span>
         {datasetsLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-stone-300" />
-        ) : datasets?.length === 0 ? (
-          <span className="text-xs text-stone-400 italic">No datasets in this project.</span>
+          <Loader2 className="h-4 w-4 animate-spin text-stone-300 shrink-0" />
         ) : (
-          datasets?.map((ds) => (
-            <DatasetItem 
-                key={ds.id} 
-                dataset={ds} 
-                isSelected={selectedDatasets.includes(ds.id)} 
+          <>
+            {datasets?.map((ds) => (
+              <DatasetItem
+                key={ds.id}
+                dataset={ds}
+                projectId={projectId}
+                isSelected={selectedDatasets.includes(ds.id)}
                 onToggle={() => toggleDataset(ds.id)}
                 onDownload={downloadFile}
-            />
-          ))
+                onDetach={() => setConfirmDetachDataset(ds)}
+              />
+            ))}
+            {datasets?.length === 0 && (
+              <span className="text-xs text-stone-400 italic shrink-0">No datasets — add one to start.</span>
+            )}
+            <AddDatasetDialog nativeButton={true}>
+              <button className="flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full border border-dashed border-stone-300 text-stone-400 hover:text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50/50 text-xs font-semibold transition-all whitespace-nowrap">
+                <Plus className="h-3 w-3" />
+                New
+              </button>
+            </AddDatasetDialog>
+          </>
         )}
       </div>
 
-      <ScrollArea className="flex-1 p-4">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4">
         <div className="max-w-3xl mx-auto space-y-6">
           {historyLoading ? (
             <div className="flex justify-center py-20">
@@ -459,8 +513,8 @@ export function ChatWindow() {
               <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Bot className="h-6 w-6 text-emerald-700" />
               </div>
-              <h2 className="text-xl font-bold mb-2 text-stone-800 tracking-tight">Sugarcane Research Assistant</h2>
-              <p className="max-w-xs mx-auto text-sm font-medium text-stone-500 leading-relaxed">Select biological datasets above to provide context for your queries.</p>
+              <h2 className="text-xl font-bold mb-2 text-stone-800 tracking-tight">SugarcaneChatbot</h2>
+              <p className="max-w-xs mx-auto text-sm font-medium text-stone-500 leading-relaxed">All datasets are selected. Ask anything about your biological research data.</p>
             </div>
           )}
           
@@ -496,7 +550,7 @@ export function ChatWindow() {
                   <div className="flex flex-col gap-2 max-w-[85%] w-full">
                     {activeStreamAnswer ? (
                       <div className="rounded-lg px-4 py-2 text-sm shadow-sm bg-white text-stone-800 border border-emerald-100">
-                        <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50">
+                        <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50 prose-pre:whitespace-pre-wrap prose-pre:break-all break-words [overflow-wrap:anywhere]">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {activeStreamAnswer}
                           </ReactMarkdown>
@@ -504,26 +558,35 @@ export function ChatWindow() {
                       </div>
                     ) : (
                       <div className="rounded-lg px-4 py-3 bg-white text-stone-800 border border-emerald-100 shadow-sm flex items-center gap-3">
-                        <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                        <span className="text-xs font-bold text-stone-400 uppercase tracking-widest animate-pulse">Agent is reasoning...</span>
+                        <div className="flex items-center gap-1">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:-0.3s]" />
+                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:-0.15s]" />
+                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce" />
+                        </div>
+                        <span className="text-xs text-stone-400 font-medium">
+                          {activeToolsMap.size > 0 ? "Running tools..." : activeStreamThoughts.length > 0 ? "Reasoning..." : "Thinking..."}
+                        </span>
                       </div>
                     )}
 
                     {/* Active Thoughts */}
                     {activeStreamThoughts.length > 0 && (
-                      <div className="border border-stone-200 rounded-md bg-stone-50 overflow-hidden">
-                        <button 
+                      <div className="border border-stone-100 rounded-xl bg-stone-50/80 overflow-hidden">
+                        <button
                           onClick={() => setActiveThoughtsExpanded(!activeThoughtsExpanded)}
-                          className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 transition-colors"
+                          className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-stone-500 hover:bg-stone-100 transition-colors"
                         >
                           <div className="flex items-center gap-2">
-                            <Brain className="h-3.5 w-3.5" />
-                            Thought Process
+                            <Brain className="h-3.5 w-3.5 text-stone-400" />
+                            <span>Reasoning</span>
+                            {isStreaming && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold uppercase tracking-wider">Live</span>
+                            )}
                           </div>
                           {activeThoughtsExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         </button>
                         {activeThoughtsExpanded && (
-                          <div className="p-3 bg-white text-xs text-stone-600 border-t border-stone-200 space-y-2">
+                          <div className="px-4 py-3 bg-white text-xs text-stone-500 border-t border-stone-100 italic leading-relaxed">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {activeStreamThoughts[activeStreamThoughts.length - 1]}
                             </ReactMarkdown>
@@ -533,36 +596,39 @@ export function ChatWindow() {
                     )}
 
                     {/* Active Tools */}
-                    {activeStreamTools.length > 0 && (
+                    {activeToolsMap.size > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {activeStreamTools.map((t, idx) => {
-                          const toolData = (typeof t.data === 'object' && t.data !== null) ? (t.data as any) : {};
-                          const s3Uris = extractS3Uris(toolData.output || "");
-                          return (
-                            <div key={idx} className="flex flex-col gap-1">
-                                <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-stone-200 bg-stone-50 text-[10px] font-bold text-stone-500 uppercase tracking-tight">
-                                    <Wrench className="h-3 w-3" />
-                                    {toolData.tool}: {t.event === 'tool_start' ? 'Running...' : 'Complete'}
-                                </div>
-                                {t.event === 'tool_end' && s3Uris.length > 0 && (
-                                    <div className="flex flex-wrap gap-1">
-                                        {s3Uris.map((uri, uIdx) => (
-                                            <Button 
-                                                key={uIdx}
-                                                variant="outline" 
-                                                size="sm" 
-                                                className="h-6 px-2 text-[9px] gap-1 bg-white border-emerald-100 text-emerald-700 hover:bg-emerald-50"
-                                                onClick={() => downloadFile({ s3Uri: uri })}
-                                            >
-                                                <FileDown className="h-3 w-3" />
-                                                Download Result
-                                            </Button>
-                                        ))}
-                                    </div>
-                                )}
+                        {Array.from(activeToolsMap.entries()).map(([name, { status, outputs }]) => (
+                          <div key={name} className="flex flex-col gap-1">
+                            <div className={cn(
+                              "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold",
+                              status === 'running'
+                                ? "bg-amber-50 border border-amber-200 text-amber-700"
+                                : "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                            )}>
+                              {status === 'running'
+                                ? <Loader2 className="h-3 w-3 animate-spin" />
+                                : <Check className="h-3 w-3" />}
+                              {formatToolName(name)}
                             </div>
-                          );
-                        })}
+                            {status === 'done' && outputs.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {outputs.map((uri, uIdx) => (
+                                  <Button
+                                    key={uIdx}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-xs gap-2 bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 font-bold shadow-sm transition-all"
+                                    onClick={() => downloadFile({ s3Uri: uri })}
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                    Download Result
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -616,9 +682,9 @@ export function ChatWindow() {
 
           <div ref={scrollRef} />
         </div>
-      </ScrollArea>
+      </div>
 
-      <div className="border-t bg-white p-4">
+      <div className="border-t bg-white p-4 shrink-0">
         <div className="max-w-3xl mx-auto relative">
           {isModifyingPlan && planToModify && (
             <div className="absolute bottom-full left-0 right-0 z-50 px-4 pb-2">
@@ -663,54 +729,64 @@ export function ChatWindow() {
           </Button>
         </div>
         <p className="max-w-3xl mx-auto text-[10px] text-stone-400 mt-2 text-center italic">
-          Genomic Assistant • Powered by LLM Sugarcane
+          SugarcaneChatbot • Agentic Sugarcane Research System
         </p>
       </div>
     </div>
   );
 }
 
-function DatasetItem({ 
-    dataset, 
-    isSelected, 
+function DatasetItem({
+    dataset,
+    projectId,
+    isSelected,
     onToggle,
-    onDownload
-}: { 
-    dataset: Dataset; 
-    isSelected: boolean; 
+    onDownload,
+    onDetach,
+}: {
+    dataset: Dataset;
+    projectId: string;
+    isSelected: boolean;
     onToggle: () => void;
     onDownload: (params: { fileId?: string; s3Uri?: string }) => void;
+    onDetach: () => void;
 }) {
     const { data: files, isLoading } = useDatasetFiles(dataset.id);
-    const [isHovered, setIsHovered] = useState(false);
 
     return (
         <TooltipProvider>
             <Tooltip>
-                <TooltipTrigger asChild>
-                    <button
-                        onClick={onToggle}
-                        onMouseEnter={() => setIsHovered(true)}
-                        onMouseLeave={() => setIsHovered(false)}
-                        className={cn(
-                            "group flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all whitespace-nowrap relative",
-                            isSelected
-                                ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
-                                : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
-                        )}
-                    >
-                        <Database className="h-3 w-3" />
-                        {dataset.name}
-                        {isSelected && files && files.length > 0 && (
-                             <div className="ml-1 flex items-center gap-1">
-                                <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1 rounded-sm">{files.length}</span>
-                             </div>
-                        )}
-                    </button>
-                </TooltipTrigger>
+                <div className="group/chip relative shrink-0 max-w-[200px]">
+                    <TooltipTrigger asChild>
+                        <button
+                            onClick={onToggle}
+                            className={cn(
+                                "flex items-center gap-1.5 pl-3 pr-7 py-1.5 rounded-full border text-xs font-semibold transition-all w-full overflow-hidden",
+                                isSelected
+                                    ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
+                                    : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
+                            )}
+                        >
+                            <Database className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{dataset.name}</span>
+                            {isSelected && files && files.length > 0 && (
+                                <span className="shrink-0 text-[10px] bg-emerald-200 text-emerald-800 px-1 rounded-sm">{files.length}</span>
+                            )}
+                        </button>
+                    </TooltipTrigger>
+                    {dataset.project_id !== projectId && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onDetach(); }}
+                            className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/chip:opacity-100 transition-opacity p-0.5 rounded-full text-stone-300 hover:text-red-500 hover:bg-red-50"
+                            title="Remove from project"
+                        >
+                            <X className="h-3 w-3" />
+                        </button>
+                    )}
+                </div>
                 <TooltipContent side="bottom" className="w-64 p-0 overflow-hidden border-stone-200 bg-white shadow-xl">
-                    <div className="bg-stone-50 px-3 py-2 border-b border-stone-200">
-                        <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Dataset Files</h4>
+                    <div className="bg-stone-50 px-3 py-2 border-b border-stone-200 overflow-hidden">
+                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest truncate">{dataset.name}</p>
                     </div>
                     <div className="max-h-48 overflow-y-auto">
                         {isLoading ? (
@@ -722,14 +798,14 @@ function DatasetItem({
                         ) : (
                             <div className="divide-y divide-stone-100">
                                 {files.map((file) => (
-                                    <div key={file.id} className="p-2 flex items-center justify-between hover:bg-stone-50 group/file">
-                                        <div className="flex items-center gap-2 min-w-0">
+                                    <div key={file.id} className="p-2 flex items-center justify-between gap-2 overflow-hidden hover:bg-stone-50 group/file">
+                                        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                                             <FileCode className="h-3 w-3 text-stone-400 shrink-0" />
-                                            <span className="text-[10px] text-stone-600 font-medium truncate">{file.file_name}</span>
+                                            <span className="text-[10px] text-stone-600 font-medium truncate" title={file.file_name}>{file.file_name}</span>
                                         </div>
-                                        <Button 
-                                            size="xs" 
-                                            variant="ghost" 
+                                        <Button
+                                            size="xs"
+                                            variant="ghost"
                                             className="h-6 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2 gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity"
                                             onClick={(e) => {
                                                 e.stopPropagation();

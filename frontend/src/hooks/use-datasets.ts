@@ -35,17 +35,6 @@ export function useLibraryDatasets() {
   });
 }
 
-export function useDataset(id: string) {
-  return useQuery({
-    queryKey: ["datasets", id],
-    queryFn: async () => {
-      const response = await api.get<Dataset>(`/workspace/datasets/${id}`);
-      return response.data;
-    },
-    enabled: !!id,
-  });
-}
-
 export function useDatasetFiles(datasetId: string) {
   return useQuery({
     queryKey: ["dataset-files", datasetId],
@@ -182,6 +171,20 @@ export function useDetachDataset() {
     mutationFn: async (data: { projectId: string; datasetId: string }) => {
       const response = await api.delete(`/workspace/projects/${data.projectId}/attachments/${data.datasetId}`);
       return response.data;
+    },
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["projects", variables.projectId, "datasets"] });
+      const previous = queryClient.getQueryData<Dataset[]>(["projects", variables.projectId, "datasets"]);
+      queryClient.setQueryData<Dataset[]>(
+        ["projects", variables.projectId, "datasets"],
+        (old) => (old ?? []).filter((d) => d.id !== variables.datasetId)
+      );
+      return { previous };
+    },
+    onError: (_err, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["projects", variables.projectId, "datasets"], context.previous);
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["projects", variables.projectId, "datasets"] });

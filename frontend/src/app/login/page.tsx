@@ -75,8 +75,8 @@ export default function LoginPage() {
             <Sprout className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-base font-black tracking-tight text-stone-900">Sugarcane LLM</h1>
-            <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-700/70">Genomic Intelligence</p>
+            <h1 className="text-base font-black tracking-tight text-stone-900">SugarcaneChatbot</h1>
+            <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-700/70">Agentic Research System</p>
           </div>
         </div>
       </header>
@@ -131,17 +131,17 @@ export default function LoginPage() {
                 </div>
               </CardContent>
 
-              <CardFooter className="px-8 pt-6 pb-10 flex flex-col space-y-4">
-                <Button 
-                  className="w-full h-12 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition-all shadow-lg shadow-emerald-700/20 active:scale-[0.98]" 
-                  type="submit" 
+              <CardFooter className="px-8 pt-8 pb-10 flex flex-col items-center space-y-4 border-t border-stone-100 mt-2">
+                <Button
+                  className="px-10 h-11 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition-all shadow-lg shadow-emerald-700/20 active:scale-[0.98]"
+                  type="submit"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Enter Workspace"}
                 </Button>
-                
+
                 <p className="text-center text-[10px] text-stone-400 font-medium leading-relaxed">
-                  Sugarcane Thesis Project • 2026
+                  SugarcaneChatbot • 2026
                 </p>
               </CardFooter>
             </form>
@@ -151,7 +151,7 @@ export default function LoginPage() {
 
       <footer className="w-full py-6 text-center">
         <p className="text-[10px] font-bold text-stone-300 uppercase tracking-[0.3em]">
-          Genomic Intelligence System
+          SugarcaneChatbot
         </p>
       </footer>
     </div>

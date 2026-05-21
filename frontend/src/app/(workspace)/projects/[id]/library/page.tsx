@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useLibraryDatasets, useProjectDatasets, useAttachDataset, useDetachDataset } from "@/hooks/use-datasets"
 import { getCurrentUser } from "@/lib/auth"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import Link from "next/link"
 
 export default function ProjectLibraryPage() {
@@ -38,6 +39,7 @@ export default function ProjectLibraryPage() {
   
   const attachMutation = useAttachDataset()
   const detachMutation = useDetachDataset()
+  const [confirmDetachId, setConfirmDetachId] = React.useState<string | null>(null)
 
   const [searchQuery, setSearchQuery] = React.useState("")
 
@@ -53,13 +55,23 @@ export default function ProjectLibraryPage() {
   }
 
   const handleDetach = (datasetId: string) => {
-    if (confirm("Remove this reference from your project? You can re-attach it anytime from the library.")) {
-      detachMutation.mutate({ projectId, datasetId })
-    }
+    setConfirmDetachId(datasetId)
   }
 
   return (
     <div className="space-y-8 p-8 max-w-7xl mx-auto">
+      <ConfirmDialog
+        open={!!confirmDetachId}
+        onOpenChange={(v) => { if (!v) setConfirmDetachId(null) }}
+        title="Disconnect Dataset"
+        description="Remove this reference from your project? You can re-attach it anytime from the library."
+        confirmLabel="Disconnect"
+        onConfirm={() => {
+          if (!confirmDetachId) return
+          detachMutation.mutate({ projectId, datasetId: confirmDetachId }, { onSettled: () => setConfirmDetachId(null) })
+        }}
+        isPending={detachMutation.isPending}
+      />
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-[0.3em] mb-1">Project Resources</p>

@@ -16,6 +16,7 @@ import { AddDatasetDialog } from "@/components/datasets/add-dataset-dialog"
 import { useProject } from "@/hooks/use-projects"
 import { useProjectDatasets, useDatasetFiles, useDeleteDataset, useDeleteDatasetFile } from "@/hooks/use-datasets"
 import { useDownload } from "@/hooks/use-download"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Dataset } from "@/lib/types"
 import Link from "next/link"
 
@@ -28,23 +29,33 @@ function DatasetRow({ dataset }: { dataset: Dataset }) {
   const deleteDatasetMutation = useDeleteDataset()
   const deleteFileMutation = useDeleteDatasetFile()
   const { downloadFile } = useDownload()
-  
+  const [confirmDataset, setConfirmDataset] = React.useState(false)
+  const [confirmFileId, setConfirmFileId] = React.useState<string | null>(null)
+
   const genomeFiles = files.filter(f => f.file_type.includes('genome'))
   const knowledgeFiles = files.filter(f => !f.file_type.includes('genome'))
 
-  const handleDeleteDataset = () => {
-    if (confirm(`Are you sure you want to delete the dataset "${dataset.name}"?`)) {
-      deleteDatasetMutation.mutate(dataset.id)
-    }
-  }
-
-  const handleDeleteFile = (fileId: string) => {
-    if (confirm("Are you sure you want to delete this file?")) {
-      deleteFileMutation.mutate({ fileId, datasetId: dataset.id })
-    }
-  }
+  const handleDeleteDataset = () => setConfirmDataset(true)
+  const handleDeleteFile = (fileId: string) => setConfirmFileId(fileId)
 
   return (
+    <>
+    <ConfirmDialog
+      open={confirmDataset}
+      onOpenChange={setConfirmDataset}
+      title={`Delete "${dataset.name}"`}
+      description="This will permanently delete the dataset and all its files. This action cannot be undone."
+      onConfirm={() => deleteDatasetMutation.mutate(dataset.id, { onSettled: () => setConfirmDataset(false) })}
+      isPending={deleteDatasetMutation.isPending}
+    />
+    <ConfirmDialog
+      open={!!confirmFileId}
+      onOpenChange={(v) => { if (!v) setConfirmFileId(null) }}
+      title="Delete File"
+      description="Are you sure you want to delete this file? This action cannot be undone."
+      onConfirm={() => confirmFileId && deleteFileMutation.mutate({ fileId: confirmFileId, datasetId: dataset.id }, { onSettled: () => setConfirmFileId(null) })}
+      isPending={deleteFileMutation.isPending}
+    />
     <div className="p-6 space-y-4 hover:bg-stone-50/50 transition-colors group">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -149,6 +160,7 @@ function DatasetRow({ dataset }: { dataset: Dataset }) {
         </div>
       </div>
     </div>
+    </>
   )
 }
 

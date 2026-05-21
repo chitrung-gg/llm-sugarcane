@@ -13,7 +13,7 @@ function WorkspaceLayoutContent({ children }: { children: React.ReactNode }) {
       {activeProjectId && <AppSidebar />}
       <SidebarInset className="bg-stone-50">
         <WorkspaceHeader />
-        <div className="flex flex-1 flex-col overflow-auto">
+        <div className="relative flex flex-1 flex-col overflow-auto min-h-0">
           {children}
         </div>
       </SidebarInset>

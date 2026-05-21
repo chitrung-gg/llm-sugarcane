@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sugarcane LLM Researcher",
-  description: "Bioinformatics research tool for sugarcane genetics",
+  title: "SugarcaneChatbot",
+  description: "Agentic Sugarcane Research System",
 };
 
 export default function RootLayout({

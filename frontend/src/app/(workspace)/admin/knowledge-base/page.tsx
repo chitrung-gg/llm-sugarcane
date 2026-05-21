@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { AddDatasetDialog } from "@/components/datasets/add-dataset-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useProjects } from "@/hooks/use-projects"
 import { useUserDatasets, useUpdateDataset, useDeleteDataset } from "@/hooks/use-datasets"
 import { SYSTEM_OWNER_ID } from "@/lib/constants"
@@ -48,6 +49,7 @@ export default function AdminKnowledgeBasePage() {
 
   const [searchQuery, setSearchQuery] = React.useState("")
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null)
 
   const selectedProject = adminProjects.find(p => p.id === (selectedProjectId || adminProjects[0]?.id))
 
@@ -64,9 +66,7 @@ export default function AdminKnowledgeBasePage() {
   }
 
   const handleDelete = (datasetId: string) => {
-    if (confirm("Are you sure you want to delete this global dataset? This action is irreversible.")) {
-      deleteDatasetMutation.mutate(datasetId)
-    }
+    setConfirmDeleteId(datasetId)
   }
 
   if (projectsLoading) {
@@ -274,6 +274,17 @@ export default function AdminKnowledgeBasePage() {
           </Card>
         </div>
       </div>
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        onOpenChange={(v) => { if (!v) setConfirmDeleteId(null) }}
+        title="Delete Global Dataset"
+        description="Are you sure you want to delete this global dataset? This action is irreversible and will remove it from all projects that reference it."
+        onConfirm={() => {
+          if (!confirmDeleteId) return
+          deleteDatasetMutation.mutate(confirmDeleteId, { onSettled: () => setConfirmDeleteId(null) })
+        }}
+        isPending={deleteDatasetMutation.isPending}
+      />
     </div>
   )
 }
