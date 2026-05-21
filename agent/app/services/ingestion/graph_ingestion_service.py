@@ -121,14 +121,15 @@ class GraphIngestionService:
         dataset_id_str = source_meta.get("dataset_id")
 
         # 1. Route to the Correct Vector Store
-        target_vector_store = None
-        if tool_config.vector_store_type == VectorStoreType.SOLID:
-            target_vector_store = self.vector_store_solid
-        elif tool_config.vector_store_type == VectorStoreType.VOLATILE:
-            target_vector_store = self.vector_store_volatile
+        target_vector_store = self.vector_store_solid
+        # if tool_config.vector_store_type == VectorStoreType.SOLID:
+        #     target_vector_store = self.vector_store_solid
+        # elif tool_config.vector_store_type == VectorStoreType.VOLATILE:
+        #     target_vector_store = self.vector_store_volatile
         
-        if not target_vector_store:
-            raise ValueError(f"The vector store type '{tool_config.vector_store_type}' has not been configured.")
+        
+        # if not target_vector_store:
+        #     raise ValueError(f"The vector store type '{tool_config.vector_store_type}' has not been configured.")
         
         # Neo4j Graph Insertion
         graph_documents = []

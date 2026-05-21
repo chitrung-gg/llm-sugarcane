@@ -10,7 +10,7 @@ from qdrant_client.http import models
 from app.core.prompts.knowledge_graph_prompts import GRAPH_PRUNING_PROMPT
 from app.schemas.agent.knowledge_graph import GraphPruningResult
 from app.services.llm.llm_service import LLMService
-from agent.app.schemas.tool.knowledge_graph_tool_schema import KnowledgeGraphInput
+from app.schemas.tool.knowledge_graph_tool_schema import KnowledgeGraphInput
 from app.configs.settings.settings import get_settings
 from app.core.tools.registry.registry_tool import register_agent_tool
 

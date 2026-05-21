@@ -74,7 +74,7 @@ class RerankerService:
             
         best_score = max(normalized_scores)
 
-        # 4. THE HYBRID CHECK
+        # 4. Check
         if best_score < absolute_floor:
             logger.warning(
                 f"[Reranker] ALL documents failed the absolute floor "

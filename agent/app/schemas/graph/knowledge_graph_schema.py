@@ -93,13 +93,15 @@ class KnowledgeGraphRelationship(BaseModel):
 
 class KnowledgeGraphComponents(BaseModel):
     is_domain_relevant: bool = Field(
-        description="True ONLY if the text is specifically about plant biology, sugarcane, genomics, or related agricultural sciences. False if it is about human medicine, irrelevant news, etc."
+        description="True if the text contains information relevant to plant science, genomics, or agricultural biotechnology. This includes specific studies on crops (especially sugarcane and related species), general botanical research, molecular biology techniques, and bioinformatic methods applicable to genetic analysis. False only if the content is entirely unrelated, such as general entertainment news, or non-scientific commercial content."
     )
     overall_confidence: float = Field(
-        description="Score (0.0 to 1.0) representing the scientific reliability of the ENTIRE text. "
-                    "0.8-1.0: Primary literature, official databases (e.g., NCBI), curated genomes. "
-                    "0.5-0.7: General web articles, summaries, wikis. "
-                    "0.0-0.4: Unknown sources, messy outputs, or incomplete data."
+        description="""
+            Score (0.0 to 1.0) reflecting how explicitly the entities and relationships are stated in the text.
+            0.8-1.0: Information is direct, clear, and supported by data/citations.
+            0.5-0.7: Information is implied or from secondary summaries.
+            < 0.5: Ambiguous, fragmented, or potentially conflicting information.
+        """
     )
     nodes: List[KnowledgeGraphNode] = Field(description="List of entities extracted from the text.")
     relationships: List[KnowledgeGraphRelationship] = Field(description="List of relationships between entities.")
