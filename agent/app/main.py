@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 from app.core.app_container import get_container
-from app.api.v1 import agent_endpoint, ingestion_endpoint, workspace_endpoint
+from app.api.v1 import agent_endpoint, ingestion_endpoint, project_endpoint, dataset_endpoint, chat_endpoint
 
 
 @asynccontextmanager
@@ -71,7 +71,9 @@ FastAPIInstrumentor.instrument_app(app)
 
 app.include_router(agent_endpoint.router, prefix="/api/v1/agent")
 app.include_router(ingestion_endpoint.router, prefix="/api/v1/ingest")
-app.include_router(workspace_endpoint.router, prefix="/api/v1/workspace")
+app.include_router(project_endpoint.router, prefix="/api/v1/workspace")
+app.include_router(dataset_endpoint.router, prefix="/api/v1/workspace")
+app.include_router(chat_endpoint.router, prefix="/api/v1/workspace")
 
 @app.get("/")
 async def root():

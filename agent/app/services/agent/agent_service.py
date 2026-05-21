@@ -24,7 +24,8 @@ from pydantic import BaseModel
 from app.core.graph.state.agent_state import AgentProject
 from app.utils.files.files_classifier import is_genomic_file
 from app.utils.observability.tracing import tracing
-from app.services.workspace.workspace_service import WorkspaceService
+from app.services.workspace.project.project_service import ProjectService
+from app.services.workspace.dataset.dataset_service import DatasetService
 from app.common.constants import (
     LANGFUSE_GRAPH_OBSERVATION_NAME, 
     LANGGRAPH_STATE_MAX_ITERATIONS, 
@@ -45,12 +46,14 @@ class AgentService:
     def __init__(
         self,
         graph: CompiledStateGraph,
-        workspace_service: WorkspaceService,
+        project_service: ProjectService,
+        dataset_service: DatasetService,
         llm_service: LLMService,
         langfuse_client: Langfuse
     ):
         self.graph = graph
-        self.workspace_service = workspace_service
+        self.project_service = project_service
+        self.dataset_service = dataset_service
         self.llm_service = llm_service
         self.langfuse_client = langfuse_client
 
@@ -104,7 +107,7 @@ class AgentService:
                     #  Hydrate Workspace Context
                     active_project_name = None
                     if project_id:
-                        project = await self.workspace_service.get_project(project_id)
+                        project = await self.project_service.get_project(project_id)
                         if project:
                             active_project_name = project.name
                     
@@ -117,7 +120,7 @@ class AgentService:
 
                     active_datasets = []
                     if dataset_ids:
-                        datasets = await self.workspace_service.get_datasets_by_ids(dataset_ids)
+                        datasets = await self.dataset_service.get_datasets_by_ids(dataset_ids)
                         for ds in datasets:
                             ds_files = []
                             for f in ds.files:
@@ -342,7 +345,7 @@ class AgentService:
 
                 # 1. Fetch Project Data & Project Dataset IDs
                 if project_id:
-                    project_db = await self.workspace_service.get_project(project_id)
+                    project_db = await self.project_service.get_project(project_id)
                     if project_db:
                         active_project = {
                             "project_id": str(project_db.id),
@@ -350,7 +353,7 @@ class AgentService:
                             "description": project_db.description,
                             "metadata": project_db.dataset_metadata
                         }
-                        project_dataset_ids = await self.workspace_service.get_project_dataset_ids(project_id)
+                        project_dataset_ids = await self.dataset_service.get_project_dataset_ids(project_id)
                 else:
                     # raise ValueError("Should we block chat if not in any project ?")
                     pass
@@ -361,7 +364,7 @@ class AgentService:
 
                 # 3. Fetch Datasets and Categorize Files
                 if query_dataset_ids:
-                    datasets_db = await self.workspace_service.get_datasets_by_ids(query_dataset_ids)
+                    datasets_db = await self.dataset_service.get_datasets_by_ids(query_dataset_ids)
                     
                     for ds in datasets_db:
                         genomic_files = []

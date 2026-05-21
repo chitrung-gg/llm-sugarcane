@@ -168,6 +168,12 @@ class DatasetService:
         datasets = await self.get_datasets_by_ids([dataset_id])
         return datasets[0] if datasets else None
 
+    async def get_file_by_id(self, file_id: uuid.UUID):
+        return await self.file_service.get_file_by_id(file_id)
+
+    async def delete_dataset_file(self, file_record_id: uuid.UUID) -> bool:
+        return await self.file_service.delete_dataset_file(file_record_id)
+
     async def get_datasets_by_ids(self, dataset_ids: List[uuid.UUID]) -> List[UserDataset]:
         if not dataset_ids:
             return []

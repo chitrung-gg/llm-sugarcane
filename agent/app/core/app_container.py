@@ -21,8 +21,11 @@ from app.configs.settings.settings import get_settings
 from app.services.llm.llm_service import LLMService
 from app.utils.document_processor import DocumentProcessor
 from app.services.ingestion.graph_ingestion_service import GraphIngestionService
-from app.services.workspace.workspace_service import WorkspaceService
+from app.services.workspace.project.project_service import ProjectService
+from app.services.workspace.dataset.dataset_service import DatasetService
+from app.services.workspace.chat.chat_service import ChatService
 from app.services.storage.storage_service import StorageService
+from app.services.storage.file_service import FileService
 
 from app.core.embeddings.gemini_embeddings_model import GeminiEmbeddingModel
 from app.core.vector_store.vector_store import VectorStore
@@ -43,7 +46,10 @@ class AppContainer:
         self._knowledge_service: KnowledgeService | None = None
         self._storage_service: StorageService | None = None
         self._graph_ingestion_service: GraphIngestionService | None = None
-        self._workspace_service: WorkspaceService | None = None
+        self._file_service: FileService | None = None
+        self._project_service: ProjectService | None = None
+        self._dataset_service: DatasetService | None = None
+        self._chat_service: ChatService | None = None
         self._embedding_model: GeminiEmbeddingModel | None = None
         self._vector_store_solid: QdrantVectorStore | None = None
         self._vector_store_volatile: QdrantVectorStore | None = None
@@ -77,7 +83,10 @@ class AppContainer:
         # 3. Middlewares & Processors
         await self._init_document_processor()
         await self._init_graph_ingestion_service()
-        await self._init_workspace_service()
+        await self._init_file_service()
+        await self._init_project_service()
+        await self._init_dataset_service()
+        await self._init_chat_service()
 
         # 4. The Graph
         logger.info("🗺️ Compiling Agent Graph...")
@@ -121,20 +130,30 @@ class AppContainer:
         """Initialize KnowledgeService."""
         self._knowledge_service = KnowledgeService(
             storage_service=self.storage_service,
-            workspace_service=self.workspace_service
+            file_service=self.file_service
         )
 
     async def _init_agent_service(self):
         """Initialize AgentService."""
         self._agent_service = AgentService(
             graph=self.agent_graph,
-            workspace_service=self.workspace_service,
+            project_service=self.project_service,
+            dataset_service=self.dataset_service,
             llm_service=self.llm_service,
             langfuse_client=self.langfuse_client
         )
 
-    async def _init_workspace_service(self):
-        self._workspace_service = WorkspaceService()
+    async def _init_file_service(self):
+        self._file_service = FileService()
+
+    async def _init_project_service(self):
+        self._project_service = ProjectService()
+
+    async def _init_dataset_service(self):
+        self._dataset_service = DatasetService(file_service=self.file_service)
+
+    async def _init_chat_service(self):
+        self._chat_service = ChatService()
 
     async def _init_graph_ingestion_service(self):
         """Initialize GraphIngestionService."""
@@ -294,9 +313,24 @@ class AppContainer:
         return self._storage_service
     
     @property
-    def workspace_service(self) -> WorkspaceService:
-        assert self._workspace_service, "Container not initialized (WorkspaceService missing)"
-        return self._workspace_service
+    def file_service(self) -> FileService:
+        assert self._file_service, "Container not initialized (FileService missing)"
+        return self._file_service
+
+    @property
+    def project_service(self) -> ProjectService:
+        assert self._project_service, "Container not initialized (ProjectService missing)"
+        return self._project_service
+
+    @property
+    def dataset_service(self) -> DatasetService:
+        assert self._dataset_service, "Container not initialized (DatasetService missing)"
+        return self._dataset_service
+
+    @property
+    def chat_service(self) -> ChatService:
+        assert self._chat_service, "Container not initialized (ChatService missing)"
+        return self._chat_service
 
     @property
     def graph_ingestion_service(self) -> GraphIngestionService:

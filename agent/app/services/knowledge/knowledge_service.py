@@ -18,8 +18,8 @@ from app.schemas.knowledge.knowledge_ingestion_schema import IngestionSourceType
 from app.core.vector_store.vector_store import VectorStoreType
 from app.utils.files.files_classifier import is_genomic_file, is_knowledge_file, get_genomic_file_type
 from app.utils.files.files_validator import validate_genomic_file, validate_knowledge_file
-from app.services.workspace.workspace_service import WorkspaceService
 from app.services.storage.storage_service import StorageService
+from app.services.storage.file_service import FileService
 from app.common.constants import SYSTEM_OWNER_ID
 
 class KnowledgeService:
@@ -28,9 +28,9 @@ class KnowledgeService:
     Delegates raw storage tasks to StorageService.
     """
 
-    def __init__(self, storage_service: StorageService, workspace_service: WorkspaceService):
+    def __init__(self, storage_service: StorageService, file_service: FileService):
         self.storage_service = storage_service
-        self.workspace_service = workspace_service
+        self.file_service = file_service
         self.settings = get_settings()
 
     async def dispatch_ingestion_tasks(
@@ -102,7 +102,7 @@ class KnowledgeService:
                     # Extract metadata for this specific file if provided
                     this_file_meta = files_metadata.get(original_filename) if files_metadata else None
                     
-                    await self.workspace_service.register_dataset_file(
+                    await self.file_service.register_dataset_file(
                         file_id=file_id,
                         dataset_id=dataset_id,
                         file_name=final_filename,

@@ -38,6 +38,13 @@ async def chat_with_langgraph_agent(
         logger.error("Graph Execution Error: {e}", e=e)
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
 
+@router.get("/{thread_id}/history")
+async def get_chat_history(
+    thread_id: uuid.UUID,
+    agent_service: AgentService = Depends(get_agent_service),
+):
+    return await agent_service.get_conversation_history(thread_id)
+
 @router.post("/stream")
 async def chat_stream(
     request: ChatStreamRequest,
