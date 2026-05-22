@@ -76,7 +76,7 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
         # Dynamically add instructions if the agent is about to give up
         final_warning = ""
 
-        is_final_attempt = current_iteration >= max_iterations
+        is_final_attempt = current_iteration > max_iterations
         if is_final_attempt:
             final_warning = SYNTHESIZER_FINAL_WARNING
         
@@ -155,7 +155,7 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
             # The Outer Executor will catch this answer, update past_steps, and decide what to do next.
             
             logger.info("[Synthesizer] Answer complete. Exiting inner graph.")
-            updates["iteration_count"] = 0
+            updates["iteration_count"] = current_iteration + 1
             destination = AgentGraphNode.END_NODE
 
 

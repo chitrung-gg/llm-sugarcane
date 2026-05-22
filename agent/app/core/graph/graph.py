@@ -31,7 +31,6 @@ from app.core.graph.nodes.components.rag_node import make_rag_node
 from app.core.graph.nodes.components.router_node import make_router_node
 from app.core.graph.nodes.components.inner_synthesizer_node import make_inner_synthesizer_node
 from app.core.graph.nodes.components.tools_node import make_tools_node
-from app.core.graph.nodes.components.enrichment_node import make_enrichment_node
 from app.core.graph.state.agent_state import AgentState
 from app.configs.storage.databases import langgraph_connection_pool
 
@@ -144,11 +143,7 @@ async def _build_agent_graph(
     )
     workflow.add_node(
         AgentGraphNode.TOOL,
-        make_tools_node(available_tools)
-    )
-    workflow.add_node(
-        AgentGraphNode.ENRICHMENT,
-        make_enrichment_node(KNOWLEDGE_GRAPH_TOOL_REGISTRY)
+        make_tools_node(available_tools, KNOWLEDGE_GRAPH_TOOL_REGISTRY)
     )
     workflow.add_node(
         AgentGraphNode.INNER_SYNTHESIZER,
@@ -190,13 +185,12 @@ async def _build_agent_graph(
     
     # # 3. Execution Branches converge on Synthesizer (Fan-in pattern)
     workflow.add_edge(AgentGraphNode.RAG, AgentGraphNode.INNER_SYNTHESIZER)
-    workflow.add_edge(AgentGraphNode.TOOL, AgentGraphNode.ENRICHMENT)
-    workflow.add_edge(AgentGraphNode.ENRICHMENT, AgentGraphNode.INNER_SYNTHESIZER)
+    workflow.add_edge(AgentGraphNode.TOOL, AgentGraphNode.INNER_SYNTHESIZER)
     workflow.add_edge(AgentGraphNode.WEB_SEARCH, AgentGraphNode.INNER_SYNTHESIZER)
     
     # # 4. Synthesis and Feedback Loop
     def route_after_synthesis(state: AgentState):
-        if state.get("is_complete") or state.get("iteration_count") >= settings.INNER_AGENT_MAX_ITERATION:
+        if state.get("is_complete") or state.get("iteration_count") > settings.INNER_AGENT_MAX_ITERATION:
             return END
         return AgentGraphNode.ROUTER
 

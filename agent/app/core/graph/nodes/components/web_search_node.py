@@ -119,11 +119,11 @@ def make_web_search_node(
         if not web_docs:
             return {"web_results": []}
             
-        reranked_docs = reranker_service.rerank_documents(
+        reranked_docs = await asyncio.to_thread(
+            reranker_service.rerank_documents,
             documents=web_docs,
             query=original_query,
             top_k=settings.WEB_SEARCH_NUM_RESULTS,
-            # absolute_floor=settings.WEB_SEARCH_SCORE_THRESHOLD
         )
 
         final_web_results = []
@@ -133,8 +133,9 @@ def make_web_search_node(
             relevance_score = float(raw_score) 
 
             final_web_results.append({
-                "content": doc.page_content,
-                "url": doc.metadata.get("url"),
+                "snippet": doc.page_content,
+                "title": doc.metadata.get("title", ""),
+                "link": doc.metadata.get("url", ""),
                 "score": relevance_score
             })
 
@@ -142,6 +143,6 @@ def make_web_search_node(
 
         execution_time = int((time.time() - start_time) * 1000)
 
-        return {"web_results": [final_web_results]}
+        return {"web_results": final_web_results}
 
     return web_search

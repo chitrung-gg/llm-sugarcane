@@ -144,6 +144,7 @@ class KnowledgeService:
                     "metadata": {
                         "file_id": str(file_id),
                         "original_filename": original_filename,
+                        "source": original_filename,
                         "source_type": source_type.value,
                         "vector_store": vector_store.value,
                         "owner_id": str(user_id),

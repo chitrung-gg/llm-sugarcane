@@ -60,14 +60,23 @@ class StorageService:
     async def get_presigned_url(self, s3_uri: str, expires_in: int = 3600) -> str:
         """
         Generates a pre-signed URL for a specific S3 object.
+        If RUSTFS_PUBLIC_URL is set, rewrites the internal endpoint host so the
+        URL is reachable by browsers outside the Docker network.
         """
         bucket, key = await self._parse_s3_uri(s3_uri)
         async with self._get_client() as s3_client:
-            return await s3_client.generate_presigned_url(
+            url = await s3_client.generate_presigned_url(
                 ClientMethod="get_object",
                 Params={"Bucket": bucket, "Key": key},
                 ExpiresIn=expires_in
             )
+
+        public_url = self.settings.RUSTFS_PUBLIC_URL
+        if public_url:
+            internal_url = self.settings.RUSTFS_ENDPOINT_URL.rstrip("/")
+            url = url.replace(internal_url, public_url.rstrip("/"), 1)
+
+        return url
 
     async def download_file(self, s3_uri: str, local_path: Path) -> Path:
         """

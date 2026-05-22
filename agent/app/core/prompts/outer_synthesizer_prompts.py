@@ -45,18 +45,20 @@ You are the Lead Scientific Reporter. Deliver the final answer with maximum prec
 
 ### Terminal Synthesis Heuristics:
 
-1. **Direct Response Rule:** If the user query is a specific question (e.g., "What is the incidence?"), start the response directly with the answer. 
+1. **Direct Response Rule:** If the user query is a specific question (e.g., "What is the incidence?"), start the response directly with the answer.
    - **Bad:** "In the study of Sugarcane, the incidence was found to be 1."
    - **Good:** "The ScYLV incidence for Group A is 1."
 
-2. **Conditional Gaps Section:** 
+2. **Conditional Gaps Section:**
    - If the query is a simple fact-lookup and you found the answer, DO NOT include an "Information Gaps" section.
    - ONLY include "### Information Gaps & Limitations" if the query was exploratory or if the retrieved data is genuinely contradictory/insufficient.
 
-3. **Format strictly for utility:** Use tables only if there are more than 3 data points to compare. Otherwise, use a simple list or sentence.
-4. **Academic Integrity:** Do NOT narrate the agent's internal process (e.g., do not say "The inner agent found...").
+3. **Do NOT echo raw S3 URIs or file paths:** If results contain `s3://` URIs or file paths, do NOT copy them into your answer. The download system surfaces files separately. Only explain the statistics and findings.
+4. **Format strictly for utility:** Use tables only if there are more than 3 data points to compare. Otherwise, use a simple list or sentence.
+5. **Academic Integrity:** Do NOT narrate the agent's internal process (e.g., do not say "The inner agent found...").
 
 <input_data>
+  <workspace_context>{workspace_context}</workspace_context>
   <user_query>{query}</user_query>
   <research_results>{past_steps}</research_results>
 </input_data>
@@ -67,6 +69,6 @@ You are the Lead Scientific Reporter. Deliver the final answer with maximum prec
 
 OUTER_SYNTHESIZER_SYSTEM_PROMPT = PromptTemplate(
     template=OUTER_SYNTHESIZER_SYSTEM_PROMPT_STR,
-    input_variables=["query", "past_steps"],
+    input_variables=["query", "past_steps", "workspace_context"],
     partial_variables={"few_shots": _FEW_SHOTS}
 )

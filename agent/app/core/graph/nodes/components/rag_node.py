@@ -1,3 +1,4 @@
+import asyncio
 import time
 import re
 import hashlib
@@ -101,12 +102,14 @@ def make_rag_node(
         volatile_docs = []
         if dataset_ids:
             # Combine filters
-            volatile_filter = [
-                models.FieldCondition(
-                    key="metadata.dataset_id",
-                    match=models.MatchAny(any=dataset_ids)
-                )
-            ]
+            volatile_filter = models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="metadata.dataset_id",
+                        match=models.MatchAny(any=dataset_ids)
+                    )
+                ]
+            )
  
             volatile_results = await vector_store_volatile.asimilarity_search(
                 query=optimized_query, 
@@ -131,7 +134,8 @@ def make_rag_node(
             final_docs = []
         else:
             logger.debug(f"[RAG] Reranking {len(combined_docs)} total chunks using FlashRank...")
-            final_docs = reranker_service.rerank_documents(
+            final_docs = await asyncio.to_thread(
+                reranker_service.rerank_documents,
                 query=original_query,
                 documents=combined_docs,
                 top_k=settings.QDRANT_FINAL_TOP_K

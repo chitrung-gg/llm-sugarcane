@@ -69,11 +69,33 @@ async def compare_genomes(ids: str) -> Dict[str, Any]:
 
 @register_agent_tool
 @tool(args_schema=GenomeAnalysisInput)
-async def get_genome_analysis(id: int, force_refresh: bool = False) -> Dict[str, Any]:
+async def get_genome_analysis(
+    id: int,
+    force_refresh: bool = False,
+    chromosome_page: int = 1,
+    chromosome_limit: int = 500,
+) -> Dict[str, Any]:
     """
-    High-level analysis landscape of a genome (assembly stats, feature counts, protein/cds stats).
+    Retrieve the full analysis profile of a genome. Use this tool whenever the user asks about:
+    - The chromosome list or names (returned as 'chromosomes': [{name, length, gene_count, gene_density}])
+    - Assembly statistics (total length, N50, GC content, contig count)
+    - Feature counts (genes, mRNA, exons, etc.)
+    - Protein or CDS statistics
+    - Quality metrics (density, gap percentages)
+
+    The chromosomes list is paginated (sorted by length descending). Use chromosome_limit=500
+    to retrieve all chromosomes in a single call. If total chromosomes exceed 500, increment
+    chromosome_page to fetch the next page.
+
+    This is the PRIMARY tool for answering "what chromosomes does genome X have?" — the response
+    includes every chromosome name and its length, which is required before calling tools like
+    design_polyploid_primer or get_chromosome_detail.
     """
-    params = {"force_refresh": force_refresh}
+    params = {
+        "force_refresh": force_refresh,
+        "chromosome_page": chromosome_page,
+        "chromosome_limit": chromosome_limit,
+    }
     return await call_genome_backend("GET", f"/api/genome/{id}/analysis", params=params)
 
 @register_agent_tool
@@ -341,8 +363,21 @@ async def run_synteny_haplotype_analysis(
 @tool
 async def get_synteny_status(task_id: int) -> Dict[str, Any]:
     """
-    Get the current execution status and retrieve the final results/output data of a synteny analysis task.
-    Use this tool when the user wants to check if a previously initiated synteny task is done, or to get the actual results of the completed task.
+    Get the current execution status and retrieve the final results of a synteny analysis task.
+    Use this tool when the user wants to check if a previously initiated synteny task is done,
+    or to fetch and explain the actual results of a completed task.
+
+    Response fields:
+    - status: "success" | "running" | "failed"
+    - alignment_stats:
+        - block_count: number of syntenic blocks (collinear gene chains); more blocks = more fragmented synteny
+        - gene_pair_count: total orthologous gene pairs across all blocks; indicates synteny depth
+        - avg_block_size: average number of gene pairs per block; larger = longer conserved regions
+    - download_archive_s3: S3 URI of the full results archive (.zip) — always reproduce this URI verbatim in your answer
+    - dotplot_image_s3: S3 URI of the dot-plot visualization (.png) — always reproduce this URI verbatim in your answer
+
+    When reporting results to the user, explain the biological significance of each stat AND
+    include the S3 URIs verbatim so the user can download the files.
     """
     return await call_genome_backend("GET", f"/api/synteny/result/{task_id}")
 

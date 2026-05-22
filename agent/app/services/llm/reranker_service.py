@@ -3,7 +3,11 @@ from typing import List, Optional
 from loguru import logger
 from langchain_core.documents import Document
 from sentence_transformers import CrossEncoder
-import torch 
+import torch
+
+# Prevent PyTorch's internal OpenMP/MKL thread pool from deadlocking when
+# model.predict() is called inside asyncio.to_thread (a ThreadPoolExecutor thread).
+torch.set_num_threads(1)
 
 from app.configs.settings.settings import get_settings
 
@@ -33,7 +37,7 @@ class RerankerService:
         self, 
         query: str, 
         documents: List[Document], 
-        absolute_floor: float = 0.65, 
+        absolute_floor: float = 0.6, 
         relative_tolerance: float = 0.85, 
         top_k: Optional[int] = None
     ) -> List[Document]:

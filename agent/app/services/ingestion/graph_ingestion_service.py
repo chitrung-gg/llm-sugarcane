@@ -194,10 +194,12 @@ class GraphIngestionService:
             res = chunk["components"]
             raw_text = chunk["text"]
 
-            # The Bridge: ["Gene::ScDREB2", "Disease::Smut"]
-            entity_ids = list(set([
-                generate_entity_uuid(n.label, n.name) for n in res.nodes
-            ])) if res.nodes else []
+            # The Bridge: parallel arrays where entities[i] <-> entity_ids[i]
+            seen: dict[str, str] = {}
+            for n in res.nodes:
+                key = f"{n.label}::{n.name}"
+                if key not in seen:
+                    seen[key] = generate_entity_uuid(n.label, n.name)
 
             clean_metadata = {
                 "file_id": file_id_str,
@@ -205,8 +207,8 @@ class GraphIngestionService:
                 "owner_id": str(owner_id),
                 "source": source_meta.get("source", "unknown_file"),
                 "page": source_meta.get("page", 1),
-                "entity_ids": entity_ids, 
-                "entities": [f"{n.label}::{n.name}" for n in res.nodes]
+                "entity_ids": list(seen.values()),
+                "entities": list(seen.keys())
             }
             
             clean_metadata = {k: v for k, v in clean_metadata.items() if v is not None}

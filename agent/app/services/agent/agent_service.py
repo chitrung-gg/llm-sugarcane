@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import time
 from typing import Any, Dict, List, Optional, AsyncContextManager, cast
 import uuid
@@ -483,6 +484,7 @@ class AgentService:
                 return
 
             try:
+                collected_s3_uris: set[str] = set()
                 if input_state is not None:
                     async for event in self.graph.astream_events(input_state, config, version="v2"):
                         kind = event["event"]
@@ -550,13 +552,18 @@ class AgentService:
                             
                         elif kind == EventKind.TOOL_END:
                             tool_output = event["data"].get("output")
+                            # Extract S3 URIs from structured output before stringifying
+                            if tool_output is not None:
+                                raw = tool_output if isinstance(tool_output, str) else json.dumps(tool_output, default=str)
+                                for uri in re.findall(r's3://[^\s"\'`<>|,\]\[)}{]+', raw):
+                                    collected_s3_uris.add(uri.rstrip(".,;:"))
                             # Stringify output safely for SSE stream
                             safe_output = str(tool_output)[:1000] if tool_output is not None else "No output."
-                            
+
                             chunk = StreamChunk(
-                                event=StreamEventType.TOOL_END, 
+                                event=StreamEventType.TOOL_END,
                                 data={
-                                    'tool': name, 
+                                    'tool': name,
                                     'output': safe_output
                                 }
                             )
@@ -567,24 +574,20 @@ class AgentService:
                         if kind == EventKind.CHAIN_END and name == AgentGraphNode.OUTER_SYNTHESIZER:
                             output = event["data"].get("output")
                             final_answer = None
-                            
+
                             if output is not None and hasattr(output, "update") and isinstance(output.update, dict):
                                 final_answer = output.update.get("final_answer")
 
                             if final_answer:
-                                # chunk = StreamChunk(
-                                #     event=StreamEventType.ANSWER, 
-                                #     data=final_answer
-                                # )
-                                # yield f"data: {chunk.model_dump_json()}\n\n"
-                                
+                                metadata = {"downloadable_s3_uris": sorted(collected_s3_uris)} if collected_s3_uris else None
                                 # Save to DB immediately
                                 await self._save_chat_message(
                                     thread_id=thread_id,
                                     role="assistant",
                                     content=final_answer,
                                     type="answer",
-                                    execution_id=execution_id
+                                    execution_id=execution_id,
+                                    chat_metadata=metadata
                                 )
 
                 # 1. Initialize the status dictionary
@@ -663,12 +666,15 @@ class AgentService:
 
             formatted_messages = []
             for row in rows:
+                meta_raw = row.get("chat_metadata")
+                chat_metadata = json.loads(meta_raw) if isinstance(meta_raw, str) else meta_raw
                 formatted_messages.append({
                     "id": str(row["id"]),
                     "role": row["role"],
                     "content": row["content"],
                     "type": row["type"],
-                    "execution_id": row["execution_id"]
+                    "execution_id": row["execution_id"],
+                    "chat_metadata": chat_metadata,
                 })            
             return {
                 "thread_id": thread_id,

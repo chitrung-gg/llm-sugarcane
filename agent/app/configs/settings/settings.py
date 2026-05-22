@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Optional
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -84,7 +85,7 @@ class Settings(BaseSettings):
     QDRANT_URL: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
     QDRANT_API_KEY: SecretStr | None = Field(default=None, validation_alias="QDRANT_API_KEY")
     QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME: str = Field(
-        default="sugarcane_docs_new",       # "sugarcane_docs_new"
+        default="sugarcane_docs",       # "sugarcane_docs_new"
         validation_alias="QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME"
     )
     QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME: str = Field(
@@ -164,6 +165,12 @@ class Settings(BaseSettings):
     RUSTFS_ENDPOINT_URL: str = Field(
         default="http://localhost:9000",
         validation_alias="RUSTFS_ENDPOINT_URL"
+    )
+    # Public URL reachable by browsers — used to rewrite presigned URLs so clients can download directly.
+    # If unset, falls back to RUSTFS_ENDPOINT_URL (fine when running fully local).
+    RUSTFS_PUBLIC_URL: Optional[str] = Field(
+        default=None,
+        validation_alias="RUSTFS_PUBLIC_URL"
     )
     RUSTFS_ACCESS_KEY_ID: str = Field(
         default="rustfs",

@@ -80,6 +80,8 @@ class CompareGenomesInput(BaseModel):
 class GenomeAnalysisInput(BaseModel):
     id: int = Field(..., description="Genome ID")
     force_refresh: bool = Field(False, description="Force Refresh")
+    chromosome_page: int = Field(1, ge=1, description="Page number for the chromosomes list (default 1).")
+    chromosome_limit: int = Field(500, ge=1, le=500, description="Chromosomes per page, sorted by length descending (max 500). Use 500 to retrieve all chromosomes in one call.")
 
 class ChromosomeDetailInput(BaseModel):
     id: int = Field(..., description="Genome ID")
