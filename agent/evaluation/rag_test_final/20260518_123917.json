@@ -1,0 +1,522 @@
+[
+    {
+        "input": "What is the causal agent of yellow leaf disease in sugarcane?",
+        "actual_output": "The causal agent of yellow leaf disease in sugarcane is the Sugarcane yellow leaf virus (SCYLV), which is a polerovirus.\n\nThe causal agent of yellow leaf disease in sugarcane is the Sugarcane yellow leaf virus (SCYLV), which is a polerovirus.",
+        "expected_output": "The causal agent is the Sugarcane yellow leaf virus (SCYLV), a Polerovirus transmitted by aphids.",
+        "retrieval_context": [
+            "## Abstract  \nKey message Using GWAS approaches, we detected independent resistant markers in sugarcane towards a vectored virus disease. Based on comparative genomics, several candidate genes potentially involved in virus/ aphid/plant interactions were pinpointed.  \nAbstract Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids. To identify quantitative trait loci controlling resistance to yellow leaf which are of direct relevance for breeding, we undertook a genome-wide association study (GWAS) on a sugarcane cultivar panel (n =189) representative of current breeding germplasm. This panel was fingerprinted with 3,949 polymorphic markers (DArT and AFLP). The panel was phenotyped for SCYLV infection in leaves and stalks in two trials for two crop cycles, under natural disease pressure prevalent in Guadeloupe. Mixed linear  \nCommunicated by Antonio Augusto Franco Garcia.",
+            "## Introduction  \nYellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40% in susceptible cultivars (Lockhart and Cronjé 2000; Zhu etal. 2011; Rassaby etal. 2003; Vega etal. 1997). This disease has been well described (Schenck 2001; Rott etal. 2008) and is caused by the Sugarcane yellow leaf virus (SCYLV), a polerovirus (D'Arcy and Domier 2005) vectored in a persistent, circulative, non-propagative manner by different aphids species as Ceratovacuna lanigera, Melanaphis sacchari, Rhopalosiphum maidis, and R. rufiabdominalis (Schenck and Lehrer 2000; Zhou etal. 2006). M. sacchari has been shown to be the most efficient aphid vector of SCYLV  \nwhen compared with R. maidis, and R. rufiabdominalis (Schenck and Lehrer 2000)."
+        ],
+        "context": [
+            "Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How much yield loss can yellow leaf disease cause in susceptible sugarcane cultivars?",
+        "actual_output": "Sugarcane yellow leaf disease (SCYLV) causes yield losses ranging from 20% to 40% in susceptible cultivars.\n\nSugarcane yellow leaf disease (SCYLV) causes yield losses ranging from 20% to 40% in susceptible cultivars.",
+        "expected_output": "Yellow leaf disease can cause severe yield losses ranging from 20 to 40% in susceptible cultivars.",
+        "retrieval_context": [
+            "## Introduction  \nYellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40% in susceptible cultivars (Lockhart and Cronjé 2000; Zhu etal. 2011; Rassaby etal. 2003; Vega etal. 1997). This disease has been well described (Schenck 2001; Rott etal. 2008) and is caused by the Sugarcane yellow leaf virus (SCYLV), a polerovirus (D'Arcy and Domier 2005) vectored in a persistent, circulative, non-propagative manner by different aphids species as Ceratovacuna lanigera, Melanaphis sacchari, Rhopalosiphum maidis, and R. rufiabdominalis (Schenck and Lehrer 2000; Zhou etal. 2006). M. sacchari has been shown to be the most efficient aphid vector of SCYLV  \nwhen compared with R. maidis, and R. rufiabdominalis (Schenck and Lehrer 2000).",
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner). This virus is present in all commercial sugarcane cultivars and in all sugarcane growing areas in Guadeloupe, where field SCYLV incidences varied from 0 to 21% in 2005 depending on cultivars and locations (Edon-Jock etal. 2007). Incidences have since increased to reach, in 2010, between 1 and 72% for the most susceptible cultivars (personal communication, J.H. Daugrois)."
+        ],
+        "context": [
+            "Yellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40 % in susceptible cultivars"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Where and when was SCYLV first identified according to the text?",
+        "actual_output": "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999).\n\nSCYLV was first identified in Guadeloupe in 1996.",
+        "expected_output": "SCYLV was first identified in Guadeloupe in 1996.",
+        "retrieval_context": [
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner). This virus is present in all commercial sugarcane cultivars and in all sugarcane growing areas in Guadeloupe, where field SCYLV incidences varied from 0 to 21% in 2005 depending on cultivars and locations (Edon-Jock etal. 2007). Incidences have since increased to reach, in 2010, between 1 and 72% for the most susceptible cultivars (personal communication, J.H. Daugrois).",
+            "## Abstract  \nKey message Using GWAS approaches, we detected independent resistant markers in sugarcane towards a vectored virus disease. Based on comparative genomics, several candidate genes potentially involved in virus/ aphid/plant interactions were pinpointed.  \nAbstract Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids. To identify quantitative trait loci controlling resistance to yellow leaf which are of direct relevance for breeding, we undertook a genome-wide association study (GWAS) on a sugarcane cultivar panel (n =189) representative of current breeding germplasm. This panel was fingerprinted with 3,949 polymorphic markers (DArT and AFLP). The panel was phenotyped for SCYLV infection in leaves and stalks in two trials for two crop cycles, under natural disease pressure prevalent in Guadeloupe. Mixed linear  \nCommunicated by Antonio Augusto Franco Garcia."
+        ],
+        "context": [
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois et al. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner)."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "According to the study, what is the most efficient strategy to control sugarcane diseases?",
+        "actual_output": "Varietal resistance improvement is identified as the most efficient strategy to control sugarcane diseases. Key methodologies mentioned include the exploration of genotypic variability within germplasm collections (Comstock et al. 2001; Komor 2011) and the use of QTL mapping approaches to characterize resistance (Costet et al.).\n\nVarietal resistance improvement is the most efficient strategy to control sugarcane diseases.",
+        "expected_output": "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases.",
+        "retrieval_context": [
+            "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases, but the lack of knowledge of the genetic basis of yellow leaf resistance makes breeding progress for this disease difficult. Some studies have dealt with the exploration of genotypic variability of resistance to SCYLV in sugarcane germplasm. Indexation of germplasm collections of sugarcane and related species for the presence of the virus revealed potential sources of resistance to yellow leaf disease. Commercial cultivars (Saccharum spp.), S. officinarum , S. robustum and S. sinense presented high virus incidence, whereas virus incidence was low for S. barberi and S. spontaneum , and the related genus Miscanthus spp. and Erianthus spp. (Comstock etal. 2001; Komor 2011). Until today, only one genetic study was attempted to characterize resistance to yellow leaf disease. Using a QTL approach based on a biparental progeny between a susceptible cultivar and a resistant clone, Costet etal"
+        ],
+        "context": [
+            "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases, but the lack of knowledge of the genetic basis of yellow leaf resistance makes breeding progress for this disease difficult."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many sugarcane accessions were used in the cultivar panel for this study?",
+        "actual_output": "The study used a panel of 189 sugarcane accessions originating from 26 sugarcane breeding programs worldwide, consisting primarily of advanced interspecific sugar-producing commercial hybrids.\n\n189 sugarcane accessions were used in the cultivar panel for this study.",
+        "expected_output": "The study used a panel of 189 sugarcane accessions.",
+        "retrieval_context": [
+            "## Plant material  \nA panel of 189 sugarcane accessions originated from 26 sugarcane breeding programs around the world (supplementary material 1) was planted in two successive trials (A and B) at Station de Roujol, CIRAD, Petit Bourg, Guadeloupe, French West Indies. This panel was composed of a large majority of advanced interspecific sugar-producing commercial hybrids and a very few early-generation interspecific hybrids. Both trials were planted in a randomized complete block design with three complete blocks and a 4m sugarcane row as an experimental plot. Plots were separated by 1.5m between line and rows. Trials were conducted during three successive crop cycles. Both trials were planted using cuttings from the germplasm collection of"
+        ],
+        "context": [
+            "A panel of 189 sugarcane accessions originated from 26 sugarcane breeding programs around the world (supplementary material 1) was planted in two successive trials"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many independent markers were significantly detected in association with SCYLV resistance?",
+        "actual_output": "Six independent markers were significantly detected in association with the SCYLV resistance phenotype.\n\nSix independent markers were significantly detected in association with the SCYLV resistance phenotype.",
+        "expected_output": "Six independent markers were significantly detected in association with the SCYLV resistance phenotype.",
+        "retrieval_context": [
+            "## Abstract  \nKey message Using GWAS approaches, we detected independent resistant markers in sugarcane towards a vectored virus disease. Based on comparative genomics, several candidate genes potentially involved in virus/ aphid/plant interactions were pinpointed.  \nAbstract Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids. To identify quantitative trait loci controlling resistance to yellow leaf which are of direct relevance for breeding, we undertook a genome-wide association study (GWAS) on a sugarcane cultivar panel (n =189) representative of current breeding germplasm. This panel was fingerprinted with 3,949 polymorphic markers (DArT and AFLP). The panel was phenotyped for SCYLV infection in leaves and stalks in two trials for two crop cycles, under natural disease pressure prevalent in Guadeloupe. Mixed linear  \nCommunicated by Antonio Augusto Franco Garcia.",
+            "models including co-factors representing population structure fixed effects and pairwise kinship random effects provided an efficient control of the risk of inflated type-I error at a genome-wide level. Six independent markers were significantly detected in association with SCYLV resistance phenotype. These markers explained individually between 9 and 14% of the disease variation of the cultivar panel. Their frequency in the panel was relatively low (8–20%). Among them, two markers were detected repeatedly across the GWAS exercises based on the different disease resist -ance parameters. These two markers could be blasted on Sorghum bicolor genome and candidate genes potentially involved in plant–aphid or plant–virus interactions were localized in the vicinity of sorghum homologs of sugarcane markers. Our results illustrate the potential of GWAS approaches to prospect among sugarcane germplasm for accessions likely bearing resistance alleles of significant effect useful in breeding programs."
+        ],
+        "context": [
+            "Six independent markers were significantly detected in association with SCYlV resistance phenotype. These markers explained individually between 9 and 14 % of the disease variation of the cultivar panel."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What does CatRAG stand for in the proposed framework?",
+        "actual_output": "CatRAG stands for ContextAware Traversal for robust RAG. Its role is to transform Knowledge Graph Traversal into a context-aware navigation structure, mitigating the constraints of static graph topologies and improving multi-hop reasoning completeness by integrating an optimization layer for context-driven navigation.\n\nCatRAG stands for ContextAware Traversal for robust RAG.",
+        "expected_output": "CatRAG stands for Context-Aware Traversal for robust RAG.",
+        "retrieval_context": [
+            "## 7 Conclusion  \nWe identify and address the \"Static Graph Fallacy\" inherent in current structure-aware RAG systems, where fixed transition probabilities predispose retrieval to semantic drift and prevent the recovery of complete evidence chains. We propose CatRAG, a framework that transforms the Knowledge Graph Traversal into a context-aware navigation structure. Experiment across multi-hop benchmarks demonstrate that CatRAG consistently outperforms baselines, including HippoRAG 2, while significantly reducing the bias of high-degree hub nodes. Our analysis reveals that these topological adjustments yield substantial improvements in reasoning completeness, effectively bridging the gap between retrieving partial context and enabling fully grounded, multi-hop reasoning.",
+            "To mitigate the constraints imposed by static graph topologies, we develop CatRAG (ContextAware Traversal for robust RAG). This framework extends the HippoRAG 2 (Gutiérrez et al. , 2025) paradigm by integrating a novel optimization layer tailored for context-driven navigation. First, we introduce Symbolic Anchoring. By injecting explicitly recognized entities as weak topological anchors, we constrain the starting distribution to prevent immediate drift into generic hubs. Second, we introduce Query-Aware Dynamic Edge Weighting. By employing an LLM to assess the relevance of outgoing edges from seed entities, we dynamically modulate the graph edge weight, effectively pruning irrelevant paths while amplifying those aligned with the query's intent. Third, we propose Key-Fact Passage Weight Enhancement, a costefficient method to structurally anchor the random walk to documents containing verified evidentiary triples"
+        ],
+        "context": [
+            "To address this, we propose CatRAG, Context-Aware Traversal for robust RAG, a framework that builds on the HippoRAG 2 ar-chitecture and transforms the static KG into a query-adaptive navigation structure."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What is the \"Static Graph Fallacy\" problem that CatRAG aims to solve?",
+        "actual_output": "The 'Static Graph Fallacy' refers to a problem in structure-aware RAG systems where fixed transition probabilities lead to semantic drift and prevent the recovery of complete evidence chains. CatRAG addresses this by transforming Knowledge Graph Traversal into a context-aware navigation structure using a 'one-shot' graph modification that dynamically re-weights edges before traversal.\n\nThe \"Static Graph Fallacy\" refers to a problem in structure-aware Retrieval-Augmented Generation (RAG) systems where fixed transition probabilities lead to semantic drift and prevent the recovery of complete evidence chains. CatRAG addresses this by transforming Knowledge Graph Traversal into a context-aware navigation structure using a \"one-shot\" graph modification that dynamically re-weights edges before traversal.",
+        "expected_output": "The \"Static Graph Fallacy\" is a problem where methods rely on fixed transition probabilities determined during indexing. This rigidity ignores the query-dependent nature of edge relevance, causing semantic drift.",
+        "retrieval_context": [
+            "## 7 Conclusion  \nWe identify and address the \"Static Graph Fallacy\" inherent in current structure-aware RAG systems, where fixed transition probabilities predispose retrieval to semantic drift and prevent the recovery of complete evidence chains. We propose CatRAG, a framework that transforms the Knowledge Graph Traversal into a context-aware navigation structure. Experiment across multi-hop benchmarks demonstrate that CatRAG consistently outperforms baselines, including HippoRAG 2, while significantly reducing the bias of high-degree hub nodes. Our analysis reveals that these topological adjustments yield substantial improvements in reasoning completeness, effectively bridging the gap between retrieving partial context and enabling fully grounded, multi-hop reasoning.",
+            "searches. CatRAG instead introduces a \"one-shot\" context-aware graph modification that dynamically re-weights edges before traversal. Unlike iterative cycles, our approach maintains the efficiency of a single retrieval pass, effectively combining the reasoning precision of adaptive methods with the speed and structural integrity of graph-based retrieval."
+        ],
+        "context": [
+            "However, these methods suffer from a \"Static Graph Fal-lacy\": they rely on fixed transition probabil-ities determined during indexing. This rigid-ity ignores the query-dependent nature of edge relevance, causing semantic drift where ran-dom walks are diverted into high-degree \"hub\" nodes before reaching critical downstream ev-idence."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What are the three mechanisms introduced in the CatRAG framework to steer the random walk?",
+        "actual_output": "The CatRAG framework introduces three specific mechanisms to steer the random walk: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the walk; (2) Query-Aware Dynamic Edge Weighting, which modulates graph structure to prune irrelevant paths and amplify those aligned with query intent; and (3) Key-Fact Passage Weight Enhancement, which provides a cost-efficient bias to structurally anchor the walk to likely evidence.\n\nThe three mechanisms introduced in the CatRAG framework to steer the random walk are: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the walk; (2) Query-Aware Dynamic Edge Weighting, which modulates graph structure to prune irrelevant paths and amplify those aligned with query intent; and (3) Key-Fact Passage Weight Enhancement, which provides a cost-efficient bias to structurally anchor the walk to likely evidence.",
+        "expected_output": "The three mechanisms are (1) Symbolic Anchoring, (2) Query-Aware Dynamic Edge Weighting, and (3) Key-Fact Passage Weight Enhancement.",
+        "retrieval_context": [
+            ". We introduce a multi-faceted framework to steer the random walk: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the random walk; (2) Query-Aware Dynamic Edge Weighting, which dynamically modulates graph structure, to prune irrelevant paths while amplifying those aligned with the query's intent; and (3) Key-Fact Passage Weight Enhancement, cost-efficient bias that structurally anchors the random walk to likely evidence. Experiments across four multi-hop benchmarks demonstrate that CatRAG consistently outperforms state-of-the-art baselines. Our analysis reveals that while standard Recall metrics show modest gains, CatRAG achieves substantial improvements in reasoning completeness—the capacity to recover entire evidence path without gaps. These results reveal that our approach effectively bridges the gap between retrieving partial context and enabling fully grounded reasoning. Resources are available at https://github.com/kwunhang/CatRAG ."
+        ],
+        "context": [
+            "We introduce a multi-faceted framework to steer the random walk: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the random walk; (2) Query-Aware Dynamic Edge Weighting, which dynamically modu-lates graph structure, to prune irrelevant paths while amplifying those aligned with the query’s intent; and (3) Key-Fact Passage Weight En-hancement, cost-efficient bias that structurally anchors the random walk to likely evidence."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Which specific Large Language Model (LLM) is used as the backbone for all LLM components in the implementation of CatRAG?",
+        "actual_output": "GPT-4o-mini is used as the backbone for all LLM components in the implementation of CatRAG.\n\nGPT-4o-mini is used as the backbone for all LLM components in the implementation of CatRAG.",
+        "expected_output": "GPT-4o-mini is used as the backbone for all LLM components.",
+        "retrieval_context": [
+            "## 4.4 Implementation Details  \nWe implement CatRAG upon the HippoRAG 2 architecture, using GPT-4o-mini 2 as the backbone for all LLM components and text-embedding-3small as the retriever. While newer open-weight models like NV-Embed-v2 (Lee et al. , 2025) show strong performance, our primary objective is to isolate the topological gains provided by the CatRAG mechanism from the raw semantic capacity of the underlying encoder. For fair comparison, all structure-augmented baselines are reproduced using the same extractor and retriever. Downstream responses are generated by Llama-3.3-70B-Instruct  \n2 https://platform.openai.com/docs/models/gpt-4o-mini  \nusing the top-5 retrieved passages. Key hyperparameters include: symbolic anchor reset probability ϵ = 0 . 2 (weighted by inverse passage count |Pi| − 1 ), boost factor β = 2 . 5, dynamic weighting limits Nseed = 5 and Kedge = 15. More implementation details and hyperparameters are provided in Appendix A.1 ."
+        ],
+        "context": [
+            "We implement CatRAG upon the HippoRAG 2 ar-chitecture, using GPT-4o-mini as the backbone for all LLM components and text-embedding-3-small as the retriever."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Which three datasets are used to evaluate the Multi-hop QA performance in the experiments?",
+        "actual_output": "The three datasets used to evaluate Multi-hop QA performance are MuSiQue, 2WikiMultiHopQA, and HotpotQA.\n\nThe three datasets used to evaluate Multi-hop QA performance are MuSiQue, 2WikiMultiHopQA, and HotpotQA.",
+        "expected_output": "The three datasets are MuSiQue, 2WikiMulti-HopQA, and HotpotQA.",
+        "retrieval_context": [
+            "## 4.2 Datasets  \nTo evaluate the ability of CatRAG to maintain precise retrieval in multi-hop scenarios, we conduct experiments on four benchmarks across two challenge types: Multi-hop QA and Multi-hop Fact Verification. We summarize the key statistics of these datasets in Table 1 .  \nMulti-hop QA. We conduct experiments on MuSiQue (Trivedi et al. , 2022), 2WikiMultiHopQA (Ho et al. , 2020), and HotpotQA (Yang et al. , 2018). These datasets require the system to reason over multiple passages to derive an answer. To ensure a fair comparison and reproducibility, we utilize the subsets defined in prior work (Gutiérrez et al. , 2024), which sampled 1,000 queries randomly and collected all candidate passages (including supporting and distractor passages) to form a corpus for each dataset. Crucially, HotpotQA and 2WikiMultiHopQA are composed of 2-hop queries, while MuSiQue presents more challenging questions requiring 2 to 4 hops.  \n1 https://platform.openai.com/docs/models/textembedding-3-small",
+            "## 8 Ethical considerations  \nThis study utilizes four publicly available benchmark datasets, MuSiQue, 2WikiMultiHopQA, HotpotQA, and HoVer, which are standard in the field. These datasets are derived from Wikipedia/Wikidata sources and may therefore contain publicly available information about real people and may incidentally include sensitive topics; however, we did not collect new personal data or interact with human participants. Regarding computational resources and model access, we utilized GPT-4o mini and text-embedding-3-small via the Microsoft Azure API, and accessed Llama-3.370B-Instruct through the OpenRouter API.  \nAccording with AI Assistance policies, we acknowledge that we used generative AI tools to assist with code implementation and language polishing. All scientific content and results were verified by the authors."
+        ],
+        "context": [
+            "Multi-hop QA. We conduct experiments on MuSiQue (Trivedi et al., 2022), 2WikiMulti-HopQA (Ho et al., 2020), and HotpotQA (Yang et al., 2018). These datasets require the system to reason over multiple passages to derive an answer."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What is Full Chain Retrieval (FCR) defined as in this study?",
+        "actual_output": "Full Chain Retrieval (FCR) is defined as the percentage of queries where the retrieved context contains the entire set of gold supporting documents.\n\nFull Chain Retrieval (FCR) is defined as the percentage of queries where the retrieved context contains the entire set of gold supporting documents.",
+        "expected_output": "Full Chain Retrieval (FCR) is defined as the percentage of queries where the retrieved context contains the entire set of gold supporting documents.",
+        "retrieval_context": [
+            "## 4.3 Metrics  \nWe report Recall@5 for standard retrieval evaluation and F1 for downstream QA. However, these aggregate metrics often mask incomplete reasoning, as models may retrieve partial evidence or guess correct answers without grounding. To rigorously assess reasoning integrity, we introduce Full Chain Retrieval (FCR), defined as the percentage of queries where the retrieved context contains the entire set of gold supporting documents. Furthermore, we report the Joint Success Rate (JSR) , which counts a query as successful only if the system achieves FCR and the generated response contains the correct answer. This metric conceptually aligned with the strict evaluation established in the FEVER Shared Task (Thorne et al. , 2018) and HoVer (Jiang et al. , 2020), ensuring that accurate answer stem from complete evidentiary support rather than hallucinated or accidental correctness."
+        ],
+        "context": [
+            "To rigor-ously assess reasoning integrity, we introduce Full Chain Retrieval (FCR), defined as the percent-age of queries where the retrieved context contains the entire set of gold supporting documents."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What does ScDB stand for?",
+        "actual_output": "ScDB stands for Saccharum genomic database.\n\nScDB stands for Saccharum genomic database.",
+        "expected_output": "ScDB stands for Saccharum genomic database.",
+        "retrieval_context": [
+            "Building upon this foundation, we are pleased to introduce ScDB (Saccharum genomic database, https://sugarcane.gxu.edu. cn/scdb), the first user-friendly multi-omics database for six  \nSaccharum species (AP85-441, Np-X, LA-Purple, XTT22, R570, ZZ1) and a Erianthus rufipilus (YN2009-3). ScDB currently comprises a total of 38.91 Gb of genomic assembly sequences, encompassing 1 366 608 genes. Additionally, ScDB includes 24 transcriptome projects involving over 300 sugarcane samples and approximately 2.5 TB of data. Furthermore, 12 online functions that are frequently used by users have been developed to facilitate the use of ScDB, include 'Gene Search', 'Orthologous Gene Search', 'Synteny Block', 'Genome Browser', 'Gene Expression', 'Co-expression Network', 'Blast', 'Primer', 'Sequence Fetch', 'Transcription Factors', 'Protein Interaction Network', 'Profile Inference' (Figure 1a).",
+            "## ScDB: A comprehensive database dedicated to Saccharum , facilitating functional genomics and molecular biology studies in sugarcane  \nSiyuan Chen 1,2,† , Xiaoxi Feng 1,2,† , Zhe Zhang 3 , Xiuting Hua 1 , Qing Zhang 1 , Chengjie Chen 4 , Jiawei Li 5 , Xiaojing Liu 3 , Chenyu Weng 1,2 , Baoshan Chen 1 , Muqing Zhang 1 , Wei Yao 1 , Haibao Tang 3 , Ray Ming 3 and Jisen Zhang 1,*  \n1 State Key Laboratory for Conservation and Utilization of Subtropical Agro-Bioresources, College of Agriculture, Guangxi Key Laboratory of Sugarcane Biology, Guangxi University, Nanning, China  \n2 College of Life Science and Technology, Guangxi University, Nanning, China  \n3 Center for Genomics and Biotechnology, Fujian Provincial Key Laboratory of Haixia Applied Plant Systems Biology, Haixia Institute of Science, Fujian Agriculture and Forestry University, Fuzhou, China"
+        ],
+        "context": [
+            "Building upon this foundation, we are pleased to introduce ScDB (Saccharum genomic database, https://sugarcane.gxu.edu.cn/scdb), the first user-friendly multi-omics database for six Saccharum species"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many Saccharum species and Erianthus rufipilus genomes are included in the ScDB database?",
+        "actual_output": "I attempted to retrieve the genome files from the ScDB database, but the system encountered a connection error with the Genome Backend. As a result, I cannot currently provide the count for Saccharum species and Erianthus rufipilus genomes.\n\nThe specific count of Saccharum species and Erianthus rufipilus genomes in the ScDB database could not be retrieved due to a connection error with the Genome Backend.",
+        "expected_output": "The ScDB database includes six Saccharum species and one Erianthus rufipilus genome.",
+        "retrieval_context": [
+            "Tool execution failed: RuntimeError - Failed to connect to Genome Backend: All connection attempts failed",
+            "Tool execution failed: RuntimeError - Failed to connect to Genome Backend: All connection attempts failed"
+        ],
+        "context": [
+            "ScDB (Saccharum genomic database, https://sugarcane.gxu.edu.cn/scdb), the first user-friendly multi-omics database for six Saccharum species (AP85-441, Np-X, LA-Purple, XTT22, R570, ZZ1) and a Erianthus rufipilus (YN2009-3)."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What are the six main modules that organize the ScDB database?",
+        "actual_output": "The ScDB database is organized into six main modules: 'Home', 'Genomics', 'Transcriptomics', 'Tools', 'Download', and 'Publication'.\n\nThe six main modules that organize the ScDB database are 'Home', 'Genomics', 'Transcriptomics', 'Tools', 'Download', and 'Publication'.",
+        "expected_output": "The six main modules are 'Home', 'Genomics', 'Transcriptomics', 'Tools', 'Download', and 'Publication'.",
+        "retrieval_context": [
+            "ScDB consists of a frontend web interface, a backend application server, a main database and a suite of tools for analysis and visualization. The database is an organized database into six main modules: 'Home', 'Genomics', 'Transcriptomics', 'Tools', 'Download' and 'Publication'. The homepage features an introduction to ScDB, an advanced search engine, descriptions of Saccharum species and Erianthus rufipilus, and links to various tools. The advanced search function enables users to search by gene ID, gene name, GO number and KEGG number (Figure 1b).",
+            "## ScDB: A comprehensive database dedicated to Saccharum , facilitating functional genomics and molecular biology studies in sugarcane  \nSiyuan Chen 1,2,† , Xiaoxi Feng 1,2,† , Zhe Zhang 3 , Xiuting Hua 1 , Qing Zhang 1 , Chengjie Chen 4 , Jiawei Li 5 , Xiaojing Liu 3 , Chenyu Weng 1,2 , Baoshan Chen 1 , Muqing Zhang 1 , Wei Yao 1 , Haibao Tang 3 , Ray Ming 3 and Jisen Zhang 1,*  \n1 State Key Laboratory for Conservation and Utilization of Subtropical Agro-Bioresources, College of Agriculture, Guangxi Key Laboratory of Sugarcane Biology, Guangxi University, Nanning, China  \n2 College of Life Science and Technology, Guangxi University, Nanning, China  \n3 Center for Genomics and Biotechnology, Fujian Provincial Key Laboratory of Haixia Applied Plant Systems Biology, Haixia Institute of Science, Fujian Agriculture and Forestry University, Fuzhou, China"
+        ],
+        "context": [
+            "The database is an organized database into six main modules: ‘Home’, ‘Genomics’, ‘Transcriptomics’, ‘Tools’, ‘Download’ and ‘Publication’."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many transcriptome projects and sugarcane samples are included in ScDB?",
+        "actual_output": "ScDB includes 24 transcriptome projects involving over 300 sugarcane samples.\n\nScDB includes 24 transcriptome projects and over 300 sugarcane samples.",
+        "expected_output": "ScDB includes 24 transcriptome projects involving over 300 sugarcane samples.",
+        "retrieval_context": [
+            "Building upon this foundation, we are pleased to introduce ScDB (Saccharum genomic database, https://sugarcane.gxu.edu. cn/scdb), the first user-friendly multi-omics database for six  \nSaccharum species (AP85-441, Np-X, LA-Purple, XTT22, R570, ZZ1) and a Erianthus rufipilus (YN2009-3). ScDB currently comprises a total of 38.91 Gb of genomic assembly sequences, encompassing 1 366 608 genes. Additionally, ScDB includes 24 transcriptome projects involving over 300 sugarcane samples and approximately 2.5 TB of data. Furthermore, 12 online functions that are frequently used by users have been developed to facilitate the use of ScDB, include 'Gene Search', 'Orthologous Gene Search', 'Synteny Block', 'Genome Browser', 'Gene Expression', 'Co-expression Network', 'Blast', 'Primer', 'Sequence Fetch', 'Transcription Factors', 'Protein Interaction Network', 'Profile Inference' (Figure 1a).",
+            "In summary, we present ScDB, which encompasses genome assemblies, annotations and transcriptome data of six Saccharum species and Erianthus rufipilus. To enhance the usability and efficiency of data acquisition and analysis, ScDB also provides a suite of convenient modules for search, analysis and visualization. In the future, ScDB will continue to be updated, adding more sugarcane genome data and other levels of omics data (proteomics, epigenetics, ncRNA, etc.), as well as further data analysis tools to ensure that it is a powerful and sustainable sugarcane data collection and analysis platform.",
+            "Knowledge Graph Context:\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[FOUND_IN | Conf:0.9]-> (Saccharum)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[ASSOCIATED_WITH | Conf:0.95]-> (Profile Inference)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[MAPPED_TO | Conf:1.0]-> (XTT22)\n(Saccharum) -[ASSOCIATED_WITH | Conf:1.0]-> (ScDB) -[MAPPED_TO | Conf:1.0]-> (YN2009-3)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[MAPPED_TO | Conf:1.0]-> (Np-X)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[ASSOCIATED_WITH | Conf:1.0]-> (Saccharum)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[ASSOCIATED_WITH | Conf:0.9]-> (Erianthus rufipilus)\n(Saccharum) -[ASSOCIATED_WITH | Conf:1.0]-> (ScDB)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[MAPPED_TO | Conf:1.0]-> (YN2009-3)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[MAPPED_TO | Conf:1.0]-> (ZZ1)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[MAPPED_TO | Conf:1.0]-> (AP85-441)\n(R570) -[MAPPED_TO | Conf:1.0]-> (ScDB) -[MAPPED_TO | Conf:1.0]-> (LA-Purple)"
+        ],
+        "context": [
+            "Additionally, ScDB includes 24 transcriptome projects involving over 300 sugarcane samples and approximately 2.5 TB of data."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Which specific software was used to identify transcription factor families and kinase families in ScDB?",
+        "actual_output": "The ScDB database is organized into six modules including 'Genomics', 'Transcriptomics', and 'Tools', and supports advanced searches by gene ID, name, GO number, and KEGG number. However, the specific bioinformatics software and methodologies used to identify transcription factor and kinase families are not explicitly detailed in the retrieved documentation.\n\nThe specific bioinformatics software used to identify transcription factor and kinase families in ScDB is not explicitly detailed in the available documentation.\n\n### Information Gaps & Limitations\n- The retrieved documentation for ScDB does not specify the software or methodologies (e.g., iTAK, PlantTFDB, or HMMER) used for the classification of transcription factors and kinases.",
+        "expected_output": "The iTAK software was used to identify transcription factor families and kinase families.",
+        "retrieval_context": [
+            "ScDB consists of a frontend web interface, a backend application server, a main database and a suite of tools for analysis and visualization. The database is an organized database into six main modules: 'Home', 'Genomics', 'Transcriptomics', 'Tools', 'Download' and 'Publication'. The homepage features an introduction to ScDB, an advanced search engine, descriptions of Saccharum species and Erianthus rufipilus, and links to various tools. The advanced search function enables users to search by gene ID, gene name, GO number and KEGG number (Figure 1b)."
+        ],
+        "context": [
+            "In the ‘Transcription Factors’, we used iTAK (Zheng et al., 2016) software to identify transcription factor families and kinase families of Saccharum species and Erianthus rufipilus"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What is the purpose of the 'Synteny Block' function in the database?",
+        "actual_output": "I could not find any information regarding the purpose or functionality of 'Synteny Blocks' in the provided internal documentation or literature.\n\nThe purpose of the 'Synteny Block' function could not be identified from the provided documentation.\n\n### Information Gaps & Limitations\n- No information regarding the purpose or functionality of 'Synteny Blocks' was found in the available internal documentation or literature.",
+        "expected_output": "The 'Synteny Block' function is used for a swift examination of the evolution and variety within large homologous gene segments and chromosomes.",
+        "retrieval_context": [],
+        "context": [
+            "The ‘Synteny Block’ can be used for a swift examination of the evolution and variety within large homologous gene segments and chromosome"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What does RUE stand for and what is its definition according to the glossary?",
+        "actual_output": "I was unable to find the definition or expansion of 'RUE' within the provided internal literature and glossary context.\n\nThe definition and expansion for 'RUE' were not found in the provided glossary or internal literature.\n\n### Information Gaps & Limitations\n- The term 'RUE' is not defined within the available research context or glossary documentation.",
+        "expected_output": "RUE stands for Radiation-use efficiency, which is the rate at which a plant is able to convert intercepted solar radiation into dry biomass.",
+        "retrieval_context": [],
+        "context": [
+            "RUE g DM MJ−1 Radiation-use efficiency, the rate at which a plant is able to convert intercepted solar radiation into dry biomass."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many distinct sugarcane varieties and countries were included in the experimental data for this study?",
+        "actual_output": "The study included 40 distinct sugarcane varieties and experimental data from 6 countries: Brazil, South Africa, United States of America, Zimbabwe, Argentina, and La Réunion.\n\nThe study included 40 distinct sugarcane varieties and 6 countries (Brazil, South Africa, United States of America, Zimbabwe, Argentina, and La Réunion).",
+        "expected_output": "The study used experimental data from six countries and 40 distinct varieties.",
+        "retrieval_context": [
+            "Sugarcane is a major tropical C4 crop of global economic significance, primarily used for sugar, ethanol, and bioenergy production. As climate change accelerates, with projected increases in global temperatures, understanding the temperature sensitivity of sugarcane ' s radiation use efficiency (RUE) is crucial for projecting yield under changing environmental conditions. In this context, this study aimed to characterize sugarcane RUE response to temperature across various environments and varieties from key producing regions worldwide. Using experimental data from six countries (Brazil, South Africa, United States of America, Zimbabwe, Argentina, and La R ´ ´eunion) and 40 distinct varieties, our results indicated that maximum RUE (RUEMAX) is consistent across varieties, while apparent RUE (RUEA) showed significant variation. Based on this diverse dataset, we parameterized different RUE MAX temperature response formalisms used in crop models (APSIM-Sugar, DSSAT-Canegro, MOSICAS, and emergent formalisms)",
+            "Sugarcane is a major tropical C4 crop of global economic significance, primarily used for sugar, ethanol, and bioenergy production. As climate change accelerates, with projected increases in global temperatures, understanding the temperature sensitivity of sugarcane ' s radiation use efficiency (RUE) is crucial for projecting yield under changing environmental conditions. In this context, this study aimed to characterize sugarcane RUE response to temperature across various environments and varieties from key producing regions worldwide. Using experimental data from six countries (Brazil, South Africa, United States of America, Zimbabwe, Argentina, and La R ´ ´eunion) and 40 distinct varieties, our results indicated that maximum RUE (RUEMAX) is consistent across varieties, while apparent RUE (RUEA) showed significant variation"
+        ],
+        "context": [
+            "Using experimental data from six countries (Brazil, South Africa, United States of America, Zimbabwe, Argentina, and La Réunion) and 40 distinct varieties, our results indicated that maximum RUE (RUEMAX) is consistent across varieties, while apparent RUE (RUEA) showed significant variation."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What type of photosynthesis pathway does sugarcane have?",
+        "actual_output": "Sugarcane uses the C4 photosynthesis pathway.\n\nSugarcane uses the C4 photosynthesis pathway.",
+        "expected_output": "Sugarcane is a crop species with the C4 photosynthesis pathway.",
+        "retrieval_context": [
+            "Sugarcane RUE has been observed to be sensitive to air temperature (Dias et al., 2021a; Donaldson et al., 2008). Crop species with the C4 photosynthesis pathway, such as sugarcane, are better adapted to higher temperatures (&gt; 25 ◦ C) compared to species with C3 photosynthesis (Long, 1999). This adaptation underscores the importance of C4 crop species in warmer future climatic conditions. It is also acknowledged that C 4 crop species are significantly sensitive to variations in air temperature within the 20 – 30 ◦ C range (Long, 1999). This temperature range is typical of current sugarcane-producing regions worldwide (Dias and Inman-Bamber, 2020). The anticipated economic importance of sugarcane in the future underscores the urgent need to project the impacts of climate change on sugarcane productivity accurately. This is essential for planning effective adaptation strategies to mitigate the adverse effects of climate change and, where possible, capitalize on its positive impacts",
+            "fact, leaf photosynthesis in sugarcane is modulated more by the leaf carbohydrate dynamics than by leaf carbohydrate concentration (Ribeiro et al., 2017). When active sinks demand energy and carbon, leaf photosynthesis in sugarcane is stimulated (Ribeiro et al., 2017). In such a scenario, high-yielding genotypes might present stronger sinks and higher stimulation of photosynthesis compared to low-yielding genotypes. Taken together, these findings would suggest that the extension of downor up-regulation of photosynthesis by sugars is genotype-dependent and could justify variations in RGP and RUEA among sugarcane cultivars studied herein."
+        ],
+        "context": [
+            "Sugarcane is a major tropical C4 crop of global economic significance, primarily used for sugar, ethanol, and bioenergy production.",
+            "Crop species with the C4 photosynthesis pathway, such as sugarcane, are better adapted to higher temperatures (> 25◦C) compared to species with C3 photosynthesis"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What are the names of the four formalisms of temperature effects on RUE that were compared in this study?",
+        "actual_output": "The study compared four formalisms of temperature effects on Radiation Use Efficiency (RUE). The first formalism identified is ApsimCanegro, which is used in the APSIM and DSSAT-Canegro models and consists of a trapezoidal function with a linear increase or decrease between two optimal temperatures.\n\nThe four formalisms of temperature effects on RUE compared in the study are ApsimCanegro, Mospi, Sucros, and QCANE.",
+        "expected_output": "The four formalisms compared in this study are ApsimCanegro, Mosicas, Wang-Engel, and Johnson.",
+        "retrieval_context": [
+            "## 2.5. Description of RUE - temperature formalisms in crop models  \nIn most sugarcane crop models, the influence of daily mean temperature (TMEAN) on RUE is applied as an efficiency response function of temperature (fTRUE , unitless 0-1), and the daily potential biomass production results from fT RUE, total intercepted radiation, and RUEMAX . Crop models use different formalisms of temperature effects on RUE, and four of them were compared in this study. The first formalism (referred to as ApsimCanegro), used in the APSIM (Keating et al., 1999) and DSSAT-Canegro (Jones and Singels, 2018) models, consists of a trapezoidal function, with a linear increase or decrease between two optimal temperatures:  \n<!-- formula-not-decoded -->  \n<!-- formula-not-decoded -->  \n<!-- formula-not-decoded -->  \n<!-- formula-not-decoded -->  \nWhere T B, TOPT1 , TOPT2 , T X are base, first, and second optimum (optimum range), and maximum temperature, respectively."
+        ],
+        "context": [
+            "Crop models use different formalisms of temperature effects on RUE, and four of them were compared in this study. The first formalism (referred to as ApsimCanegro), used in the APSIM... The second formalism (referred to as Mosicas)... The third formalism (referred to as Wang-Engel)... The fourth formalism (referred to as Johnson)..."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What is the optimal temperature range recommended for sugarcane RUE based on this study?",
+        "actual_output": "The optimal temperature range recommended for sugarcane Radiation Use Efficiency (RUE) is 30 to 33 °C.\n\nThe optimal temperature range recommended for sugarcane Radiation Use Efficiency (RUE) is 30 to 33 °C.",
+        "expected_output": "The recommended optimal temperature range is 30 to 33 ◦C.",
+        "retrieval_context": [
+            ". Based on this diverse dataset, we parameterized different RUE MAX temperature response formalisms used in crop models (APSIM-Sugar, DSSAT-Canegro, MOSICAS, and emergent formalisms). We compared their ability to simulate RUEA in various regions accurately. Our analysis revealed significant differences in formalism performance, emphasizing the need for accurate parameterization. Additionally, we demonstrated that predictions of biomass production under climate change scenarios are highly sensitive to the formalism parameterization used to represent the RUE-temperature relationship. These findings highlight the critical importance of refining crop models considering temperature response and cardinal temperatures (optimal range: 30 – 33 ◦ C) to enhance projections of sugarcane yield under future climate conditions. We discussed physiological processes that may explain differences in RUEA among varieties",
+            "Based on our study, we recommend that crop models using daily RUEO as a parameter apply a base temperature of 7 ◦ C and an optimal temperature ranging from 30 to 33 ◦ C, depending on formalisms, should be encouraged. This base temperature is lower than the ones historically adopted to represent photosynthesis in the widely used sugarcane crop models (TB = 9 ◦ C, APSIM, Keating et al., 1999; TB = 10 ◦ C, DSSAT-Canegro, Jones and Singels, 2018), but it is consistent with carbon exchange measurements at the canopy (Colmanetti et al., 2024; Cuadra et al., 2012) and leaf-scale photosynthesis (Peixoto and Sage, 2017; Sage et al., 2013). Nevertheless, estimating the maximum mean daily temperature based on RUEMAX is difficult considering the usual sugarcane-cultivated regions since average temperature above 35 ◦ C is not observed in such areas"
+        ],
+        "context": [
+            "These findings highlight the critical importance of refining crop models considering temperature response and cardinal temperatures (optimal range: 30–33◦C) to enhance projections of sugarcane yield under future climate conditions."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What base temperature do the authors recommend for crop models using daily RUEO as a parameter?",
+        "actual_output": "The authors recommend a base temperature of 7 °C for crop models using daily RUEO as a parameter. This value is lower than those historically used in models such as APSIM (9 °C, Keating et al., 1999) and DSSAT-Canegro (10 °C, Jones and Singels, 2018), but is consistent with findings from Colmanetti et al. (2024) and Cuadra et al. (2012).\n\nThe authors recommend a base temperature of 7 °C for crop models using daily RUEO as a parameter.",
+        "expected_output": "The authors recommend applying a base temperature of 7 ◦C.",
+        "retrieval_context": [
+            "Based on our study, we recommend that crop models using daily RUEO as a parameter apply a base temperature of 7 ◦ C and an optimal temperature ranging from 30 to 33 ◦ C, depending on formalisms, should be encouraged. This base temperature is lower than the ones historically adopted to represent photosynthesis in the widely used sugarcane crop models (TB = 9 ◦ C, APSIM, Keating et al., 1999; TB = 10 ◦ C, DSSAT-Canegro, Jones and Singels, 2018), but it is consistent with carbon exchange measurements at the canopy (Colmanetti et al., 2024; Cuadra et al., 2012) and leaf-scale photosynthesis (Peixoto and Sage, 2017; Sage et al., 2013). Nevertheless, estimating the maximum mean daily temperature based on RUEMAX is difficult considering the usual sugarcane-cultivated regions since average temperature above 35 ◦ C is not observed in such areas"
+        ],
+        "context": [
+            "Based on our study, we recommend that crop models using daily RUEO as a parameter apply a base temperature of 7◦C and an optimal temperature ranging from 30 to 33◦C, depending on formalisms, should be encouraged."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "According to the text, what is sugarcane recently considered as?",
+        "actual_output": "Sugarcane was recently considered as a sustainable feedstock for next generation cellulosic biofuel production.\n\nSugarcane is considered a sustainable feedstock for next generation cellulosic biofuel production.",
+        "expected_output": "Sugarcane is recently considered as a sustainable feedstock for next generation cellulosic biofuel production.",
+        "retrieval_context": [
+            "## INTRODUCTION  \nSugarcane (Saccharum spp.) is grown in over 100 countries, mainly in tropical and subtropical areas of the world. Recently, sugarcane was considered as a sustainable feedstock for next generation cellulosic biofuel production (Tew and Cobill, 2008). The genus Saccharum is considered to include six species, namely S. officinarum , S. spontaneum , S. sinense , S. robustum ,  \nfpls-07-00804 June 6, 2016 Time: 12:34 # 2"
+        ],
+        "context": [
+            "Recently, sugarcane was considered as a sustainable feedstock for next generation cellulosic biofuel production (Tew and Cobill, 2008)."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many accessions were selected for the target enrichment sequencing study?",
+        "actual_output": "The target enrichment sequencing study selected 12 representative germplasm accessions from the Saccharum complex.\n\n12 representative germplasm accessions were selected for the target enrichment sequencing study.",
+        "expected_output": "A total of 12 diverse accessions representing different species were selected from a diversity panel.",
+        "retrieval_context": [
+            "Sugarcane (Saccharum spp.) is an important sugar and biofuel crop with high polyploid and complex genomes. The Saccharum complex, comprised of Saccharum genus and a few related genera, are important genetic resources for sugarcane breeding. A large amount of natural variation exists within the Saccharum complex. Though understanding their allelic variation has been challenging, it is critical to dissect allelic structure and to identify the alleles controlling important traits in sugarcane. To characterize natural variations in Saccharum complex, a target enrichment sequencing approach was used to assay 12 representative germplasm accessions. In total, 55,946 highly efficient probes were designed based on the sorghum genome and sugarcane unigene set targeting a total of 6 Mb of the sugarcane genome. A pipeline specifically tailored for polyploid sequence variants and genotype calling was established",
+            "## Sequences Generated from Target Enrichment  \nA total of 55,946 120-mer probes were designed from sugarcane and sorghum sequences to capture the corresponding target regions of the 12 accessions in Saccharum complex. These probes targeted approximately 41.4% of 34,211 sorghum gene models, 3,413 non-genic regions in total spanning an accumulative 6 Mb genomic region. Due to repetitive sequences or duplicative genes, which were not suitable for probe design, some genes were not targeted. These probes were distributed across each arm of sorghum chromosomes (Figure 1) with an average of one probe every 13 kb of the sorghum genome. Sequencing of fragments captured by the probes from the 12 accessions generated a total of 488.1 million 100-base single end reads ranging from 22.8 to 56.7 million reads with an average of 40.7 million reads per accession. The raw data was deposited in NCBI SRA with accession number PRJNA300644. There were 411.7 (84.3%) million clean reads left"
+        ],
+        "context": [
+            "A total of 12 diverse accessions representing different species were selected from a diversity panel of 300 accessions (Nayak et al., 2014) grown at the United States Department of Agriculture (USDA), Agricultural Research Service (ARS) Sugarcane Field Station at Canal Point, FL"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many probes were designed for the target enrichment of the 12 accessions?",
+        "actual_output": "A total of 55,946 probes were designed for the target enrichment of the 12 accessions.\n\nA total of 55,946 probes were designed for the target enrichment of the 12 accessions.",
+        "expected_output": "A set of 55,946 probes, which are 120-nucleotide long, were designed.",
+        "retrieval_context": [
+            "For target enrichment of the 12 accessions, we designed a set of 55,946 probes, which are 120-nucleotide long (Supplementary Table S2). Three different genomic resources were used for the probe design in a strategic way. First, a set of 6,035 probes were designed from 5,546 tentative sugarcane unigenes downloaded from the Gene Index repository Version 3 1 . To identify exon– exon boundaries, we searched the corresponding genes in the Sorghum genome v3.1 (downloaded from Phytozome) using BLAST version 2.2.31 (Paterson et al. , 2009). The sugarcane unigenes were realigned to the full-length sorghum genes using GMAP v20141216 (Wu and Watanabe , 2005). Based on the output, putative intronic regions in the unigene sequences were masked and avoided in the probe design. All possible probes in non-masked regions were designed. Subsequently, we selected probes with no hit to sugarcane chloroplast or mitochondria reference genome and with a single unique hit to the sorghum reference genome",
+            "## Sequences Generated from Target Enrichment  \nA total of 55,946 120-mer probes were designed from sugarcane and sorghum sequences to capture the corresponding target regions of the 12 accessions in Saccharum complex. These probes targeted approximately 41.4% of 34,211 sorghum gene models, 3,413 non-genic regions in total spanning an accumulative 6 Mb genomic region. Due to repetitive sequences or duplicative genes, which were not suitable for probe design, some genes were not targeted. These probes were distributed across each arm of sorghum chromosomes (Figure 1) with an average of one probe every 13 kb of the sorghum genome. Sequencing of fragments captured by the probes from the 12 accessions generated a total of 488.1 million 100-base single end reads ranging from 22.8 to 56.7 million reads with an average of 40.7 million reads per accession. The raw data was deposited in NCBI SRA with accession number PRJNA300644. There were 411.7 (84.3%) million clean reads left"
+        ],
+        "context": [
+            "For target enrichment of the 12 accessions, we designed a set of 55,946 probes, which are 120-nucleotide long (Supplementary Table S2)."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Which sequencing platform was used to sequence the enriched products?",
+        "actual_output": "The system currently contains one genome file: 'R570.v2023' (ID: 53). The metadata for this genome includes assembly statistics (N50: 79,221,035; GC content: 44.65%) and CDS/protein metrics, but it does not contain any references to 'enriched products' or specific sequencing platform details.\n\nThe methodology used for the sugarcane enriched products was a target enrichment sequencing approach. This involved the design of 55,946 probes based on the sorghum genome and sugarcane unigene set, targeting 6 Mb of the sugarcane genome, combined with a pipeline tailored for polyploid sequence variants and genotype calling.\n\nThe sequencing platform used for the enriched products is not specified in the provided research results. The methodology is described as a target enrichment sequencing approach using 55,946 probes targeting 6 Mb of the sugarcane genome.\n\n### Information Gaps & Limitations\n- The retrieved data does not identify the specific sequencing hardware (e.g., Illumina, PacBio) used for the enriched products.",
+        "expected_output": "The enriched products were sequenced using the Illumina HiSeq 2000.",
+        "retrieval_context": [
+            "Sugarcane (Saccharum spp.) is an important sugar and biofuel crop with high polyploid and complex genomes. The Saccharum complex, comprised of Saccharum genus and a few related genera, are important genetic resources for sugarcane breeding. A large amount of natural variation exists within the Saccharum complex. Though understanding their allelic variation has been challenging, it is critical to dissect allelic structure and to identify the alleles controlling important traits in sugarcane. To characterize natural variations in Saccharum complex, a target enrichment sequencing approach was used to assay 12 representative germplasm accessions. In total, 55,946 highly efficient probes were designed based on the sorghum genome and sugarcane unigene set targeting a total of 6 Mb of the sugarcane genome. A pipeline specifically tailored for polyploid sequence variants and genotype calling was established",
+            "[{\"genotype\": null, \"gff_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.gff3.gz\", \"cds_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.cds.fasta.gz\", \"status\": \"READY\", \"global_id\": \"4ace99b2-0f58-41de-bb86-48d950f587ba\", \"user_id\": null, \"id\": 53, \"name\": \"R570.v2023\", \"genome_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.genome.fasta.gz\", \"protein_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.protein.fasta.gz\", \"gene_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.gene.fasta.gz\", \"created_at\": \"2026-03-22T03:28:29.319341+00:00\", \"dataset_id\": null, \"is_public\": true, \"genome_metadata\": {\"analysis\": {\"samples\": {\"feature_examples\": {\"gene\": [\"SoffiXsponR570.10Ag000100.v2.1\", \"SoffiXsponR570.10Ag000200.v2.1\", \"SoffiXsponR570.10Ag000300.v2.1\", \"SoffiXsponR570.10Ag000400.v2.1\", \"SoffiXsponR570.10Ag000500.v2.1\"], \"mRNA\": [\"SoffiXsponR570.10Ag000100.2\", \"SoffiXsponR570.10Ag000100.3\", \"SoffiXsponR570.10Ag000100.1\", \"SoffiXsponR570.10Ag000100.4\", \"SoffiXsponR570.10Ag000200.1\"]}}, \"cds_stats\": {\"n50\": 1719, \"longest\": 16320, \"gc_content\": 57.44, \"total_length\": 407471130, \"average_length\": 1359.46, \"gap_percentage\": 0.0, \"sequence_count\": 299731}, \"methodology\": {\"n50\": \"The length of the shortest sequence such that 50% of the total assembly length is contained in sequences of this length or longer. Higher N50 indicates better assembly continuity.\", \"gc_content\": \"The molar ratio of Guanine and Cytosine bases in the DNA. High GC often correlates with gene-rich regions.\", \"gene_density\": \"Number of genes per 1 Megabase (Mb) of genomic sequence.\", \"gap_percentage\": \"The percentage of 'N' bases in the assembly, representing sequence gaps.\"}, \"protein_stats\": {\"n50\": 573, \"longest\": 5439, \"gc_content\": 9.69, \"total_length\": 135524020, \"average_length\": 452.15, \"gap_percentage\": 2.99, \"sequence_count\": 299731}, \"assembly_stats\": {\"n50\": 79221035, \"longest\": 131767155, \"gc_content\": 44.65, \"total_length\": 5037187377, \"average_length\": 36767791.07, \"gap_percentage\": 0.09, \"sequence_count\": 137}, \"feature_counts\": {\"CDS\": 1601936, \"exon\": 1772112, \"gene\": 194593, \"mRNA\": 299731, \"five_prime_UTR\": 347402, \"three_prime_UTR\": 336204}, \"quality_metrics\": {\"gc_content\": 44.65, \"gap_percentage\": 0.09, \"avg_gene_density\": 38.63}, \"functional_summary\": {\"top_annotations\": [{\"count\": 337010, \"keyword\": \"protein\"}, {\"count\": 148964, \"keyword\": \"hypothetical\"}, {\"count\": 112611, \"keyword\": \"conserved\"}, {\"count\": 90630, \"keyword\": \"domain-containing\"}, {\"count\": 64976, \"keyword\": \"putative\"}, {\"count\": 23708, \"keyword\": \"kinase\"}, {\"count\": 12479, \"keyword\": \"subunit\"}, {\"count\": 11244, \"keyword\": \"factor\"}, {\"count\": 10233, \"keyword\": \"chloroplastic\"}, {\"count\": 8226, \"keyword\": \"family\"}, {\"count\": 7218, \"keyword\": \"transporter\"}, {\"count\": 7012, \"keyword\": \"transcription\"}, {\"count\": 6573, \"keyword\": \"mitochondrial\"}, {\"count\": 6462, \"keyword\": \"synthase\"}, {\"count\": 6290, \"keyword\": \"repeat-containing\"}, {\"count\": 5739, \"keyword\": \"pentatricopeptide\"}, {\"count\": 5056, \"keyword\": \"f-box\"}, {\"count\": 4833, \"keyword\": \"resistance\"}, {\"count\": 4765, \"keyword\": \"receptor-like\"}, {\"count\": 4570, \"keyword\": \"ring-type\"}]}}}}, {\"genotype\": null, \"gff_path\": null, \"cds_path\": null, \"status\": \"READY\", \"global_id\": \"f69bdb60-fb06-4f06-a6d7-9c6e251a3c7a\", \"user_id\": null, \"id\": 36, \"name\": \"ecoli\", \"genome_path\": \"../data/bacteria/ecoli/ecoli.fna\", \"protein_path\": null, \"gene_path\": null, \"created_at\": \"2025-12-20T15:23:39.613229+00:00\", \"dataset_id\": null, \"is_public\": false, \"genome_metadata\": null}, {\"genotype\": null, \"gff_path\": \"../data/sugarcane/zz1/ZZ1.v20231221.genome.gff3.gz\", \"cds_path\": null, \"status\": \"READY\", \"global_id\": \"6511c1e4-d14f-46ff-bc90-2faeb0d9128a\", \"user_id\": null, \"id\": 37, \"name\": \"ZZ1.v20231221.genome\", \"genome_path\": \"../data/sugarcane/zz1/ZZ1.v20231221.genome.fasta\", \"protein_path\": null, \"gene_path\": null, \"created_at\": \"2025-12-20T15:23:39.617608+00:00\", \"dataset_id\": null, \"is_public\": false, \"genome_metadata\": null}, {\"genotype\": null, \"gff_path\": null, \"cds_path\": null, \"status\": \"READY\", \"global_id\": \"2ebe1ecb-81d6-430e-87b2-8af7fdddfe93\", \"user_id\": null, \"id\": 48, \"name\": \"Saccharum_hybrid_cultivar_R570.gene\", \"genome_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.gene.fna\", \"protein_path\": null, \"gene_path\": null, \"created_at\": \"2026-03-22T03:02:24.977320+00:00\", \"dataset_id\": null, \"is_public\": false, \"genome_metadata\": null}, {\"genotype\": null, \"gff_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.gff3.gz\", \"cds_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.cds.fna\", \"status\": \"READY\", \"global_id\": \"f93e5d44-af59-44a4-b6b4-32072211fd30\", \"user_id\": null, \"id\": 39, \"name\": \"Saccharum_hybrid_cultivar_R570\", \"genome_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.assembly.fna\", \"protein_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.protein.faa\", \"gene_path\": null, \"created_at\": \"2025-12-20T15:23:39.623321+00:00\", \"dataset_id\": null, \"is_public\": false, \"genome_metadata\": {\"analysis\": {\"samples\": {\"feature_examples\": {}}, \"cds_stats\": null, \"methodology\": {\"n50\": \"The length of the shortest sequence such that 50% of the total assembly length is contained in sequences of this length or longer. Higher N50 indicates better assembly continuity.\", \"gc_content\": \"The molar ratio of Guanine and Cytosine bases in the DNA. High GC often correlates with gene-rich regions.\", \"gene_density\": \"Number of genes per 1 Megabase (Mb) of genomic sequence.\", \"gap_percentage\": \"The percentage of 'N' bases in the assembly, representing sequence gaps.\"}, \"protein_stats\": null, \"assembly_stats\": null, \"feature_counts\": null, \"quality_metrics\": {}, \"functional_summary\": {}}}}, {\"genotype\": null, \"gff_path\": \"s3://users-bucket/ee349364-3dc8-492f-9a22-9c414a7301a4_GenomeSugarcane.gff3.gz\", \"cds_path\": \"s3://users-bucket/6c68afdd-e2c9-4651-842b-66fe97ec4bee_SugarcaneGenome.cds.fasta.gz\", \"status\": \"READY\", \"global_id\": \"2dbec7fd-dc8c-4fe3-8c50-cb5e81356a35\", \"user_id\": null, \"id\": 54, \"name\": \"SugarcaneGenome\", \"genome_path\": null, \"protein_path\": null, \"gene_path\": null, \"created_at\": \"2026-04-26T14:35:26.842425+00:00\", \"dataset_id\": \"1d94550b-ab1c-40f1-83c0-67bdc3d152d9\", \"is_public\": false, \"genome_metadata\": {\"analysis\": {\"samples\": {\"feature_examples\": {\"CDS\": [\"ROC-Rec-Chr01A0000010.t1.CDS1\", \"ROC-Rec-Chr01A0000010.t1.CDS2\", \"ROC-Rec-Chr01A0000010.t1.CDS3\", \"ROC-Rec-Chr01A0000010.t1.CDS4\", \"ROC-Rec-Chr01A0000010.t1.CDS5\"], \"exon\": [\"ROC-Rec-Chr01A0000010.t1.exon1\", \"ROC-Rec-Chr01A0000010.t1.exon2\", \"ROC-Rec-Chr01A0000010.t1.exon3\", \"ROC-Rec-Chr01A0000010.t1.exon4\", \"ROC-Rec-Chr01A0000010.t1.exon5\"], \"gene\": [\"ROC-Rec-Chr01A0000010\", \"ROC-Rec-Chr01A0000020\", \"ROC-Rec-Chr01A0000030\", \"ROC-Rec-Chr01A0000040\", \"ROC-Rec-Chr01A0000050\"], \"mRNA\": [\"ROC-Rec-Chr01A0000010.t1\", \"ROC-Rec-Chr01A0000020.t1\", \"ROC-Rec-Chr01A0000030.t1\", \"ROC-Rec-Chr01A0000040.t1\", \"ROC-Rec-Chr01A0000050.t1\"], \"five_prime_UTR\": [\"ROC-Rec-Chr01A0000010.t1.5UTR1\", \"ROC-Rec-Chr01A0000020.t1.5UTR1\", \"ROC-Rec-Chr01A0000050.t1.5UTR1\", \"ROC-Rec-Chr01A0000070.t1.5UTR1\", \"ROC-Rec-Chr01A0000090.t1.5UTR1\"], \"three_prime_UTR\": [\"ROC-Rec-Chr01A0000010.t1.3UTR1\", \"ROC-Rec-Chr01A0000020.t1.3UTR1\", \"ROC-Rec-Chr01A0000050.t1.3UTR1\", \"ROC-Rec-Chr01A0000070.t1.3UTR1\", \"ROC-Rec-Chr01A0000070.t1.3UTR2\"]}}, \"cds_stats\": {\"n50\": 1581, \"longest\": 16131, \"gc_content\": 64.38, \"total_length\": 383602503, \"average_length\": 1270.69, \"gap_percentage\": 0.0, \"sequence_count\": 301886}, \"methodology\": {\"n50\": \"The length of the shortest sequence such that 50% of the total assembly length is contained in sequences of this length or longer. Higher N50 indicates better assembly continuity.\", \"gc_content\": \"The molar ratio of Guanine and Cytosine bases in the DNA. High GC often correlates with gene-rich regions.\", \"gene_density\": \"Number of genes per 1 Megabase (Mb) of genomic sequence.\", \"gap_percentage\": \"The percentage of 'N' bases in the assembly, representing sequence gaps.\"}, \"protein_stats\": null, \"assembly_stats\": null, \"feature_counts\": {\"CDS\": 1315636, \"exon\": 1336759, \"gene\": 301886, \"mRNA\": 301886, \"five_prime_UTR\": 49309, \"three_prime_UTR\": 57217}, \"quality_metrics\": {}, \"functional_summary\": {\"top_annotations\": []}}}}]",
+            "[{\"genotype\": null, \"gff_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.gff3.gz\", \"cds_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.cds.fasta.gz\", \"status\": \"READY\", \"global_id\": \"4ace99b2-0f58-41de-bb86-48d950f587ba\", \"user_id\": null, \"id\": 53, \"name\": \"R570.v2023\", \"genome_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.genome.fasta.gz\", \"protein_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.protein.fasta.gz\", \"gene_path\": \"s3://etl-genome/sugarcane/r570/R570.v2023.gene.fasta.gz\", \"created_at\": \"2026-03-22T03:28:29.319341+00:00\", \"dataset_id\": null, \"is_public\": true, \"genome_metadata\": {\"analysis\": {\"samples\": {\"feature_examples\": {\"gene\": [\"SoffiXsponR570.10Ag000100.v2.1\", \"SoffiXsponR570.10Ag000200.v2.1\", \"SoffiXsponR570.10Ag000300.v2.1\", \"SoffiXsponR570.10Ag000400.v2.1\", \"SoffiXsponR570.10Ag000500.v2.1\"], \"mRNA\": [\"SoffiXsponR570.10Ag000100.2\", \"SoffiXsponR570.10Ag000100.3\", \"SoffiXsponR570.10Ag000100.1\", \"SoffiXsponR570.10Ag000100.4\", \"SoffiXsponR570.10Ag000200.1\"]}}, \"cds_stats\": {\"n50\": 1719, \"longest\": 16320, \"gc_content\": 57.44, \"total_length\": 407471130, \"average_length\": 1359.46, \"gap_percentage\": 0.0, \"sequence_count\": 299731}, \"methodology\": {\"n50\": \"The length of the shortest sequence such that 50% of the total assembly length is contained in sequences of this length or longer. Higher N50 indicates better assembly continuity.\", \"gc_content\": \"The molar ratio of Guanine and Cytosine bases in the DNA. High GC often correlates with gene-rich regions.\", \"gene_density\": \"Number of genes per 1 Megabase (Mb) of genomic sequence.\", \"gap_percentage\": \"The percentage of 'N' bases in the assembly, representing sequence gaps.\"}, \"protein_stats\": {\"n50\": 573, \"longest\": 5439, \"gc_content\": 9.69, \"total_length\": 135524020, \"average_length\": 452.15, \"gap_percentage\": 2.99, \"sequence_count\": 299731}, \"assembly_stats\": {\"n50\": 79221035, \"longest\": 131767155, \"gc_content\": 44.65, \"total_length\": 5037187377, \"average_length\": 36767791.07, \"gap_percentage\": 0.09, \"sequence_count\": 137}, \"feature_counts\": {\"CDS\": 1601936, \"exon\": 1772112, \"gene\": 194593, \"mRNA\": 299731, \"five_prime_UTR\": 347402, \"three_prime_UTR\": 336204}, \"quality_metrics\": {\"gc_content\": 44.65, \"gap_percentage\": 0.09, \"avg_gene_density\": 38.63}, \"functional_summary\": {\"top_annotations\": [{\"count\": 337010, \"keyword\": \"protein\"}, {\"count\": 148964, \"keyword\": \"hypothetical\"}, {\"count\": 112611, \"keyword\": \"conserved\"}, {\"count\": 90630, \"keyword\": \"domain-containing\"}, {\"count\": 64976, \"keyword\": \"putative\"}, {\"count\": 23708, \"keyword\": \"kinase\"}, {\"count\": 12479, \"keyword\": \"subunit\"}, {\"count\": 11244, \"keyword\": \"factor\"}, {\"count\": 10233, \"keyword\": \"chloroplastic\"}, {\"count\": 8226, \"keyword\": \"family\"}, {\"count\": 7218, \"keyword\": \"transporter\"}, {\"count\": 7012, \"keyword\": \"transcription\"}, {\"count\": 6573, \"keyword\": \"mitochondrial\"}, {\"count\": 6462, \"keyword\": \"synthase\"}, {\"count\": 6290, \"keyword\": \"repeat-containing\"}, {\"count\": 5739, \"keyword\": \"pentatricopeptide\"}, {\"count\": 5056, \"keyword\": \"f-box\"}, {\"count\": 4833, \"keyword\": \"resistance\"}, {\"count\": 4765, \"keyword\": \"receptor-like\"}, {\"count\": 4570, \"keyword\": \"ring-type\"}]}}}}, {\"genotype\": null, \"gff_path\": null, \"cds_path\": null, \"status\": \"READY\", \"global_id\": \"f69bdb60-fb06-4f06-a6d7-9c6e251a3c7a\", \"user_id\": null, \"id\": 36, \"name\": \"ecoli\", \"genome_path\": \"../data/bacteria/ecoli/ecoli.fna\", \"protein_path\": null, \"gene_path\": null, \"created_at\": \"2025-12-20T15:23:39.613229+00:00\", \"dataset_id\": null, \"is_public\": false, \"genome_metadata\": null}, {\"genotype\": null, \"gff_path\": \"../data/sugarcane/zz1/ZZ1.v20231221.genome.gff3.gz\", \"cds_path\": null, \"status\": \"READY\", \"global_id\": \"6511c1e4-d14f-46ff-bc90-2faeb0d9128a\", \"user_id\": null, \"id\": 37, \"name\": \"ZZ1.v20231221.genome\", \"genome_path\": \"../data/sugarcane/zz1/ZZ1.v20231221.genome.fasta\", \"protein_path\": null, \"gene_path\": null, \"created_at\": \"2025-12-20T15:23:39.617608+00:00\", \"dataset_id\": null, \"is_public\": false, \"genome_metadata\": null}, {\"genotype\": null, \"gff_path\": null, \"cds_path\": null, \"status\": \"READY\", \"global_id\": \"2ebe1ecb-81d6-430e-87b2-8af7fdddfe93\", \"user_id\": null, \"id\": 48, \"name\": \"Saccharum_hybrid_cultivar_R570.gene\", \"genome_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.gene.fna\", \"protein_path\": null, \"gene_path\": null, \"created_at\": \"2026-03-22T03:02:24.977320+00:00\", \"dataset_id\": null, \"is_public\": false, \"genome_metadata\": null}, {\"genotype\": null, \"gff_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.gff3.gz\", \"cds_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.cds.fna\", \"status\": \"READY\", \"global_id\": \"f93e5d44-af59-44a4-b6b4-32072211fd30\", \"user_id\": null, \"id\": 39, \"name\": \"Saccharum_hybrid_cultivar_R570\", \"genome_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.assembly.fna\", \"protein_path\": \"../data/sugarcane/r570/Saccharum_hybrid_cultivar_R570.protein.faa\", \"gene_path\": null, \"created_at\": \"2025-12-20T15:23:39.623321+00:00\", \"dataset_id\": null, \"is_public\": false, \"genome_metadata\": {\"analysis\": {\"samples\": {\"feature_examples\": {}}, \"cds_stats\": null, \"methodology\": {\"n50\": \"The length of the shortest sequence such that 50% of the total assembly length is contained in sequences of this length or longer. Higher N50 indicates better assembly continuity.\", \"gc_content\": \"The molar ratio of Guanine and Cytosine bases in the DNA. High GC often correlates with gene-rich regions.\", \"gene_density\": \"Number of genes per 1 Megabase (Mb) of genomic sequence.\", \"gap_percentage\": \"The percentage of 'N' bases in the assembly, representing sequence gaps.\"}, \"protein_stats\": null, \"assembly_stats\": null, \"feature_counts\": null, \"quality_metrics\": {}, \"functional_summary\": {}}}}, {\"genotype\": null, \"gff_path\": \"s3://users-bucket/ee349364-3dc8-492f-9a22-9c414a7301a4_GenomeSugarcane.gff3.gz\", \"cds_path\": \"s3://users-bucket/6c68afdd-e2c9-4651-842b-66fe97ec4bee_SugarcaneGenome.cds.fasta.gz\", \"status\": \"READY\", \"global_id\": \"2dbec7fd-dc8c-4fe3-8c50-cb5e81356a35\", \"user_id\": null, \"id\": 54, \"name\": \"SugarcaneGenome\", \"genome_path\": null, \"protein_path\": null, \"gene_path\": null, \"created_at\": \"2026-04-26T14:35:26.842425+00:00\", \"dataset_id\": \"1d94550b-ab1c-40f1-83c0-67bdc3d152d9\", \"is_public\": false, \"genome_metadata\": {\"analysis\": {\"samples\": {\"feature_examples\": {\"CDS\": [\"ROC-Rec-Chr01A0000010.t1.CDS1\", \"ROC-Rec-Chr01A0000010.t1.CDS2\", \"ROC-Rec-Chr01A0000010.t1.CDS3\", \"ROC-Rec-Chr01A0000010.t1.CDS4\", \"ROC-Rec-Chr01A0000010.t1.CDS5\"], \"exon\": [\"ROC-Rec-Chr01A0000010.t1.exon1\", \"ROC-Rec-Chr01A0000010.t1.exon2\", \"ROC-Rec-Chr01A0000010.t1.exon3\", \"ROC-Rec-Chr01A0000010.t1.exon4\", \"ROC-Rec-Chr01A0000010.t1.exon5\"], \"gene\": [\"ROC-Rec-Chr01A0000010\", \"ROC-Rec-Chr01A0000020\", \"ROC-Rec-Chr01A0000030\", \"ROC-Rec-Chr01A0000040\", \"ROC-Rec-Chr01A0000050\"], \"mRNA\": [\"ROC-Rec-Chr01A0000010.t1\", \"ROC-Rec-Chr01A0000020.t1\", \"ROC-Rec-Chr01A0000030.t1\", \"ROC-Rec-Chr01A0000040.t1\", \"ROC-Rec-Chr01A0000050.t1\"], \"five_prime_UTR\": [\"ROC-Rec-Chr01A0000010.t1.5UTR1\", \"ROC-Rec-Chr01A0000020.t1.5UTR1\", \"ROC-Rec-Chr01A0000050.t1.5UTR1\", \"ROC-Rec-Chr01A0000070.t1.5UTR1\", \"ROC-Rec-Chr01A0000090.t1.5UTR1\"], \"three_prime_UTR\": [\"ROC-Rec-Chr01A0000010.t1.3UTR1\", \"ROC-Rec-Chr01A0000020.t1.3UTR1\", \"ROC-Rec-Chr01A0000050.t1.3UTR1\", \"ROC-Rec-Chr01A0000070.t1.3UTR1\", \"ROC-Rec-Chr01A0000070.t1.3UTR2\"]}}, \"cds_stats\": {\"n50\": 1581, \"longest\": 16131, \"gc_content\": 64.38, \"total_length\": 383602503, \"average_length\": 1270.69, \"gap_percentage\": 0.0, \"sequence_count\": 301886}, \"methodology\": {\"n50\": \"The length of the shortest sequence such that 50% of the total assembly length is contained in sequences of this length or longer. Higher N50 indicates better assembly continuity.\", \"gc_content\": \"The molar ratio of Guanine and Cytosine bases in the DNA. High GC often correlates with gene-rich regions.\", \"gene_density\": \"Number of genes per 1 Megabase (Mb) of genomic sequence.\", \"gap_percentage\": \"The percentage of 'N' bases in the assembly, representing sequence gaps.\"}, \"protein_stats\": null, \"assembly_stats\": null, \"feature_counts\": {\"CDS\": 1315636, \"exon\": 1336759, \"gene\": 301886, \"mRNA\": 301886, \"five_prime_UTR\": 49309, \"three_prime_UTR\": 57217}, \"quality_metrics\": {}, \"functional_summary\": {\"top_annotations\": []}}}}]"
+        ],
+        "context": [
+            "The enriched products were sequenced using Illumina HiSeq 2000 to generate single-end 100-bp reads."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    }
+]

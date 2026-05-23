@@ -1,0 +1,26 @@
+[Unit]
+Description=Genome Hub ETL Pipeline Worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=sugarcanechatbot
+Group=sugarcanechatbot
+WorkingDirectory=/home/sugarcanechatbot/Data/Repositories/genome-hub/backend
+EnvironmentFile=/home/sugarcanechatbot/Data/Repositories/genome-hub/infra/airflow/.env
+
+MemoryHigh=15.5G
+MemorySwapMax=8G
+MemoryMax=16G
+CPUQuota=600%
+
+Environment="PATH=/home/sugarcanechatbot/miniconda3/envs/airflow_genomic/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart=/home/sugarcanechatbot/miniconda3/envs/airflow_genomic/bin/airflow celery worker -q etl_queue,bio_tools_queue,ingest_knowledge_queue --celery-hostname sugarcanechatbot-graduationthesis-tool
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

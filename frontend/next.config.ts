@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     // If your version of Next.js requires it under experimental
   },
   // Add the allowed origins for development (e.g., your local network IP)
-  allowedDevOrigins: ["192.168.198.100"],
+  allowedDevOrigins: ["10.9.9.190", '100.88.18.97'],
 };
 
 export default nextConfig;

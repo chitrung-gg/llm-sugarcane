@@ -1,0 +1,974 @@
+[
+    {
+        "input": "Search NCBI for sugarcane genome assembly GCA_038087645.1 and summarize its stats.",
+        "actual_output": "The sugarcane genome assembly GCA_038087645.1 (Saccharum officinarum X spontaneum var R570 v2.1) has a total sequence length of 5,038,506,984 bp and a GC content of 44.5%. The chromosome count for this assembly is currently listed as unknown.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "search_ncbi_genome",
+                "inputParameters": {
+                    "organism_or_cultivar": "GCA_038087645.1"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "search_ncbi_genome",
+                "inputParameters": {
+                    "organism_or_cultivar": "GCA_038087645.1"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Find which genes are responsible for sucrose content in Saccharum according to literature.",
+        "actual_output": "The sucrose synthase gene family is the primary group of genes responsible for sucrose content in Saccharum species. These genes encode sucrose synthase, an enzyme central to sucrose metabolism and accumulation in plant tissues. In cultivated clones, Saccharum officinarum is the primary source of high sucrose content, while Saccharum spontaneum typically contributes high fiber and lower sucrose levels.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "search_knowledge_graph",
+                "inputParameters": {
+                    "query": "sucrose content genes Saccharum",
+                    "top_k": 5
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "search_literature_for_traits",
+                "inputParameters": {
+                    "organism": "Saccharum",
+                    "primary_concept": "sucrose content"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "List all available genome files in the system.",
+        "actual_output": "The available genome files for R570.v2023 (ID: 53) are:\n- Genome assembly: s3://etl-genome/sugarcane/r570/R570.v2023.genome.fasta.gz\n- GFF3 annotation: s3://etl-genome/sugarcane/r570/R570.v2023.gff3.gz\n- CDS: s3://etl-genome/sugarcane/r570/R570.v2023.cds.fasta.gz\n- Protein: s3://etl-genome/sugarcane/r570/R570.v2023.protein.fasta.gz\n- Gene sequences: s3://etl-genome/sugarcane/r570/R570.v2023.gene.fasta.gz",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Show me the analysis summary for genome 53.",
+        "actual_output": "The analysis summary for genome 53 includes the following metrics:\n\n**Assembly Stats**\n- Total length: 5,037,187,377 bp\n- Sequences: 137\n- N50: 79,221,035\n- GC content: 44.65%\n- Gap percentage: 0.09%\n\n**Feature Counts**\n- Genes: 194,593\n- mRNAs: 299,731\n- CDS: 1,601,936\n- Exons: 1,772,112\n- 5' UTRs: 347,402\n- 3' UTRs: 336,204\n\n**Protein Stats**\n- Total length: 135,524,020 aa\n- N50: 573\n- Average length: 452.15 aa\n\n**CDS Stats**\n- Total length: 407,471,130 bp\n- N50: 1,719\n- Average length: 1,359.46 bp",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_genome_analysis",
+                "inputParameters": {
+                    "id": 53,
+                    "force_refresh": false
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_genome_analysis",
+                "inputParameters": {
+                    "id": 53
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Check the status of indexing task 98765.",
+        "actual_output": "Indexing task 98765 could not be found. The system returned a 404 error indicating that the ETL task does not exist.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "check_genome_indexing_status",
+                "inputParameters": {
+                    "task_id": 98765
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "check_genome_indexing_status",
+                "inputParameters": {
+                    "task_id": 98765
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Run a synteny analysis between subgenomes of genome 53 using haplotype sets A and B.",
+        "actual_output": "The synteny analysis for genome 53 (R570.v2023) between haplotype sets A and B has been initiated and is currently processing under task ID 29 with a status of 'PENDING'.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "run_synteny_haplotype_analysis",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "haplotype_set_query": "A",
+                    "haplotype_set_subject": "B"
+                }
+            },
+            {
+                "name": "get_synteny_status",
+                "inputParameters": {
+                    "task_id": 29
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "run_synteny_haplotype_analysis",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "haplotype_set_query": "A",
+                    "haplotype_set_subject": "B"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What is the status of the synteny task with ID 10101?",
+        "actual_output": "The synteny task with ID 10101 does not exist in the system (404 error).",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_synteny_status",
+                "inputParameters": {
+                    "task_id": 10101
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_synteny_status",
+                "inputParameters": {
+                    "task_id": 10101
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Get the functional distribution of genes in genome 53.",
+        "actual_output": "The functional distribution of genes for genome ID 53 (R570.v2023) is as follows:\n\n| Category | Gene Count |\n| :--- | :--- |\n| Sugar Metabolism | 6,462 |\n| Transporters | 7,218 |\n| Signaling & Regulation | 46,729 |\n| Other / Uncharacterized | 818,190 |\n| Stress Response | 0 |\n| Photosynthesis | 0 |\n| Cell Wall & Growth | 0 |",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "get_functional_distribution",
+                "inputParameters": {
+                    "id": 53
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_functional_distribution",
+                "inputParameters": {
+                    "id": 53
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Does genome 53 show any subgenome bias?",
+        "actual_output": "Genome 53 (R570.v2023) exhibits subgenome bias in gene distribution, with Subgenome A containing the highest proportion of genes (18.86%) and Subgenome G the lowest (5.84%).\n\n| Subgenome | Gene Count | Percentage |\n|-----------|------------|------------|\n| A | 31,282 | 18.86% |\n| C | 28,918 | 17.44% |\n| B | 27,826 | 16.78% |\n| D | 26,842 | 16.18% |\n| E | 24,765 | 14.93% |\n| F | 16,539 | 9.97% |\n| G | 9,680 | 5.84% |",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "get_subgenome_bias",
+                "inputParameters": {
+                    "id": 53
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_subgenome_bias",
+                "inputParameters": {
+                    "id": 53
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Show me the detail of chromosome Chr10A in genome 53.",
+        "actual_output": "Chromosome Chr10A in genome 53 has a length of 84,858,003 bp with 0.0% GC content and 0.0% gap percentage. Its feature breakdown is as follows:\n\n| Feature | Count/Value |\n| :--- | :--- |\n| Length | 84,858,003 bp |\n| GC Content | 0.0% |\n| Gap Percentage | 0.0% |\n| Genes | 2,263 |\n| mRNAs | 3,350 |\n| CDS | 15,130 |\n| Exons | 16,955 |\n| 5' UTRs | 3,686 |\n| 3' UTRs | 3,602 |",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_chromosome_detail",
+                "inputParameters": {
+                    "id": 53,
+                    "name": "Chr10A"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_chromosome_detail",
+                "inputParameters": {
+                    "id": 53,
+                    "name": "Chr10A"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Investigate the region on Chr10A from 220000 to 280000 in genome 53.",
+        "actual_output": "In the region Chr10A:220000-280000 of genome 53 (R570.v2023), the gene SoffiXsponR570.10Ag000100.v2.1 was identified. This gene is located from 220,622 to 226,285 on the negative strand and is characterized as a conserved hypothetical protein. It features four mRNA isoforms (SoffiXsponR570.10Ag000100.1, .2, .3, and .4) along with their respective exons and three-prime UTRs.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "investigate_region",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "chrom": "Chr10A",
+                    "start": 220000,
+                    "end": 280000,
+                    "limit": 50
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "investigate_region",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "chrom": "Chr10A",
+                    "start": 220000,
+                    "end": 280000
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Get the DNA sequence for the region Chr10A:220622-226285 in genome 53.",
+        "actual_output": "GGACAAACGCACACACCATGCCTCTCAAAAGTCACACGAGAATGATAATGATATACGTACTTCTTTTAGTACATACATAAATACAGAGTATAGCACAATATGAATATATACAGAGTTGACAACATGCACAATGTTTATACACAGACTAAAGACAACACATTTACACATGCAGCATGGGCTACCTGGCAGCAAAGCAGAGAAAATTTCTAGAGCACGCCAGGTCAGCCAAATATCTTCTCGCTGCTGTAGCACATGTAAAGGAAGCCGTCTTTGTCCTTGTCCGAATCATAAACACTTCCCATCAGGCTAGCTGTGGGAAAAAATTGCATCATCACTATCAATTCAGCTCAACCCATTTCTACTTACGCGAAATGTCTAGTTTTGACCTTCTGCATCTTAAAGTTCTAGCTCTAAAGCTTTTTACAATATTAATCCTATCGTAATGCAAGCCGTAACCGATAGACAAAATGTCTAAAGCTTCAGCAGGGATCAGAGAGTTATCAAAGGACAGACAGCATACTATATTGATGAACAACAATCTCACCTGTTTGGGGCAAAGTGTTGTTTACAAACACAAAGAGAGCTGTTCCTGGAGATAGGTGCAGCCTGGAGCGTAGTATGAAAATGAACTGCCCAACCGGCATGTCACAGGAACTAGGTACCTGCACCATAAACAAATTTATATTGCTACATTTCAATTTTCAAAAGAGGTTTTTTTTAAAGGGAATATATTAATATCCCAGCTTCTGCATCGACTAATGCATATGTCTATAATTTTCAAAAGAGGATGGTCAATGAAGTTACTGTAAGACATACGTAAGTCACAAGCAGTATGGAATCAATGACAATGAAACACCCAGTCCATCTCTAGTAATGTATAATGGGCACAAGAGAACAGAGTAAAAACTTACTTCTTCTCCATTTGTGGTAAATTACTCCTTGAAAACCTTTCAACAATAACCTGCAAATAGAAGCTAATAATTCAGGAGTGCCATGTTCATCGAGCGATAGATGCCAAACATATGTATTGACGGCATGAGGGAAATGCAGAGTAAAACATAGGTGATAATTTAGGTGTATATAATATATGATCAGTTTCAGTGCAGTTGTTCAGGGTAGCCAAAAATTTATTAATGATTTAGATTAGAATTTGCAACGTAGACTCTCATGAATGAATGTGAGAACCCTTGAGCATCAAAAAATTGATTTGCAGGAGCATGGTGGACATAACTAAAAGGAGAGGAACTGATGTAATCTGCACAGGTGATTTTTTTTTATTTTTAACACTTGTTAAAAACTATTTTTAATTTTAGCATCGAAAGTTTTTTTTATATCTAACACTTTTGGCCGCTCCCCGCGCGAGGGAGCGGCAATGCTGCTGAGGTGGCAGTGGCGCAATTGTGGCAAGGGGCTGCTGCTCCCCCCTGGAGAAGCGGCAAGGCTACCGCTCCCCAGATCAGGGAGCGGCAGCGGGGCGCGCAGGCTGCCGCTCCCCAGATCAAGGAGCGGTAGCGGGGGTGTTGTTTTGTATCGCGCGAGATTAGAGGTCGCTGTGCCGGATAGAAGAAGCCCGATGCCCCCCCGGTGTCGCTCCTTGATCTGGGGAGCGGCAGCCTTGCCGCTCCCTAGATCAAGGAGCGGCAGTGGGGGGTGTCTTGTTTCACGCGAGGTAGAGAGCGTTGTCTGTCCGAGAAGAAAGCCGACGCCGCCCGCCCGACGCACCCCCCCGCCAGCCGCCCCGCCCCCCCACACCCCCGACGCCCCACCCCCCCCCCCCCCCCCCGCGGGCACCAGCAGCAGGGCCGCCGGCGATAGCGCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCGCGGCGCGCCCCCGGGCGTGAGCAGCAGGCAGCCCCCAGCGAGCAAGTAATTTCGTTTTTTATGTATTATAATCCTTAGTTACATTAGTTTGTTTAGTATTGT",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_region_sequence",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "chrom": "Chr10A",
+                    "start": 220622,
+                    "end": 226285
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_region_sequence",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "chrom": "Chr10A",
+                    "start": 220622,
+                    "end": 226285
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "List the first 20 genes in genome 53.",
+        "actual_output": "The first 20 genes for genome 53 (R570.v2023) are located on chromosome Chr10A and follow a sequential naming convention. The first five genes with their descriptions are: 1. SoffiXsponR570.10Ag000100.v2.1 (conserved hypothetical protein), 2. SoffiXsponR570.10Ag000200.v2.1 (conserved hypothetical protein), 3. SoffiXsponR570.10Ag000300.v2.1 (conserved hypothetical protein), 4. SoffiXsponR570.10Ag000400.v2.1 (putative Caffeoylshikimate esterase), and 5. SoffiXsponR570.10Ag000500.v2.1 (Hydrolase_4 domain-containing protein). The subsequent genes in the sequence are: 6. SoffiXsponR570.10Ag000600.v2.1, 7. SoffiXsponR570.10Ag000700.v2.1, 8. SoffiXsponR570.10Ag000800.v2.1, 9. SoffiXsponR570.10Ag000900.v2.1, 10. SoffiXsponR570.10Ag001000.v2.1, 11. SoffiXsponR570.10Ag001100.v2.1, 12. SoffiXsponR570.10Ag001200.v2.1, 13. SoffiXsponR570.10Ag001300.v2.1, 14. SoffiXsponR570.10Ag001400.v2.1, 15. SoffiXsponR570.10Ag001500.v2.1, 16. SoffiXsponR570.10Ag001600.v2.1, 17. SoffiXsponR570.10Ag001700.v2.1, 18. SoffiXsponR570.10Ag001800.v2.1, 19. SoffiXsponR570.10Ag001900.v2.1, and 20. SoffiXsponR570.10Ag002000.v2.1. ### Information Gaps & Limitations: Functional descriptions for genes 6 through 20 were not provided in the retrieved summary.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "get_genes_list",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "page": 1,
+                    "limit": 20
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_genes_list",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "limit": 20
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Find all genes on chromosome Chr10A of genome 53 that contain 'esterase' in their description.",
+        "actual_output": "The gene SoffiXsponR570.10Ag000400.v2.1 (putative Caffeoylshikimate esterase) is located on chromosome Chr10A of genome 53 and contains 'esterase' in its description.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "search_genes_full",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "keyword": "esterase",
+                    "chromosome": "Chr10A",
+                    "page": 1,
+                    "limit": 50
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "search_genes_full",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "chromosome": "Chr10A",
+                    "keyword": "esterase"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Get the detailed information for gene SoffiXsponR570.10Ag000400.v2.1 in genome 53.",
+        "actual_output": "Gene SoffiXsponR570.10Ag000400.v2.1 (ID: 1176131) in genome 53 is located on chromosome Chr10A from coordinates 268,658 to 273,080 on the negative strand (-). It is described as a putative Caffeoylshikimate esterase. The genomic sequence begins with: AAGATGTAATATGATTTTGAAAAGTCTACTGTTACATACATCATCGGCGGTTTGATTATTCCAAATCCTAATGCCTTGTGCTGGGGCTTCTTCCATTAGTTGTAGATAGGAATTGGATGTAGCTAGATTGCTGCAGCAATCCATATAGTGCATCAGGTTGGAGTATCAAATTTATAAAAGACTTGATGATATATATGATTTCATATATATATATCGAACTGCTGATTGTTTAATTTCTAGGTAAGACCGGCCTAATAATTTAGTCGGGTATGTATCACTGACATGTCATGTGTATCCATGCATCACCAAATTGAATGGTTTGTTCTATGAAGAAGAATTGCAAGCAAGCAGCTATTTGTTGCCGCCGTGCTGCTGGTGATGATGCTGGTCGTCGTGCCTGGCCTTCTGCTCCACCTCCGACAGCAGCTCCTGCTGGTCTGTGTCGGATGATCTGTGGTCGAGCCAGGCGATGATGTCTTGGAAAACTGCATGGATGTTGTCGGGCGACTCGCCAGAGGTGAGGGCGTGCCACATGCCCGGGTAGAGCTTGAGCGTCTTGTCATGGCTCGCCGCCGATCGGTACAGCAGCTCGCTCACCGACGGGTCCGTCACCTTGTCTGCCCCTCCATGTACGATCAGGAACGGCAACGACACCTACACGTACGCAACATATATAAATTCTTTGAACGTGCCATTGGCACAGTATTCATTAAGTAGAAGAAGAGTTTTACAAATTAAAGCTGGGACAATAATTTATGATTACCGAGCCAAACACTGATAGATTGTGATTACAAAAGCATAATGTCAGTATGGTTACAAAAGCACGATGTTAGTGTGTCAGAGTTTTACAAAAGCATGATGCCCGGGTATGCAACATATATAAATTCATTCAACAAATCAGTATACAGCCATAGGTTGTTACTACTATCAGCGTATCATCGTCTCTTACCAGCCATACATGCACCCAGTTATTCCTAATGTTTGAGTGGAGACAATGTGCCGCAAGTTTTGACTAGGAGAAGATAGTGACAAGTCCCAATCTAACTTTTTGAGTGGAGACAGGACAAAAACAAACACACACACTGACACACAACAAAGGGGGTGTATCAAGTCACTCCTAGGGCCTGTTTAGTTCCTATGCAAACCTACAATATTTCCTCTTCCACCCATCACATCAAATATTTGGACACATACATGGAGTATTAAATGTAGGTAAAAAAATAACTAATTGCACAGTTTGTCTGTAAATGTCGAGATGAATCTTTTGAGCCTAGTTACTTCATGGTTAGATAATATTTGTCAAATAACAACGAAAAGTGCTACAGGAACTTTTCGCCCACTTTTCACCAACTAAACACACCCCTAATTAAATGACTTCGGTATGAAAACCGCCAAACCAATAACAACTTAGGACTTCACATTCAAGTAATCCTAAGCCAACTTAGGCAAAGCATCGACCCAACTAAGGTCCTGTTTGGTGAAGCTCTGGCTCCTCCATGCATTGCATTTTTTATCTTTCCTCTCAAAATAAAGTATGAGCTAGTAAAGCCACTATTTTTTTCCTTCTTCGGGGCCTAAAGTCACTCAATGGCACAACTAAACCACTTGGTCTAGACACCGAAACACCATTGAACTAGGCAACAACTCTATTTGGACTGACTCATATAGCACCCA...",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_gene_detail",
+                "inputParameters": {
+                    "gene_id": "SoffiXsponR570.10Ag000400.v2.1",
+                    "genome_id": 53
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_gene_detail",
+                "inputParameters": {
+                    "gene_id": "SoffiXsponR570.10Ag000400.v2.1",
+                    "genome_id": 53
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Show the structure (exons/introns) of gene SoffiXsponR570.10Ag000100.v2.1.",
+        "actual_output": "The gene SoffiXsponR570.10Ag000100.v2.1 is located at genomic coordinates 220,622 to 226,285 with a total length of 5,663 bp. Its structure consists of 20 exons with a combined coding sequence (CDS) length of 938 bp and a total intron length of 4,725 bp.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "get_gene_structure",
+                "inputParameters": {
+                    "id": 53,
+                    "gene_id": "SoffiXsponR570.10Ag000100.v2.1"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_gene_structure",
+                "inputParameters": {
+                    "id": 53,
+                    "gene_id": "SoffiXsponR570.10Ag000100.v2.1"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Retrieve 2kb of the promoter sequence for SoffiXsponR570.10Ag000200.v2.1.",
+        "actual_output": "ATATAACTACTTGCTTTGCCATATATGTCTCATTTGTACCTCCGTTCAAACACCGTTCGGGTATGGGAGAAGAGCTTCGAGCCTTACCTCGACCCGTCACAGTAGCCCTCATATCATGGACCTAACTACGCACCCAGTCCGCCCCTGCAGAAGTTGGGCAAGGGCAGAAGGAAGAAGAAGCGTCTCAAGTGGGATATGGATGCTACGAAAGGGTACGGCGATGACATGTACGGAGGGGGAGACTTCAACAAGACACACGAGAGAAATTTGTGCTCGGTTTGCAAGCAACCGGGTCACAAGGCTAGCAGGCATAGAAGACCTCAATAACAGGTCTGTCCATATTATTCTGTTAAGATAACATATTATACTTGTTCTTATTTGTACCGTTATGTTTTATTCTACCATATGTTTTGTTTAGTTTTTAATATTGTTTGCACTAACTCTTTTTTTTTTAATCTGAAACAGGTTGCAGGAAGCTCCTCCTCCAATGTCGCACCCGCAGTACCTCCTCCTTGACACAGACAGTCAAGATCTGAGGAGCGAATAAAAGGTGTCCTGCGCTTGCCGCTCCTTGATCTGAGGAGCGGCAGCCCCCTACCACAATTTCGCCACTACCACCTTAGCAGCATTGCCGCTCCTCCACGTGGGGAGCGGCAAAGTTGAAATGCCGCTCCCTCACGTGGGGAGCGGCCAAAAGTGTTAGATATAAAAAAATTCGATGCTAAAATTAAAAATAGCTTTTAAAAAGTGTTAAAAATAAAAAAAATCGCACATGCCAATTAATAGTCCAGCAGAATATAAACAAAATGATGAAACCTTGAATGAGAAAGACTGGGATAGCGGACTGAGCGATAGCTCAGGTGGTGAGGCTTAAACGGTCGCTGCCCACCGGCCAGGGTTCGAACCCTGAGTCCCGCACCAAAAAACCCCCCTCCCTGTGCTCGTGGGTACTGTGCGTAGCCTGCGCCCGTGCTACGGTACACCCGGCCGGGTGATCTGGACCACGTACTCGTTTGGCCCCTCAGGGCATGGGCCAGGCTTCGGGTGGGTTTCTCGGTCGGACCGTTCGCGGTCATCTTCTTCCTATGAGAATACCGTGGGGGCCCGTTCTTCCCCTACGGCCGAGTTTTTTTTAGAAAGACTGGGATATCTTTTTTGAGTTCCTAGCTCCGAAAGGCTAGAATTATGTGAGCAACAAAGGAATTCTCTGAATCCTAAAATCCGGTGTGCTGTTTGGTTCTATCAATATCCACATATACGTGATGATGACTGATATCGTGTAGAGGGGGATGAATGGAAGTGGAAAAGGAGAGCAGTATCAACTAATTAAGACTACTAATAGTATAGTACTAGTAATAATCGATTAGTGACGCGAACACGAAGAAGAGAAGAAGAGTCAGGCTCAGGCCTCAGGCAGAGGCAAGCAAGCTAGGACAGGAGAAAGGAAAGCGAATAGAGAGACTTGACATACGGGGATCCTGGCGGGGTAGTTAGCCATCATGGCGGCGGATTCCTGGAGCCTCTCATCTGCACCCCGACCCCAATCATGCATCATCACGAATTACTCAATTATTAAGTGAACTGCAGAGTTAGATGTGAACTGAGAGCCACTGACCGAAGGTGAATTCTTGCTTGAAGGGCTTCATGGCGGATCAGATCGAATCGTCGATCGCTTTTGCTACCGTCCGTCAATGCAACTCCTCTCCAATCGGTTGCCGCTGCGGGAGGAAGAAGATGACTGAGGAAGCGACGGTGAAGCAGTAGCTGGGCTGGGCTACCTGATTTCAGAAACAAGAAGCCCAGCCTAAACCAATTAAGTTATGGGGGGGCCCATTCCAATGACATACCTACAATCTGGTAGTAGCCCATCCAACTAG",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "get_gene_promoter",
+                "inputParameters": {
+                    "id": 53,
+                    "gene_id": "SoffiXsponR570.10Ag000200.v2.1",
+                    "kb": 2
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_gene_promoter",
+                "inputParameters": {
+                    "id": 53,
+                    "gene_id": "SoffiXsponR570.10Ag000200.v2.1",
+                    "kb": 2
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Find all alleles for gene SoffiXsponR570.10Ag000300.v2.1.",
+        "actual_output": "The alleles for gene SoffiXsponR570.10Ag000300.v2.1 are:\n- SoffiXsponR570.10Ag000100.v2.1\n- SoffiXsponR570.10Ag000200.v2.1\n- SoffiXsponR570.10Ag000400.v2.1\n- SoffiXsponR570.10Ag000500.v2.1\n- SoffiXsponR570.10Ag000600.v2.1",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "get_gene_alleles",
+                "inputParameters": {
+                    "id": 53,
+                    "gene_id": "SoffiXsponR570.10Ag000300.v2.1"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_gene_alleles",
+                "inputParameters": {
+                    "id": 53,
+                    "gene_id": "SoffiXsponR570.10Ag000300.v2.1"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Search for literature about 'lignin biosynthesis' in Saccharum.",
+        "actual_output": "Lignin biosynthesis in Saccharum is a critical mechanism for drought tolerance and biomass quality. Key findings from current literature include: 1. Mechanisms and Species Variation: Lignin accumulation in roots and leaves is driven by elevated coniferyl and sinapyl alcohol substrates. Drought-resistant hybrids (e.g., XTT22) and wild species (S. spontaneum SES-208) exhibit significantly higher lignin deposition compared to sensitive cultivars like S. officinarum (Badila). 2. Genetic Basis: The CAD/SAD gene family in sugarcane contains approximately 322 members. Class I CAD genes (e.g., CAD1, CAD5) are essential for biosynthesis, while the ShF5H1 gene specifically regulates syringyl (S) lignin units. Overexpression of ShF5H1 can increase the S/G ratio by 160% and improve saccharification efficiency by 63%. 3. Regulatory Elements: Promoters of Class I CAD genes are enriched with stress-responsive cis-elements, including ABA, MeJA, and light-responsive motifs. 4. Biotechnological Applications: RNAi and CRISPR/Cas9 gene editing are being employed to target lignin biosynthetic genes to enhance biomass for second-generation ethanol production without compromising sucrose accumulation.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "search_knowledge_graph",
+                "inputParameters": {
+                    "query": "lignin biosynthesis Saccharum",
+                    "top_k": 10
+                }
+            },
+            {
+                "name": "search_knowledge_graph",
+                "inputParameters": {
+                    "query": "Saccharum lignin biosynthesis genes",
+                    "top_k": 10
+                }
+            },
+            {
+                "name": "search_literature_for_traits",
+                "inputParameters": {
+                    "organism": "Saccharum",
+                    "primary_concept": "lignin biosynthesis"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "search_literature_for_traits",
+                "inputParameters": {
+                    "organism": "Saccharum",
+                    "primary_concept": "lignin biosynthesis"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Find NCBI Bioprojects related to 'Saccharum officinarum'.",
+        "actual_output": "The NCBI BioProject identified for 'Saccharum officinarum' is 'Sucrose accumulation in Saccharum spp' (PRJCA048866). This study, submitted by the Yunnan Academy of Agricultural Sciences, analyzed transcriptional differences between high-sugar (YZ08-1609, YZ05-51) and low-sugar (CP79-318) sugarcane genotypes.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "search_bioproject",
+                "inputParameters": {
+                    "query": "Saccharum officinarum"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "search_bioproject",
+                "inputParameters": {
+                    "query": "Saccharum officinarum"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Look up Biosamples for 'R570 cultivar'.",
+        "actual_output": "The BioSample record for the 'R570' cultivar is SAMN42485386. This sample was collected from leaf tissue in Guangdong, China, in 2021.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "search_biosample",
+                "inputParameters": {
+                    "query": "R570 cultivar"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "search_biosample",
+                "inputParameters": {
+                    "query": "R570 cultivar"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Resolve the taxonomy for 'Sugarcane'.",
+        "actual_output": "The official scientific name for 'Sugarcane' is Saccharum hybrid cultivar, and its NCBI Taxonomy ID is 128810.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "resolve_taxonomy",
+                "inputParameters": {
+                    "query": "Sugarcane"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "resolve_taxonomy",
+                "inputParameters": {
+                    "query": "Sugarcane"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Fetch the nucleotide sequence for accession EF123456.",
+        "actual_output": "TGTTTGTGGGTATACTCATAAGTGACGCAGCTAACGCATTAAGCATTCCGCCTGGGGAGTACGGTCGCAAGATTAAAACTCAAAGGAATTGACGGGGGCCCGCACAAGCGGTGGAGCATGTGGTTTAATTCGAAGCAACGCGCAGAACCTTACCAGCCCTTGACATACCGATCGCGGATCGTGGAGACACTTTCCTTCAGTTTGGCTGGATCGGATACAGGTGCTGCATGGCTGTCGTCAGCTCGTGTCGTGAGATGTTGGGTTAAGTCCCGCAACGAGCGCAACCCTCGCCCTTAGTTGCCAGCATTTAGTTGGGCACTCTAGGGGGACTGCCGGTGATAAGCCGGAGGAAGGTGGGGATGACGTCAAGTCCTCATGGCCCTTACGGGCTGGGCTACACACGTGCTACAATGGTAGTGACAGAGGGCAGCGAGATCGCGAGGTCGAGCTAATCTCCAAAAGCTATCTCAGTTCGGATTGTTCTCTGCAACTCGAGAGCATGAAGTTGGAATCGCTAGTAATCGCAGATCAGCATGCTGCGGTGAATACGTTCCCGGGCCTTGTACACACCGCCCGTCACACCATGGGAGTTGGTTCTACCCGAAGGCGATGCGCTAACCGTAAGGGGGCAGTCGACCACGGTAGGGTCAGCGACTGGGGTGAAGTCGTAACAAGGTAACCGTA",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "fetch_nucleotide_sequence",
+                "inputParameters": {
+                    "accession": "EF123456"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "fetch_nucleotide_sequence",
+                "inputParameters": {
+                    "accession": "EF123456"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Create a BLAST task for genome 53 using the sequence 'ATGCATGCATGC'.",
+        "actual_output": "The BLAST task for genome ID 53 using the sequence 'ATGCATGCATGC' has been successfully created with task_id 5. The task is currently in a 'PENDING' status.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "create_blast_task",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "sequence": "ATGCATGCATGC",
+                    "evalue": 0.001
+                }
+            },
+            {
+                "name": "get_blast_result",
+                "inputParameters": {
+                    "task_id": 5
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "create_blast_task",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "sequence": "ATGCATGCATGC"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Retrieve the results for BLAST task 554433.",
+        "actual_output": "The results for BLAST task 554433 could not be retrieved because the task was not found in the system (Error 404).",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_blast_result",
+                "inputParameters": {
+                    "task_id": 554433
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_blast_result",
+                "inputParameters": {
+                    "task_id": 554433
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Run CRISPR guide RNA design for gene SoffiXsponR570.10Ag000400.v2.1 in genome 53.",
+        "actual_output": "The CRISPR gRNA design task for gene SoffiXsponR570.10Ag000400.v2.1 in genome 53 has been successfully initiated (Task ID: 2) and is currently PENDING.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_gene_detail",
+                "inputParameters": {
+                    "gene_id": "SoffiXsponR570.10Ag000400.v2.1",
+                    "genome_id": 53
+                }
+            },
+            {
+                "name": "run_crispor",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "gene_id": "SoffiXsponR570.10Ag000400.v2.1"
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "run_crispor",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "gene_id": "SoffiXsponR570.10Ag000400.v2.1"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Check the status of CRISPOR task 223344.",
+        "actual_output": "CRISPOR task 223344 was not found in the system (404 error).",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_crispor_result",
+                "inputParameters": {
+                    "task_id": 223344
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_crispor_result",
+                "inputParameters": {
+                    "task_id": 223344
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Design polyploid primers for the sequence 'GCTAGCTAGCTA' in genome 53.",
+        "actual_output": "The polyploid primer design task for the sequence 'GCTAGCTAGCTA' in genome 53 (R570.v2023) has been initiated and is currently PENDING (Task ID: 2). Results including primer pairs, predicted amplicon sizes, and specificity details will be available once the task is complete.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            },
+            {
+                "name": "design_polyploid_primer",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "query": "GCTAGCTAGCTA",
+                    "primer_num_return": 5,
+                    "primer_product_size_range": "100-300",
+                    "primer_opt_size": 20,
+                    "primer_min_size": 18,
+                    "primer_max_size": 22,
+                    "primer_opt_tm": 60.0,
+                    "primer_min_tm": 57.0,
+                    "primer_max_tm": 63.0,
+                    "primer_min_gc": 40.0,
+                    "primer_max_gc": 60.0,
+                    "primer_opt_gc_percent": 50.0
+                }
+            },
+            {
+                "name": "get_primer_task",
+                "inputParameters": {
+                    "task_id": 2
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "design_polyploid_primer",
+                "inputParameters": {
+                    "genome_id": 53,
+                    "query": "GCTAGCTAGCTA"
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Get the result for primer design task 778899.",
+        "actual_output": "The primer design task with ID 778899 could not be retrieved because it was not found in the system (Error 404).",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "get_primer_task",
+                "inputParameters": {
+                    "task_id": 778899
+                }
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "get_primer_task",
+                "inputParameters": {
+                    "task_id": 778899
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Compare the genomic neighborhood around Chr10A:220000-230000 in genome 53 with genome 45.",
+        "actual_output": "A comparison of the genomic neighborhood around Chr10A:220000-230000 between genome 53 and genome 45 cannot be performed because metadata for genome 45 was not found. Genome 53 is identified as R570.v2023 and is currently in 'READY' status.\n\n### Information Gaps & Limitations\n- Data for genome 45 is missing from the retrieved records, which prevents the comparative analysis of the specified region.",
+        "expected_output": null,
+        "retrieval_context": null,
+        "context": null,
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": [
+            {
+                "name": "list_genome_files",
+                "inputParameters": {}
+            }
+        ],
+        "expected_tools": [
+            {
+                "name": "compare_neighborhoods",
+                "inputParameters": {
+                    "gid_a": 53,
+                    "region_a": "Chr10A:220000-230000",
+                    "gid_b": 45
+                }
+            }
+        ],
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    }
+]

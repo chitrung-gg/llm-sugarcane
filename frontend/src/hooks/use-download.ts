@@ -12,14 +12,10 @@ export function useDownload() {
       });
       
       const { download_url } = response.data;
-      
-      // Open in a new tab or trigger download
-      const link = document.createElement("a");
-      link.href = download_url;
-      link.setAttribute("download", ""); // Optional: set filename if possible
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+
+      // Open in a new tab — the `download` attribute is ignored for cross-origin URLs
+      // (e.g. S3 presigned URLs), so a direct click would navigate the current page away.
+      window.open(download_url, "_blank", "noopener,noreferrer");
       
     } catch (error) {
       console.error("Failed to download file:", error);

@@ -1,0 +1,21 @@
+[
+    {
+        "input": "What does CatRAG stand for in the proposed framework?",
+        "actual_output": null,
+        "expected_output": "CatRAG stands for Context-Aware Traversal for robust RAG.",
+        "context": [
+            "To address this, we propose CatRAG, Context-Aware Traversal for robust RAG, a framework that builds on the HippoRAG 2 ar-chitecture and transforms the static KG into a query-adaptive navigation structure."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "rag_enhancement_2602.01965v1.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

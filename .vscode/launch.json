@@ -19,7 +19,7 @@
             "cwd": "${workspaceFolder}/agent",
             "args": [
                 "--dataset",
-                "./evaluation/synthetic_test_data/10.1007...s00122-014-2334-7_goldens.json" 
+                "./evaluation/synthetic_test_data/rag/one_golden.json" 
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/agent"
@@ -34,7 +34,7 @@
             "program": "${workspaceFolder}/agent/evaluation/agentic_test.py",
             "args": [
                 "--dataset",
-                "./evaluation/synthetic_test_data/agentic/agentic_test.json" 
+                "./evaluation/synthetic_test_data/agentic/one_agentic_test.json" 
             ],
             "cwd": "${workspaceFolder}/agent",
             "env": {
@@ -51,7 +51,7 @@
             "cwd": "${workspaceFolder}/agent",
             "args": [
                 "--dataset",
-                "./evaluation/synthetic_test_data/geval/geval_test.json" 
+                "./evaluation/synthetic_test_data/geval/huhu_geval.json" 
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/agent"

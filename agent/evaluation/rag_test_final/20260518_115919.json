@@ -1,0 +1,95 @@
+[
+    {
+        "input": "What is the causal agent of yellow leaf disease in sugarcane?",
+        "actual_output": "The causal agent of yellow leaf disease in sugarcane is the Sugarcane yellow leaf virus (SCYLV), which is a polerovirus.\n\nThe causal agent of yellow leaf disease in sugarcane is the Sugarcane yellow leaf virus (SCYLV), which is a polerovirus.",
+        "expected_output": "The causal agent is the Sugarcane yellow leaf virus (SCYLV), a Polerovirus transmitted by aphids.",
+        "retrieval_context": [
+            "## Abstract  \nKey message Using GWAS approaches, we detected independent resistant markers in sugarcane towards a vectored virus disease. Based on comparative genomics, several candidate genes potentially involved in virus/ aphid/plant interactions were pinpointed.  \nAbstract Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids. To identify quantitative trait loci controlling resistance to yellow leaf which are of direct relevance for breeding, we undertook a genome-wide association study (GWAS) on a sugarcane cultivar panel (n =189) representative of current breeding germplasm. This panel was fingerprinted with 3,949 polymorphic markers (DArT and AFLP). The panel was phenotyped for SCYLV infection in leaves and stalks in two trials for two crop cycles, under natural disease pressure prevalent in Guadeloupe. Mixed linear  \nCommunicated by Antonio Augusto Franco Garcia.",
+            "## Introduction  \nYellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40% in susceptible cultivars (Lockhart and Cronjé 2000; Zhu etal. 2011; Rassaby etal. 2003; Vega etal. 1997). This disease has been well described (Schenck 2001; Rott etal. 2008) and is caused by the Sugarcane yellow leaf virus (SCYLV), a polerovirus (D'Arcy and Domier 2005) vectored in a persistent, circulative, non-propagative manner by different aphids species as Ceratovacuna lanigera, Melanaphis sacchari, Rhopalosiphum maidis, and R. rufiabdominalis (Schenck and Lehrer 2000; Zhou etal. 2006). M. sacchari has been shown to be the most efficient aphid vector of SCYLV  \nwhen compared with R. maidis, and R. rufiabdominalis (Schenck and Lehrer 2000)."
+        ],
+        "context": [
+            "Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How much yield loss can yellow leaf disease cause in susceptible sugarcane cultivars?",
+        "actual_output": "Sugarcane yellow leaf disease (SCYLV) causes yield losses ranging from 20% to 40% in susceptible cultivars.\n\nSugarcane yellow leaf disease (SCYLV) causes yield losses ranging from 20% to 40% in susceptible cultivars.",
+        "expected_output": "Yellow leaf disease can cause severe yield losses ranging from 20 to 40% in susceptible cultivars.",
+        "retrieval_context": [
+            "## Introduction  \nYellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40% in susceptible cultivars (Lockhart and Cronjé 2000; Zhu etal. 2011; Rassaby etal. 2003; Vega etal. 1997). This disease has been well described (Schenck 2001; Rott etal. 2008) and is caused by the Sugarcane yellow leaf virus (SCYLV), a polerovirus (D'Arcy and Domier 2005) vectored in a persistent, circulative, non-propagative manner by different aphids species as Ceratovacuna lanigera, Melanaphis sacchari, Rhopalosiphum maidis, and R. rufiabdominalis (Schenck and Lehrer 2000; Zhou etal. 2006). M. sacchari has been shown to be the most efficient aphid vector of SCYLV  \nwhen compared with R. maidis, and R. rufiabdominalis (Schenck and Lehrer 2000).",
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner). This virus is present in all commercial sugarcane cultivars and in all sugarcane growing areas in Guadeloupe, where field SCYLV incidences varied from 0 to 21% in 2005 depending on cultivars and locations (Edon-Jock etal. 2007). Incidences have since increased to reach, in 2010, between 1 and 72% for the most susceptible cultivars (personal communication, J.H. Daugrois)."
+        ],
+        "context": [
+            "Yellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40 % in susceptible cultivars"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Where and when was SCYLV first identified according to the text?",
+        "actual_output": "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999).\n\nSCYLV was first identified in Guadeloupe in 1996.",
+        "expected_output": "SCYLV was first identified in Guadeloupe in 1996.",
+        "retrieval_context": [
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner). This virus is present in all commercial sugarcane cultivars and in all sugarcane growing areas in Guadeloupe, where field SCYLV incidences varied from 0 to 21% in 2005 depending on cultivars and locations (Edon-Jock etal. 2007). Incidences have since increased to reach, in 2010, between 1 and 72% for the most susceptible cultivars (personal communication, J.H. Daugrois).",
+            "## Abstract  \nKey message Using GWAS approaches, we detected independent resistant markers in sugarcane towards a vectored virus disease. Based on comparative genomics, several candidate genes potentially involved in virus/ aphid/plant interactions were pinpointed.  \nAbstract Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids. To identify quantitative trait loci controlling resistance to yellow leaf which are of direct relevance for breeding, we undertook a genome-wide association study (GWAS) on a sugarcane cultivar panel (n =189) representative of current breeding germplasm. This panel was fingerprinted with 3,949 polymorphic markers (DArT and AFLP). The panel was phenotyped for SCYLV infection in leaves and stalks in two trials for two crop cycles, under natural disease pressure prevalent in Guadeloupe. Mixed linear  \nCommunicated by Antonio Augusto Franco Garcia."
+        ],
+        "context": [
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois et al. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner)."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "According to the study, what is the most efficient strategy to control sugarcane diseases?",
+        "actual_output": "Varietal resistance improvement is identified as the most efficient strategy to control sugarcane diseases. Key methodologies mentioned include the exploration of genotypic variability within germplasm collections (Comstock et al. 2001; Komor 2011) and the use of QTL mapping approaches to characterize resistance (Costet et al.).\n\nVarietal resistance improvement is the most efficient strategy to control sugarcane diseases.",
+        "expected_output": "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases.",
+        "retrieval_context": [
+            "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases, but the lack of knowledge of the genetic basis of yellow leaf resistance makes breeding progress for this disease difficult. Some studies have dealt with the exploration of genotypic variability of resistance to SCYLV in sugarcane germplasm. Indexation of germplasm collections of sugarcane and related species for the presence of the virus revealed potential sources of resistance to yellow leaf disease. Commercial cultivars (Saccharum spp.), S. officinarum , S. robustum and S. sinense presented high virus incidence, whereas virus incidence was low for S. barberi and S. spontaneum , and the related genus Miscanthus spp. and Erianthus spp. (Comstock etal. 2001; Komor 2011). Until today, only one genetic study was attempted to characterize resistance to yellow leaf disease. Using a QTL approach based on a biparental progeny between a susceptible cultivar and a resistant clone, Costet etal"
+        ],
+        "context": [
+            "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases, but the lack of knowledge of the genetic basis of yellow leaf resistance makes breeding progress for this disease difficult."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many sugarcane accessions were used in the cultivar panel for this study?",
+        "actual_output": "The study used a panel of 189 sugarcane accessions originating from 26 sugarcane breeding programs worldwide, consisting primarily of advanced interspecific sugar-producing commercial hybrids.\n\n189 sugarcane accessions were used in the cultivar panel for this study.",
+        "expected_output": "The study used a panel of 189 sugarcane accessions.",
+        "retrieval_context": [
+            "## Plant material  \nA panel of 189 sugarcane accessions originated from 26 sugarcane breeding programs around the world (supplementary material 1) was planted in two successive trials (A and B) at Station de Roujol, CIRAD, Petit Bourg, Guadeloupe, French West Indies. This panel was composed of a large majority of advanced interspecific sugar-producing commercial hybrids and a very few early-generation interspecific hybrids. Both trials were planted in a randomized complete block design with three complete blocks and a 4m sugarcane row as an experimental plot. Plots were separated by 1.5m between line and rows. Trials were conducted during three successive crop cycles. Both trials were planted using cuttings from the germplasm collection of"
+        ],
+        "context": [
+            "A panel of 189 sugarcane accessions originated from 26 sugarcane breeding programs around the world (supplementary material 1) was planted in two successive trials"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    }
+]

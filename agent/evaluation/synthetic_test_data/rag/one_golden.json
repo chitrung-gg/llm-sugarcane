@@ -1,0 +1,574 @@
+[
+    {
+        "input": "What is the causal agent of yellow leaf disease in sugarcane?",
+        "actual_output": null,
+        "expected_output": "The causal agent is the Sugarcane yellow leaf virus (SCYLV), a Polerovirus transmitted by aphids.",
+        "context": [
+            "Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1007...s00122-014-2334-7.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How much yield loss can yellow leaf disease cause in susceptible sugarcane cultivars?",
+        "actual_output": null,
+        "expected_output": "Yellow leaf disease can cause severe yield losses ranging from 20 to 40% in susceptible cultivars.",
+        "context": [
+            "Yellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40 % in susceptible cultivars"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1007...s00122-014-2334-7.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Where and when was SCYLV first identified according to the text?",
+        "actual_output": null,
+        "expected_output": "SCYLV was first identified in Guadeloupe in 1996.",
+        "context": [
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois et al. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1007...s00122-014-2334-7.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "According to the study, what is the most efficient strategy to control sugarcane diseases?",
+        "actual_output": null,
+        "expected_output": "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases.",
+        "context": [
+            "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases, but the lack of knowledge of the genetic basis of yellow leaf resistance makes breeding progress for this disease difficult."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1007...s00122-014-2334-7.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How many sugarcane accessions were used in the cultivar panel for this study?",
+        "actual_output": null,
+        "expected_output": "The study used a panel of 189 sugarcane accessions.",
+        "context": [
+            "A panel of 189 sugarcane accessions originated from 26 sugarcane breeding programs around the world (supplementary material 1) was planted in two successive trials"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1007...s00122-014-2334-7.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How many independent markers were significantly detected in association with SCYLV resistance?",
+        "actual_output": null,
+        "expected_output": "Six independent markers were significantly detected in association with the SCYLV resistance phenotype.",
+        "context": [
+            "Six independent markers were significantly detected in association with SCYlV resistance phenotype. These markers explained individually between 9 and 14 % of the disease variation of the cultivar panel."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1007...s00122-014-2334-7.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What does CatRAG stand for in the proposed framework?",
+        "actual_output": null,
+        "expected_output": "CatRAG stands for Context-Aware Traversal for robust RAG.",
+        "context": [
+            "To address this, we propose CatRAG, Context-Aware Traversal for robust RAG, a framework that builds on the HippoRAG 2 ar-chitecture and transforms the static KG into a query-adaptive navigation structure."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "rag_enhancement_2602.01965v1.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What is the \"Static Graph Fallacy\" problem that CatRAG aims to solve?",
+        "actual_output": null,
+        "expected_output": "The \"Static Graph Fallacy\" is a problem where methods rely on fixed transition probabilities determined during indexing. This rigidity ignores the query-dependent nature of edge relevance, causing semantic drift.",
+        "context": [
+            "However, these methods suffer from a \"Static Graph Fal-lacy\": they rely on fixed transition probabil-ities determined during indexing. This rigid-ity ignores the query-dependent nature of edge relevance, causing semantic drift where ran-dom walks are diverted into high-degree \"hub\" nodes before reaching critical downstream ev-idence."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "rag_enhancement_2602.01965v1.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What are the three mechanisms introduced in the CatRAG framework to steer the random walk?",
+        "actual_output": null,
+        "expected_output": "The three mechanisms are (1) Symbolic Anchoring, (2) Query-Aware Dynamic Edge Weighting, and (3) Key-Fact Passage Weight Enhancement.",
+        "context": [
+            "We introduce a multi-faceted framework to steer the random walk: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the random walk; (2) Query-Aware Dynamic Edge Weighting, which dynamically modu-lates graph structure, to prune irrelevant paths while amplifying those aligned with the query’s intent; and (3) Key-Fact Passage Weight En-hancement, cost-efficient bias that structurally anchors the random walk to likely evidence."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "rag_enhancement_2602.01965v1.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Which specific Large Language Model (LLM) is used as the backbone for all LLM components in the implementation of CatRAG?",
+        "actual_output": null,
+        "expected_output": "GPT-4o-mini is used as the backbone for all LLM components.",
+        "context": [
+            "We implement CatRAG upon the HippoRAG 2 ar-chitecture, using GPT-4o-mini as the backbone for all LLM components and text-embedding-3-small as the retriever."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "rag_enhancement_2602.01965v1.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Which three datasets are used to evaluate the Multi-hop QA performance in the experiments?",
+        "actual_output": null,
+        "expected_output": "The three datasets are MuSiQue, 2WikiMulti-HopQA, and HotpotQA.",
+        "context": [
+            "Multi-hop QA. We conduct experiments on MuSiQue (Trivedi et al., 2022), 2WikiMulti-HopQA (Ho et al., 2020), and HotpotQA (Yang et al., 2018). These datasets require the system to reason over multiple passages to derive an answer."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "rag_enhancement_2602.01965v1.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What is Full Chain Retrieval (FCR) defined as in this study?",
+        "actual_output": null,
+        "expected_output": "Full Chain Retrieval (FCR) is defined as the percentage of queries where the retrieved context contains the entire set of gold supporting documents.",
+        "context": [
+            "To rigor-ously assess reasoning integrity, we introduce Full Chain Retrieval (FCR), defined as the percent-age of queries where the retrieved context contains the entire set of gold supporting documents."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "rag_enhancement_2602.01965v1.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What does ScDB stand for?",
+        "actual_output": null,
+        "expected_output": "ScDB stands for Saccharum genomic database.",
+        "context": [
+            "Building upon this foundation, we are pleased to introduce ScDB (Saccharum genomic database, https://sugarcane.gxu.edu.cn/scdb), the first user-friendly multi-omics database for six Saccharum species"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "Plant Biotechnology Journal - 2024 - Chen - ScDB A comprehensive database dedicated to Saccharum facilitating functional.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How many Saccharum species and Erianthus rufipilus genomes are included in the ScDB database?",
+        "actual_output": null,
+        "expected_output": "The ScDB database includes six Saccharum species and one Erianthus rufipilus genome.",
+        "context": [
+            "ScDB (Saccharum genomic database, https://sugarcane.gxu.edu.cn/scdb), the first user-friendly multi-omics database for six Saccharum species (AP85-441, Np-X, LA-Purple, XTT22, R570, ZZ1) and a Erianthus rufipilus (YN2009-3)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "Plant Biotechnology Journal - 2024 - Chen - ScDB A comprehensive database dedicated to Saccharum facilitating functional.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What are the six main modules that organize the ScDB database?",
+        "actual_output": null,
+        "expected_output": "The six main modules are 'Home', 'Genomics', 'Transcriptomics', 'Tools', 'Download', and 'Publication'.",
+        "context": [
+            "The database is an organized database into six main modules: ‘Home’, ‘Genomics’, ‘Transcriptomics’, ‘Tools’, ‘Download’ and ‘Publication’."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "Plant Biotechnology Journal - 2024 - Chen - ScDB A comprehensive database dedicated to Saccharum facilitating functional.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How many transcriptome projects and sugarcane samples are included in ScDB?",
+        "actual_output": null,
+        "expected_output": "ScDB includes 24 transcriptome projects involving over 300 sugarcane samples.",
+        "context": [
+            "Additionally, ScDB includes 24 transcriptome projects involving over 300 sugarcane samples and approximately 2.5 TB of data."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "Plant Biotechnology Journal - 2024 - Chen - ScDB A comprehensive database dedicated to Saccharum facilitating functional.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Which specific software was used to identify transcription factor families and kinase families in ScDB?",
+        "actual_output": null,
+        "expected_output": "The iTAK software was used to identify transcription factor families and kinase families.",
+        "context": [
+            "In the ‘Transcription Factors’, we used iTAK (Zheng et al., 2016) software to identify transcription factor families and kinase families of Saccharum species and Erianthus rufipilus"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "Plant Biotechnology Journal - 2024 - Chen - ScDB A comprehensive database dedicated to Saccharum facilitating functional.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What is the purpose of the 'Synteny Block' function in the database?",
+        "actual_output": null,
+        "expected_output": "The 'Synteny Block' function is used for a swift examination of the evolution and variety within large homologous gene segments and chromosomes.",
+        "context": [
+            "The ‘Synteny Block’ can be used for a swift examination of the evolution and variety within large homologous gene segments and chromosome"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "Plant Biotechnology Journal - 2024 - Chen - ScDB A comprehensive database dedicated to Saccharum facilitating functional.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What does RUE stand for and what is its definition according to the glossary?",
+        "actual_output": null,
+        "expected_output": "RUE stands for Radiation-use efficiency, which is the rate at which a plant is able to convert intercepted solar radiation into dry biomass.",
+        "context": [
+            "RUE g DM MJ−1 Radiation-use efficiency, the rate at which a plant is able to convert intercepted solar radiation into dry biomass."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1016...j.agrformet.2025.110854.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How many distinct sugarcane varieties and countries were included in the experimental data for this study?",
+        "actual_output": null,
+        "expected_output": "The study used experimental data from six countries and 40 distinct varieties.",
+        "context": [
+            "Using experimental data from six countries (Brazil, South Africa, United States of America, Zimbabwe, Argentina, and La Réunion) and 40 distinct varieties, our results indicated that maximum RUE (RUEMAX) is consistent across varieties, while apparent RUE (RUEA) showed significant variation."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1016...j.agrformet.2025.110854.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What type of photosynthesis pathway does sugarcane have?",
+        "actual_output": null,
+        "expected_output": "Sugarcane is a crop species with the C4 photosynthesis pathway.",
+        "context": [
+            "Sugarcane is a major tropical C4 crop of global economic significance, primarily used for sugar, ethanol, and bioenergy production.",
+            "Crop species with the C4 photosynthesis pathway, such as sugarcane, are better adapted to higher temperatures (> 25◦C) compared to species with C3 photosynthesis"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1016...j.agrformet.2025.110854.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What are the names of the four formalisms of temperature effects on RUE that were compared in this study?",
+        "actual_output": null,
+        "expected_output": "The four formalisms compared in this study are ApsimCanegro, Mosicas, Wang-Engel, and Johnson.",
+        "context": [
+            "Crop models use different formalisms of temperature effects on RUE, and four of them were compared in this study. The first formalism (referred to as ApsimCanegro), used in the APSIM... The second formalism (referred to as Mosicas)... The third formalism (referred to as Wang-Engel)... The fourth formalism (referred to as Johnson)..."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1016...j.agrformet.2025.110854.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What is the optimal temperature range recommended for sugarcane RUE based on this study?",
+        "actual_output": null,
+        "expected_output": "The recommended optimal temperature range is 30 to 33 ◦C.",
+        "context": [
+            "These findings highlight the critical importance of refining crop models considering temperature response and cardinal temperatures (optimal range: 30–33◦C) to enhance projections of sugarcane yield under future climate conditions."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1016...j.agrformet.2025.110854.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "What base temperature do the authors recommend for crop models using daily RUEO as a parameter?",
+        "actual_output": null,
+        "expected_output": "The authors recommend applying a base temperature of 7 ◦C.",
+        "context": [
+            "Based on our study, we recommend that crop models using daily RUEO as a parameter apply a base temperature of 7◦C and an optimal temperature ranging from 30 to 33◦C, depending on formalisms, should be encouraged."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.1016...j.agrformet.2025.110854.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "According to the text, what is sugarcane recently considered as?",
+        "actual_output": null,
+        "expected_output": "Sugarcane is recently considered as a sustainable feedstock for next generation cellulosic biofuel production.",
+        "context": [
+            "Recently, sugarcane was considered as a sustainable feedstock for next generation cellulosic biofuel production (Tew and Cobill, 2008)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.3389...fpls.2016.00804.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How many accessions were selected for the target enrichment sequencing study?",
+        "actual_output": null,
+        "expected_output": "A total of 12 diverse accessions representing different species were selected from a diversity panel.",
+        "context": [
+            "A total of 12 diverse accessions representing different species were selected from a diversity panel of 300 accessions (Nayak et al., 2014) grown at the United States Department of Agriculture (USDA), Agricultural Research Service (ARS) Sugarcane Field Station at Canal Point, FL"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.3389...fpls.2016.00804.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "How many probes were designed for the target enrichment of the 12 accessions?",
+        "actual_output": null,
+        "expected_output": "A set of 55,946 probes, which are 120-nucleotide long, were designed.",
+        "context": [
+            "For target enrichment of the 12 accessions, we designed a set of 55,946 probes, which are 120-nucleotide long (Supplementary Table S2)."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.3389...fpls.2016.00804.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Which sequencing platform was used to sequence the enriched products?",
+        "actual_output": null,
+        "expected_output": "The enriched products were sequenced using the Illumina HiSeq 2000.",
+        "context": [
+            "The enriched products were sequenced using Illumina HiSeq 2000 to generate single-end 100-bp reads."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.3389...fpls.2016.00804.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Which three different variant callers were used to call SNPs and InDels in this study?",
+        "actual_output": null,
+        "expected_output": "The three variant callers used were SAMtools, GATK (Genome Analysis ToolKit), and Freebayes.",
+        "context": [
+            "SNPs and InDels were called with three different variant callers, namely, Samtools (v 0.1), UnifiedGenotyper implemented in Genome Analysis ToolKit (GATK) v3.30, and Freebayes v0.9.21 respectively"
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.3389...fpls.2016.00804.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    },
+    {
+        "input": "Which reference genome was selected for the alignment of the sequence reads?",
+        "actual_output": null,
+        "expected_output": "The sorghum genome was selected as the reference for alignment.",
+        "context": [
+            "Therefore, the sorghum genome was used as a reference for alignment of the reads from different species in Saccharum complex.",
+            "To facilitate the downstream variants distribution and annotation analysis, the sorghum genome was selected as the reference since the alignment rate (83%) was highly acceptable."
+        ],
+        "retrieval_context": null,
+        "additional_metadata": {
+            "evolutions": []
+        },
+        "comments": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "source_file": "10.3389...fpls.2016.00804.pdf",
+        "name": null,
+        "custom_column_key_values": null,
+        "images_mapping": null
+    }
+]

@@ -1,0 +1,188 @@
+[
+    {
+        "input": "What is the causal agent of yellow leaf disease in sugarcane?",
+        "actual_output": "The causal agent of yellow leaf disease in sugarcane is the Sugarcane yellow leaf virus (SCYLV), which is a polerovirus.\n\nThe causal agent of yellow leaf disease in sugarcane is the Sugarcane yellow leaf virus (SCYLV), which is a polerovirus.",
+        "expected_output": "The causal agent is the Sugarcane yellow leaf virus (SCYLV), a Polerovirus transmitted by aphids.",
+        "retrieval_context": [
+            "## Abstract  \nKey message Using GWAS approaches, we detected independent resistant markers in sugarcane towards a vectored virus disease. Based on comparative genomics, several candidate genes potentially involved in virus/ aphid/plant interactions were pinpointed.  \nAbstract Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids. To identify quantitative trait loci controlling resistance to yellow leaf which are of direct relevance for breeding, we undertook a genome-wide association study (GWAS) on a sugarcane cultivar panel (n =189) representative of current breeding germplasm. This panel was fingerprinted with 3,949 polymorphic markers (DArT and AFLP). The panel was phenotyped for SCYLV infection in leaves and stalks in two trials for two crop cycles, under natural disease pressure prevalent in Guadeloupe. Mixed linear  \nCommunicated by Antonio Augusto Franco Garcia.",
+            "## Introduction  \nYellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40% in susceptible cultivars (Lockhart and Cronjé 2000; Zhu etal. 2011; Rassaby etal. 2003; Vega etal. 1997). This disease has been well described (Schenck 2001; Rott etal. 2008) and is caused by the Sugarcane yellow leaf virus (SCYLV), a polerovirus (D'Arcy and Domier 2005) vectored in a persistent, circulative, non-propagative manner by different aphids species as Ceratovacuna lanigera, Melanaphis sacchari, Rhopalosiphum maidis, and R. rufiabdominalis (Schenck and Lehrer 2000; Zhou etal. 2006). M. sacchari has been shown to be the most efficient aphid vector of SCYLV  \nwhen compared with R. maidis, and R. rufiabdominalis (Schenck and Lehrer 2000)."
+        ],
+        "context": [
+            "Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How much yield loss can yellow leaf disease cause in susceptible sugarcane cultivars?",
+        "actual_output": "Sugarcane yellow leaf disease (SCYLV) causes yield losses ranging from 20% to 40% in susceptible cultivars.\n\nSugarcane yellow leaf disease (SCYLV) causes yield losses ranging from 20% to 40% in susceptible cultivars.",
+        "expected_output": "Yellow leaf disease can cause severe yield losses ranging from 20 to 40% in susceptible cultivars.",
+        "retrieval_context": [
+            "## Introduction  \nYellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40% in susceptible cultivars (Lockhart and Cronjé 2000; Zhu etal. 2011; Rassaby etal. 2003; Vega etal. 1997). This disease has been well described (Schenck 2001; Rott etal. 2008) and is caused by the Sugarcane yellow leaf virus (SCYLV), a polerovirus (D'Arcy and Domier 2005) vectored in a persistent, circulative, non-propagative manner by different aphids species as Ceratovacuna lanigera, Melanaphis sacchari, Rhopalosiphum maidis, and R. rufiabdominalis (Schenck and Lehrer 2000; Zhou etal. 2006). M. sacchari has been shown to be the most efficient aphid vector of SCYLV  \nwhen compared with R. maidis, and R. rufiabdominalis (Schenck and Lehrer 2000).",
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner). This virus is present in all commercial sugarcane cultivars and in all sugarcane growing areas in Guadeloupe, where field SCYLV incidences varied from 0 to 21% in 2005 depending on cultivars and locations (Edon-Jock etal. 2007). Incidences have since increased to reach, in 2010, between 1 and 72% for the most susceptible cultivars (personal communication, J.H. Daugrois)."
+        ],
+        "context": [
+            "Yellow leaf disease of sugarcane (Saccharum spp.) is an important and widely spread disease causing severe yield losses, ranging from 20 to 40 % in susceptible cultivars"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Where and when was SCYLV first identified according to the text?",
+        "actual_output": "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999).\n\nSCYLV was first identified in Guadeloupe in 1996.",
+        "expected_output": "SCYLV was first identified in Guadeloupe in 1996.",
+        "retrieval_context": [
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois etal. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner). This virus is present in all commercial sugarcane cultivars and in all sugarcane growing areas in Guadeloupe, where field SCYLV incidences varied from 0 to 21% in 2005 depending on cultivars and locations (Edon-Jock etal. 2007). Incidences have since increased to reach, in 2010, between 1 and 72% for the most susceptible cultivars (personal communication, J.H. Daugrois).",
+            "## Abstract  \nKey message Using GWAS approaches, we detected independent resistant markers in sugarcane towards a vectored virus disease. Based on comparative genomics, several candidate genes potentially involved in virus/ aphid/plant interactions were pinpointed.  \nAbstract Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids. To identify quantitative trait loci controlling resistance to yellow leaf which are of direct relevance for breeding, we undertook a genome-wide association study (GWAS) on a sugarcane cultivar panel (n =189) representative of current breeding germplasm. This panel was fingerprinted with 3,949 polymorphic markers (DArT and AFLP). The panel was phenotyped for SCYLV infection in leaves and stalks in two trials for two crop cycles, under natural disease pressure prevalent in Guadeloupe. Mixed linear  \nCommunicated by Antonio Augusto Franco Garcia."
+        ],
+        "context": [
+            "SCYLV was first identified in Guadeloupe in 1996 (Daugrois et al. 1999) where the virus is vectored by the aphid M. sacchari (Zehntner)."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "According to the study, what is the most efficient strategy to control sugarcane diseases?",
+        "actual_output": "Varietal resistance improvement is identified as the most efficient strategy to control sugarcane diseases. Key methodologies mentioned include the exploration of genotypic variability within germplasm collections (Comstock et al. 2001; Komor 2011) and the use of QTL mapping approaches to characterize resistance (Costet et al.).\n\nVarietal resistance improvement is the most efficient strategy to control sugarcane diseases.",
+        "expected_output": "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases.",
+        "retrieval_context": [
+            "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases, but the lack of knowledge of the genetic basis of yellow leaf resistance makes breeding progress for this disease difficult. Some studies have dealt with the exploration of genotypic variability of resistance to SCYLV in sugarcane germplasm. Indexation of germplasm collections of sugarcane and related species for the presence of the virus revealed potential sources of resistance to yellow leaf disease. Commercial cultivars (Saccharum spp.), S. officinarum , S. robustum and S. sinense presented high virus incidence, whereas virus incidence was low for S. barberi and S. spontaneum , and the related genus Miscanthus spp. and Erianthus spp. (Comstock etal. 2001; Komor 2011). Until today, only one genetic study was attempted to characterize resistance to yellow leaf disease. Using a QTL approach based on a biparental progeny between a susceptible cultivar and a resistant clone, Costet etal"
+        ],
+        "context": [
+            "Varietal resistance improvement is the most efficient strategy to control sugarcane diseases, but the lack of knowledge of the genetic basis of yellow leaf resistance makes breeding progress for this disease difficult."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many sugarcane accessions were used in the cultivar panel for this study?",
+        "actual_output": "The study used a panel of 189 sugarcane accessions originating from 26 sugarcane breeding programs worldwide, consisting primarily of advanced interspecific sugar-producing commercial hybrids.\n\n189 sugarcane accessions were used in the cultivar panel for this study.",
+        "expected_output": "The study used a panel of 189 sugarcane accessions.",
+        "retrieval_context": [
+            "## Plant material  \nA panel of 189 sugarcane accessions originated from 26 sugarcane breeding programs around the world (supplementary material 1) was planted in two successive trials (A and B) at Station de Roujol, CIRAD, Petit Bourg, Guadeloupe, French West Indies. This panel was composed of a large majority of advanced interspecific sugar-producing commercial hybrids and a very few early-generation interspecific hybrids. Both trials were planted in a randomized complete block design with three complete blocks and a 4m sugarcane row as an experimental plot. Plots were separated by 1.5m between line and rows. Trials were conducted during three successive crop cycles. Both trials were planted using cuttings from the germplasm collection of"
+        ],
+        "context": [
+            "A panel of 189 sugarcane accessions originated from 26 sugarcane breeding programs around the world (supplementary material 1) was planted in two successive trials"
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "How many independent markers were significantly detected in association with SCYLV resistance?",
+        "actual_output": "Six independent markers were significantly detected in association with the SCYLV resistance phenotype.\n\nSix independent markers were significantly detected in association with the SCYLV resistance phenotype.",
+        "expected_output": "Six independent markers were significantly detected in association with the SCYLV resistance phenotype.",
+        "retrieval_context": [
+            "## Abstract  \nKey message Using GWAS approaches, we detected independent resistant markers in sugarcane towards a vectored virus disease. Based on comparative genomics, several candidate genes potentially involved in virus/ aphid/plant interactions were pinpointed.  \nAbstract Yellow leaf of sugarcane is an emerging viral disease whose causal agent is a Polerovirus, the Sugarcane yellow leaf virus (SCYLV) transmitted by aphids. To identify quantitative trait loci controlling resistance to yellow leaf which are of direct relevance for breeding, we undertook a genome-wide association study (GWAS) on a sugarcane cultivar panel (n =189) representative of current breeding germplasm. This panel was fingerprinted with 3,949 polymorphic markers (DArT and AFLP). The panel was phenotyped for SCYLV infection in leaves and stalks in two trials for two crop cycles, under natural disease pressure prevalent in Guadeloupe. Mixed linear  \nCommunicated by Antonio Augusto Franco Garcia.",
+            "models including co-factors representing population structure fixed effects and pairwise kinship random effects provided an efficient control of the risk of inflated type-I error at a genome-wide level. Six independent markers were significantly detected in association with SCYLV resistance phenotype. These markers explained individually between 9 and 14% of the disease variation of the cultivar panel. Their frequency in the panel was relatively low (8–20%). Among them, two markers were detected repeatedly across the GWAS exercises based on the different disease resist -ance parameters. These two markers could be blasted on Sorghum bicolor genome and candidate genes potentially involved in plant–aphid or plant–virus interactions were localized in the vicinity of sorghum homologs of sugarcane markers. Our results illustrate the potential of GWAS approaches to prospect among sugarcane germplasm for accessions likely bearing resistance alleles of significant effect useful in breeding programs."
+        ],
+        "context": [
+            "Six independent markers were significantly detected in association with SCYlV resistance phenotype. These markers explained individually between 9 and 14 % of the disease variation of the cultivar panel."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What does CatRAG stand for in the proposed framework?",
+        "actual_output": "CatRAG stands for ContextAware Traversal for robust RAG. Its role is to transform Knowledge Graph Traversal into a context-aware navigation structure, mitigating the constraints of static graph topologies and improving multi-hop reasoning completeness by integrating an optimization layer for context-driven navigation.\n\nCatRAG stands for ContextAware Traversal for robust RAG.",
+        "expected_output": "CatRAG stands for Context-Aware Traversal for robust RAG.",
+        "retrieval_context": [
+            "## 7 Conclusion  \nWe identify and address the \"Static Graph Fallacy\" inherent in current structure-aware RAG systems, where fixed transition probabilities predispose retrieval to semantic drift and prevent the recovery of complete evidence chains. We propose CatRAG, a framework that transforms the Knowledge Graph Traversal into a context-aware navigation structure. Experiment across multi-hop benchmarks demonstrate that CatRAG consistently outperforms baselines, including HippoRAG 2, while significantly reducing the bias of high-degree hub nodes. Our analysis reveals that these topological adjustments yield substantial improvements in reasoning completeness, effectively bridging the gap between retrieving partial context and enabling fully grounded, multi-hop reasoning.",
+            "To mitigate the constraints imposed by static graph topologies, we develop CatRAG (ContextAware Traversal for robust RAG). This framework extends the HippoRAG 2 (Gutiérrez et al. , 2025) paradigm by integrating a novel optimization layer tailored for context-driven navigation. First, we introduce Symbolic Anchoring. By injecting explicitly recognized entities as weak topological anchors, we constrain the starting distribution to prevent immediate drift into generic hubs. Second, we introduce Query-Aware Dynamic Edge Weighting. By employing an LLM to assess the relevance of outgoing edges from seed entities, we dynamically modulate the graph edge weight, effectively pruning irrelevant paths while amplifying those aligned with the query's intent. Third, we propose Key-Fact Passage Weight Enhancement, a costefficient method to structurally anchor the random walk to documents containing verified evidentiary triples"
+        ],
+        "context": [
+            "To address this, we propose CatRAG, Context-Aware Traversal for robust RAG, a framework that builds on the HippoRAG 2 ar-chitecture and transforms the static KG into a query-adaptive navigation structure."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What is the \"Static Graph Fallacy\" problem that CatRAG aims to solve?",
+        "actual_output": "The 'Static Graph Fallacy' refers to a problem in structure-aware RAG systems where fixed transition probabilities lead to semantic drift and prevent the recovery of complete evidence chains. CatRAG addresses this by transforming Knowledge Graph Traversal into a context-aware navigation structure using a 'one-shot' graph modification that dynamically re-weights edges before traversal.\n\nThe \"Static Graph Fallacy\" refers to a problem in structure-aware Retrieval-Augmented Generation (RAG) systems where fixed transition probabilities lead to semantic drift and prevent the recovery of complete evidence chains. CatRAG addresses this by transforming Knowledge Graph Traversal into a context-aware navigation structure using a \"one-shot\" graph modification that dynamically re-weights edges before traversal.",
+        "expected_output": "The \"Static Graph Fallacy\" is a problem where methods rely on fixed transition probabilities determined during indexing. This rigidity ignores the query-dependent nature of edge relevance, causing semantic drift.",
+        "retrieval_context": [
+            "## 7 Conclusion  \nWe identify and address the \"Static Graph Fallacy\" inherent in current structure-aware RAG systems, where fixed transition probabilities predispose retrieval to semantic drift and prevent the recovery of complete evidence chains. We propose CatRAG, a framework that transforms the Knowledge Graph Traversal into a context-aware navigation structure. Experiment across multi-hop benchmarks demonstrate that CatRAG consistently outperforms baselines, including HippoRAG 2, while significantly reducing the bias of high-degree hub nodes. Our analysis reveals that these topological adjustments yield substantial improvements in reasoning completeness, effectively bridging the gap between retrieving partial context and enabling fully grounded, multi-hop reasoning.",
+            "searches. CatRAG instead introduces a \"one-shot\" context-aware graph modification that dynamically re-weights edges before traversal. Unlike iterative cycles, our approach maintains the efficiency of a single retrieval pass, effectively combining the reasoning precision of adaptive methods with the speed and structural integrity of graph-based retrieval."
+        ],
+        "context": [
+            "However, these methods suffer from a \"Static Graph Fal-lacy\": they rely on fixed transition probabil-ities determined during indexing. This rigid-ity ignores the query-dependent nature of edge relevance, causing semantic drift where ran-dom walks are diverted into high-degree \"hub\" nodes before reaching critical downstream ev-idence."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "What are the three mechanisms introduced in the CatRAG framework to steer the random walk?",
+        "actual_output": "The CatRAG framework introduces three specific mechanisms to steer the random walk: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the walk; (2) Query-Aware Dynamic Edge Weighting, which modulates graph structure to prune irrelevant paths and amplify those aligned with query intent; and (3) Key-Fact Passage Weight Enhancement, which provides a cost-efficient bias to structurally anchor the walk to likely evidence.\n\nThe three mechanisms introduced in the CatRAG framework to steer the random walk are: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the walk; (2) Query-Aware Dynamic Edge Weighting, which modulates graph structure to prune irrelevant paths and amplify those aligned with query intent; and (3) Key-Fact Passage Weight Enhancement, which provides a cost-efficient bias to structurally anchor the walk to likely evidence.",
+        "expected_output": "The three mechanisms are (1) Symbolic Anchoring, (2) Query-Aware Dynamic Edge Weighting, and (3) Key-Fact Passage Weight Enhancement.",
+        "retrieval_context": [
+            ". We introduce a multi-faceted framework to steer the random walk: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the random walk; (2) Query-Aware Dynamic Edge Weighting, which dynamically modulates graph structure, to prune irrelevant paths while amplifying those aligned with the query's intent; and (3) Key-Fact Passage Weight Enhancement, cost-efficient bias that structurally anchors the random walk to likely evidence. Experiments across four multi-hop benchmarks demonstrate that CatRAG consistently outperforms state-of-the-art baselines. Our analysis reveals that while standard Recall metrics show modest gains, CatRAG achieves substantial improvements in reasoning completeness—the capacity to recover entire evidence path without gaps. These results reveal that our approach effectively bridges the gap between retrieving partial context and enabling fully grounded reasoning. Resources are available at https://github.com/kwunhang/CatRAG ."
+        ],
+        "context": [
+            "We introduce a multi-faceted framework to steer the random walk: (1) Symbolic Anchoring, which injects weak entity constraints to regularize the random walk; (2) Query-Aware Dynamic Edge Weighting, which dynamically modu-lates graph structure, to prune irrelevant paths while amplifying those aligned with the query’s intent; and (3) Key-Fact Passage Weight En-hancement, cost-efficient bias that structurally anchors the random walk to likely evidence."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    },
+    {
+        "input": "Which specific Large Language Model (LLM) is used as the backbone for all LLM components in the implementation of CatRAG?",
+        "actual_output": "GPT-4o-mini is used as the backbone for all LLM components in the implementation of CatRAG.\n\nGPT-4o-mini is used as the backbone for all LLM components in the implementation of CatRAG.",
+        "expected_output": "GPT-4o-mini is used as the backbone for all LLM components.",
+        "retrieval_context": [
+            "## 4.4 Implementation Details  \nWe implement CatRAG upon the HippoRAG 2 architecture, using GPT-4o-mini 2 as the backbone for all LLM components and text-embedding-3small as the retriever. While newer open-weight models like NV-Embed-v2 (Lee et al. , 2025) show strong performance, our primary objective is to isolate the topological gains provided by the CatRAG mechanism from the raw semantic capacity of the underlying encoder. For fair comparison, all structure-augmented baselines are reproduced using the same extractor and retriever. Downstream responses are generated by Llama-3.3-70B-Instruct  \n2 https://platform.openai.com/docs/models/gpt-4o-mini  \nusing the top-5 retrieved passages. Key hyperparameters include: symbolic anchor reset probability ϵ = 0 . 2 (weighted by inverse passage count |Pi| − 1 ), boost factor β = 2 . 5, dynamic weighting limits Nseed = 5 and Kedge = 15. More implementation details and hyperparameters are provided in Appendix A.1 ."
+        ],
+        "context": [
+            "We implement CatRAG upon the HippoRAG 2 ar-chitecture, using GPT-4o-mini as the backbone for all LLM components and text-embedding-3-small as the retriever."
+        ],
+        "name": null,
+        "comments": null,
+        "source_file": null,
+        "tools_called": null,
+        "expected_tools": null,
+        "additional_metadata": null,
+        "custom_column_key_values": null
+    }
+]
