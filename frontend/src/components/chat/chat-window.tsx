@@ -4,15 +4,15 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, User, Bot, Loader2, Database, ChevronDown, ChevronRight, ExternalLink, Wrench, Brain, Check, X, Download, FileDown, FileCode, Plus } from "lucide-react";
+import { Send, User, Bot, Loader2, Database, ChevronDown, ChevronRight, ExternalLink, Wrench, Brain, Check, X, Download, FileDown, FileCode, Plus, ImageIcon } from "lucide-react";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useProjectDatasets, useDatasetFiles, useDetachDataset } from "@/hooks/use-datasets";
 import { useChatHistory } from "@/hooks/use-chat";
@@ -24,11 +24,61 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Message, Dataset, DatasetFile } from "@/lib/types";
 import { v4 as uuidv4 } from "uuid";
 
-// Helper to extract S3 URIs from text
-const extractS3Uris = (text: string): string[] => {
+// Helper to extract S3 URIs from text or any tool output (trims trailing punctuation).
+// Accepts string | object so it works on raw SSE tool_end payloads without runtime errors.
+const extractS3Uris = (input: unknown): string[] => {
+  const text = typeof input === "string" ? input : JSON.stringify(input ?? "");
   const s3Regex = /s3:\/\/[^\s"'`<>]+/g;
-  return text.match(s3Regex) || [];
+  return (text.match(s3Regex) || []).map(uri => uri.replace(/[.,;:)]+$/, ""));
 };
+
+
+const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"];
+const isImageUri = (uri: string) => IMAGE_EXTENSIONS.some(ext => uri.toLowerCase().endsWith(ext));
+
+// Fetches a presigned URL and renders the image inline; falls back to a download button on error
+function S3InlineImage({ s3Uri, onDownload }: { s3Uri: string; onDownload: (p: { s3Uri: string }) => void }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    api.get<{ download_url: string }>("/workspace/files/download", { params: { s3_uri: s3Uri } })
+      .then(res => setSrc(res.data.download_url))
+      .catch(() => setFailed(true));
+  }, [s3Uri]);
+
+  if (failed) {
+    return (
+      <button
+        onClick={() => onDownload({ s3Uri })}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 text-xs text-stone-500 hover:bg-stone-100 transition-colors"
+      >
+        <ImageIcon className="h-3.5 w-3.5" /> Image unavailable — click to open
+      </button>
+    );
+  }
+
+  if (!src) {
+    return <Loader2 className="h-4 w-4 animate-spin text-stone-300 my-2" />;
+  }
+
+  return (
+    <div className="group relative inline-block max-w-full">
+      <img
+        src={src}
+        alt="Analysis result"
+        className="max-w-full rounded-lg border border-stone-200 shadow-sm"
+      />
+      <button
+        onClick={() => onDownload({ s3Uri })}
+        title="Download image"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded p-1.5 shadow border border-stone-200"
+      >
+        <Download className="h-3.5 w-3.5 text-stone-600" />
+      </button>
+    </div>
+  );
+}
 
 const formatToolName = (name: string): string =>
   name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -66,17 +116,47 @@ const ChatMessageItem = React.memo(({
       </div>
       <div className="flex flex-col gap-2 max-w-[85%]">
         <div className={cn(
-          "rounded-lg px-4 py-2 text-sm shadow-sm",
-          message.role === "user" 
-            ? "bg-stone-100 text-stone-900 border border-stone-200" 
+          "rounded-lg px-4 py-2 text-sm shadow-sm overflow-hidden",
+          message.role === "user"
+            ? "bg-stone-100 text-stone-900 border border-stone-200"
             : "bg-white text-stone-800 border border-emerald-100"
         )}>
-          <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50 prose-pre:whitespace-pre-wrap prose-pre:break-all break-words [overflow-wrap:anywhere]">
+          <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50 prose-pre:whitespace-pre-wrap prose-pre:break-all break-words [overflow-wrap:anywhere] overflow-x-auto">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
             </ReactMarkdown>
           </div>
         </div>
+
+        {/* Downloadable S3 files attached to this message */}
+        {message.role === "assistant" && (() => {
+          const structured = (message.downloadable_s3_uris ?? []).filter(u => !isImageUri(u));
+          const fromContent = structured.length === 0
+            ? extractS3Uris(message.content).filter(u => !isImageUri(u))
+            : [];
+          const uris = structured.length > 0 ? structured : fromContent;
+          if (uris.length === 0) return null;
+          return (
+            <div className="flex flex-wrap gap-1.5">
+              {uris.map((uri, idx) => {
+                const filename = uri.split("/").pop() || "file";
+                return (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-xs gap-2 bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 font-semibold shadow-sm transition-all max-w-[260px]"
+                    title={uri}
+                    onClick={() => onDownload({ s3Uri: uri })}
+                  >
+                    <FileDown className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{filename}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* Metadata Sections (Assistant Only) */}
         {message.role === "assistant" && (
@@ -112,7 +192,9 @@ const ChatMessageItem = React.memo(({
             {message.tool_executions && message.tool_executions.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {message.tool_executions.map((tool, idx) => {
-                  const s3Uris = extractS3Uris(tool.output || "");
+                  const toolS3Uris = extractS3Uris(tool.output || "");
+                  const toolImageUris = toolS3Uris.filter(isImageUri);
+                  const toolFileUris = toolS3Uris.filter(uri => !isImageUri(uri));
                   return (
                     <div key={idx} className="flex flex-col gap-1">
                       <div className={cn(
@@ -126,9 +208,16 @@ const ChatMessageItem = React.memo(({
                           : <Wrench className="h-3 w-3" />}
                         {formatToolName(tool.tool_name)}
                       </div>
-                      {s3Uris.length > 0 && (
+                      {toolImageUris.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          {toolImageUris.map((uri, uIdx) => (
+                            <S3InlineImage key={uIdx} s3Uri={uri} onDownload={onDownload} />
+                          ))}
+                        </div>
+                      )}
+                      {toolFileUris.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {s3Uris.map((uri, uIdx) => (
+                          {toolFileUris.map((uri, uIdx) => (
                             <Button
                               key={uIdx}
                               variant="outline"
@@ -273,7 +362,8 @@ export function ChatWindow() {
                 tool_name: tr.tool,
                 status: tr.status || "complete",
                 output: typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output)
-              }))
+              })),
+              downloadable_s3_uris: (m as any).chat_metadata?.downloadable_s3_uris ?? [],
             });
           }
           currentThoughts = []; // Reset for next group
@@ -387,7 +477,8 @@ export function ChatWindow() {
       if (e.event === 'tool_start' || e.event === 'tool_end') {
         const toolData = (typeof e.data === 'object' && e.data !== null) ? (e.data as any) : {};
         const name: string = toolData.tool || 'unknown';
-        const outputs = e.event === 'tool_end' ? extractS3Uris(toolData.output || "") : [];
+        // toolData.output may be a raw object from SSE — extractS3Uris handles both string and object
+        const outputs = e.event === 'tool_end' ? extractS3Uris(toolData.output) : [];
         map.set(name, { status: e.event === 'tool_start' ? 'running' : 'done', outputs });
       }
     });
@@ -549,8 +640,8 @@ export function ChatWindow() {
                   </div>
                   <div className="flex flex-col gap-2 max-w-[85%] w-full">
                     {activeStreamAnswer ? (
-                      <div className="rounded-lg px-4 py-2 text-sm shadow-sm bg-white text-stone-800 border border-emerald-100">
-                        <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50 prose-pre:whitespace-pre-wrap prose-pre:break-all break-words [overflow-wrap:anywhere]">
+                      <div className="rounded-lg px-4 py-2 text-sm shadow-sm bg-white text-stone-800 border border-emerald-100 overflow-hidden">
+                        <div className="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-stone-900 prose-pre:text-stone-50 prose-pre:whitespace-pre-wrap prose-pre:break-all break-words [overflow-wrap:anywhere] overflow-x-auto">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {activeStreamAnswer}
                           </ReactMarkdown>
@@ -754,74 +845,91 @@ function DatasetItem({
     const { data: files, isLoading } = useDatasetFiles(dataset.id);
 
     return (
-        <TooltipProvider>
-            <Tooltip>
-                <div className="group/chip relative shrink-0 max-w-[200px]">
-                    <TooltipTrigger asChild>
-                        <button
-                            onClick={onToggle}
-                            className={cn(
-                                "flex items-center gap-1.5 pl-3 pr-7 py-1.5 rounded-full border text-xs font-semibold transition-all w-full overflow-hidden",
-                                isSelected
-                                    ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
-                                    : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
-                            )}
-                        >
-                            <Database className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{dataset.name}</span>
-                            {isSelected && files && files.length > 0 && (
-                                <span className="shrink-0 text-[10px] bg-emerald-200 text-emerald-800 px-1 rounded-sm">{files.length}</span>
-                            )}
-                        </button>
-                    </TooltipTrigger>
-                    {dataset.project_id !== projectId && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDetach(); }}
-                            className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/chip:opacity-100 transition-opacity p-0.5 rounded-full text-stone-300 hover:text-red-500 hover:bg-red-50"
-                            title="Remove from project"
-                        >
-                            <X className="h-3 w-3" />
-                        </button>
+        <div className="group/chip relative shrink-0">
+            <Popover>
+                <PopoverTrigger
+                    className={cn(
+                        "flex items-center gap-1.5 pl-3 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer",
+                        dataset.project_id !== projectId ? "pr-7" : "pr-3",
+                        isSelected
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm"
+                            : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100"
                     )}
-                </div>
-                <TooltipContent side="bottom" className="w-64 p-0 overflow-hidden border-stone-200 bg-white shadow-xl">
-                    <div className="bg-stone-50 px-3 py-2 border-b border-stone-200 overflow-hidden">
-                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest truncate">{dataset.name}</p>
+                >
+                    <Database className="h-3 w-3 shrink-0" />
+                    <span className="max-w-[140px] truncate">{dataset.name}</span>
+                    {isSelected && files && files.length > 0 && (
+                        <span className="shrink-0 text-[10px] bg-emerald-200 text-emerald-800 px-1 rounded-sm">{files.length}</span>
+                    )}
+                </PopoverTrigger>
+
+                <PopoverContent side="bottom" align="start" className="w-96 p-0 overflow-hidden border-stone-200 bg-white shadow-xl">
+                    {/* Header */}
+                    <div className="bg-stone-50 px-4 py-3 border-b border-stone-200 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Dataset</p>
+                            <p className="text-sm font-semibold text-stone-700 mt-0.5 truncate" title={dataset.name}>{dataset.name}</p>
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+                            className={cn(
+                                "shrink-0 px-3 py-1 rounded-full text-xs font-bold border transition-all",
+                                isSelected
+                                    ? "bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200"
+                                    : "bg-stone-100 border-stone-300 text-stone-500 hover:bg-stone-200"
+                            )}
+                        >
+                            {isSelected ? "Active" : "Inactive"}
+                        </button>
                     </div>
-                    <div className="max-h-48 overflow-y-auto">
+
+                    {/* File list */}
+                    <div className="max-h-72 overflow-y-auto">
                         {isLoading ? (
-                            <div className="p-4 flex justify-center">
+                            <div className="p-6 flex justify-center">
                                 <Loader2 className="h-4 w-4 animate-spin text-stone-300" />
                             </div>
                         ) : !files || files.length === 0 ? (
-                            <div className="p-4 text-center text-xs text-stone-400 italic">No files available.</div>
+                            <div className="p-6 text-center text-xs text-stone-400 italic">No files available.</div>
                         ) : (
                             <div className="divide-y divide-stone-100">
                                 {files.map((file) => (
-                                    <div key={file.id} className="p-2 flex items-center justify-between gap-2 overflow-hidden hover:bg-stone-50 group/file">
-                                        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                                            <FileCode className="h-3 w-3 text-stone-400 shrink-0" />
-                                            <span className="text-[10px] text-stone-600 font-medium truncate" title={file.file_name}>{file.file_name}</span>
+                                    <div key={file.id} className="px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-stone-50">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <FileCode className="h-3.5 w-3.5 text-stone-400 shrink-0" />
+                                            <span className="text-xs text-stone-600 font-medium break-all leading-snug" title={file.file_name}>
+                                                {file.file_name}
+                                            </span>
                                         </div>
                                         <Button
-                                            size="xs"
-                                            variant="ghost"
-                                            className="h-6 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2 gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity"
+                                            size="sm"
+                                            variant="outline"
+                                            className="shrink-0 h-7 px-2.5 text-xs gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 font-semibold"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 onDownload({ fileId: file.id });
                                             }}
                                         >
                                             <Download className="h-3 w-3" />
-                                            <span className="text-[10px] font-bold uppercase tracking-tight">Download</span>
+                                            Download
                                         </Button>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+                </PopoverContent>
+            </Popover>
+
+            {dataset.project_id !== projectId && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onDetach(); }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/chip:opacity-100 transition-opacity p-0.5 rounded-full text-stone-300 hover:text-red-500 hover:bg-red-50"
+                    title="Remove from project"
+                >
+                    <X className="h-3 w-3" />
+                </button>
+            )}
+        </div>
     );
 }

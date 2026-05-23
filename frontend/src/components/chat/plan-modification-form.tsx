@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Plus, Trash2, RotateCcw, Send } from "lucide-react";
@@ -9,11 +9,11 @@ interface Step {
   expected_tool?: string;
 }
 
-export function PlanModificationForm({ 
-  initialPlan, 
-  onSubmitEdits, 
-  onSubmitFeedback, 
-  onCancel 
+export function PlanModificationForm({
+  initialPlan,
+  onSubmitEdits,
+  onSubmitFeedback,
+  onCancel
 }: {
   initialPlan: Step[];
   onSubmitEdits: (plan: Step[]) => void;
@@ -22,6 +22,12 @@ export function PlanModificationForm({
 }) {
   const [steps, setSteps] = useState<Step[]>(JSON.parse(JSON.stringify(initialPlan)));
   const [feedback, setFeedback] = useState("");
+
+  const stepsModified = useMemo(() =>
+    JSON.stringify(steps) !== JSON.stringify(initialPlan),
+    [steps, initialPlan]
+  );
+  const feedbackTyped = feedback.trim().length > 0;
 
   const handleStepChange = (index: number, val: string) => {
     const newSteps = [...steps];
@@ -55,7 +61,7 @@ export function PlanModificationForm({
               {idx + 1}
             </span>
             <div className="flex-1 space-y-2">
-              <Textarea 
+              <Textarea
                 value={step.description}
                 onChange={(e) => handleStepChange(idx, e.target.value)}
                 className="text-xs min-h-[60px] bg-stone-50 border-stone-200 focus-visible:ring-emerald-500"
@@ -74,26 +80,29 @@ export function PlanModificationForm({
 
       <div className="border-t pt-4 space-y-3">
         <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Or give text feedback for re-planning</label>
-            <Textarea 
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Ex: Don't use dataset X, focus on mutation patterns..."
-                className="text-xs bg-stone-50 border-stone-200 focus-visible:ring-emerald-500"
-            />
+          <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">
+            Or give text feedback for re-planning
+          </label>
+          <Textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="Ex: Don't use dataset X, focus on mutation patterns..."
+            className="text-xs bg-stone-50 border-stone-200 focus-visible:ring-emerald-500"
+          />
         </div>
-        
+
         <div className="flex gap-2">
-          <Button 
-            className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white shadow-md text-xs font-bold uppercase tracking-tight h-10"
+          <Button
+            className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white shadow-md text-xs font-bold uppercase tracking-tight h-10 disabled:opacity-40"
+            disabled={feedbackTyped}
             onClick={() => onSubmitEdits(steps)}
           >
             <Send className="h-3.5 w-3.5 mr-1.5" /> Submit Edited Plan
           </Button>
-          <Button 
-            variant="outline" 
-            className="flex-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold uppercase tracking-tight h-10"
-            disabled={!feedback.trim()}
+          <Button
+            variant="outline"
+            className="flex-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold uppercase tracking-tight h-10 disabled:opacity-40"
+            disabled={stepsModified || !feedbackTyped}
             onClick={() => onSubmitFeedback(feedback)}
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Ask Agent to Re-plan

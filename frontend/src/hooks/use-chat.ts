@@ -10,17 +10,18 @@ export function useChatHistory(threadId?: string) {
       return response.data;
     },
     enabled: !!threadId,
+    retry: false,
   });
 }
 
 export function useSendMessage() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { 
-      query: string; 
-      threadId: string; 
-      projectId: string; 
-      datasetIds: string[] 
+    mutationFn: async (data: {
+      query: string;
+      threadId: string;
+      projectId: string;
+      datasetIds: string[]
     }) => {
       const formData = new FormData();
       formData.append("query", data.query);
@@ -29,7 +30,7 @@ export function useSendMessage() {
       if (data.datasetIds.length > 0) {
         formData.append("dataset_ids", JSON.stringify(data.datasetIds));
       }
-      
+
       const response = await api.post("/agent", formData);
       return response.data;
     },
@@ -48,5 +49,19 @@ export function useProjectThreads(projectId: string) {
       return response.data;
     },
     enabled: !!projectId,
+  });
+}
+
+export function useDeleteThread() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { threadId: string; projectId: string }) => {
+      const response = await api.delete(`/workspace/threads/${data.threadId}`);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["project-threads", variables.projectId] });
+      queryClient.removeQueries({ queryKey: ["chat-history", variables.threadId] });
+    },
   });
 }

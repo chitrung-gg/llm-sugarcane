@@ -47,6 +47,7 @@ export interface Message {
   web_results?: WebResult[];
   tool_executions?: ToolExecution[];
   interrupt_data?: Record<string, unknown>;
+  downloadable_s3_uris?: string[];
 }
 
 export interface RAGSource {
