@@ -20,9 +20,9 @@ def make_outer_synthesizer_node(llm_service: LLMService):
         past_steps = state.get("past_steps", [])
 
         # If the planner already computed a direct response (no research steps needed),
-        # pass it through instead of regenerating without workspace context.
+        # pass it through instead of calling LLM regenerating without workspace context.
         existing_answer = state.get("final_answer")
-        if existing_answer and not past_steps:
+        if existing_answer and not past_steps:      # Distinct with Replanner output
             logger.info("[Outer Synthesizer] Passing through planner direct response.")
             return Command(
                 goto=AgentGraphNode.SUMMARIZER,
@@ -49,6 +49,7 @@ def make_outer_synthesizer_node(llm_service: LLMService):
         )
         
         # 2. Structured Model tagged for real-time JSON streaming
+        # TODO: Tagging
         llm = llm_service.get_structured_primary_model(SynthesizerOutput).with_config(
             {"tags": [StreamingTag.STREAM_SYNTHESIZER]}
         )

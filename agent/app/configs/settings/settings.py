@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     QDRANT_URL: str = Field(default="localhost:6334", validation_alias="QDRANT_URL")
     QDRANT_API_KEY: SecretStr | None = Field(default=None, validation_alias="QDRANT_API_KEY")
     QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME: str = Field(
-        default="sugarcane_docs",       # "sugarcane_docs_new"
+        default="sugarcane_docs_new",       # "sugarcane_docs_new"
         validation_alias="QDRANT_SOLID_KNOWLEDGE_COLLECTION_NAME"
     )
     QDRANT_VOLATILE_KNOWLEDGE_COLLECTION_NAME: str = Field(
@@ -97,8 +97,8 @@ class Settings(BaseSettings):
     QDRANT_VECTOR_SIZE: int = 3072   # 768 to save storage
     QDRANT_PREFER_GRPC: bool = True
 
-    QDRANT_SOLID_TOP_K: int = 20
-    QDRANT_VOLATILE_TOP_K: int = 10
+    QDRANT_SOLID_TOP_K: int = 10
+    QDRANT_VOLATILE_TOP_K: int = 5
     QDRANT_FINAL_TOP_K: int = 2
     QDRANT_MAX_QUERY_LENGTH: int = 200
 
@@ -248,7 +248,7 @@ class Settings(BaseSettings):
     WEB_SEARCH_SCORE_THRESHOLD: float = 0.5
 
     SUMMARIZER_SUMMARY_TRIGGER_THRESHOLD: int = 10
-    SUMMARIZER_SUMMARY_KEEP_LAST_N: int = 2
+    SUMMARIZER_SUMMARY_KEEP_LAST_N: int = 5
     SUMMARIZER_SUMMARY_TIMEOUT_SEC: float = 20.0
 
     SYNTHESIZER_TIMEOUT_SEC: float = 45.0

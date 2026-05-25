@@ -9,8 +9,7 @@ from langchain_core.documents import Document
 from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.common.constants import (
     AgentIntent,
-    ToolExecutionStatus,
-    UploadedFileType,
+    ToolExecutionStatus
 )
 from app.core.graph.state.record_source import RecordSource
 

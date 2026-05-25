@@ -1,7 +1,5 @@
 import logging
 import sys
-from types import FrameType
-from typing import cast
 
 from loguru import logger
 from opentelemetry import trace
@@ -25,12 +23,13 @@ class InterceptHandler(logging.Handler):
             level = record.levelno
 
         # Find caller from where the logged message originated
-        # This ensures Loguru prints the actual file/line number, not this interceptor file!
+        # Set level 6 due to most logging have the same stack before reach the code really call logs
         frame, depth = sys._getframe(6), 6
         while frame and frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back
             depth += 1
 
+        # Send log and exception handling to Loguru
         logger.opt(depth=depth, exception=record.exc_info).log(
             level, record.getMessage()
         )
@@ -41,7 +40,7 @@ def init_opentelemetry():
         service_attributes.SERVICE_NAME: "sugarcane-agent"
     })
     provider = TracerProvider(resource=resource)
-    # Note: In production, you'd add a BatchSpanProcessor and an Exporter here 
+    # Note: In production, add a BatchSpanProcessor and an Exporter here 
     # (like OTLP or Jaeger). For local logs, the provider itself is enough to generate IDs.
     set_tracer_provider(provider)
 
@@ -122,7 +121,7 @@ def setup_logging():
         "docling_core",
         "RapidOCR",
         "onnxruntime",
-        "urllib3", # Catches those HTTP GET logs from RapidOCR
+        "urllib3",
         "deepeval",
     )
     
@@ -136,6 +135,7 @@ def setup_logging():
         hijacked_logger.setLevel(logging.DEBUG)
     
     for logger_name in ["neo4j", "boto3", "botocore", "s3transfer", "urllib3", "aioboto3"]:
+        # Reduce noisy log
         logging.getLogger(logger_name).setLevel(logging.INFO)
 
     logger.success(f"Loguru successfully hijacked standard logging. Level: {log_level}")

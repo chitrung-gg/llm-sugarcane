@@ -42,6 +42,15 @@ async def detach_dataset(
     return {"success": success}
 
 
+@router.get("/datasets/{dataset_id}/available-projects")
+async def list_available_projects(
+    dataset_id: uuid.UUID,
+    user_id: uuid.UUID,
+    dataset_service: DatasetService = Depends(get_dataset_service)
+):
+    return await dataset_service.get_available_projects_for_dataset(user_id, dataset_id)
+
+
 @router.post("/projects/{project_id}/datasets", response_model=UserDataset, status_code=status.HTTP_201_CREATED)
 async def create_dataset(
     project_id: uuid.UUID,

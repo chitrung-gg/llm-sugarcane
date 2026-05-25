@@ -55,7 +55,6 @@ async def chat_stream(
     # 1. Format the resume payload if feedback exists
     resume_payload = None
     if request.human_feedback:
-        # Pydantic's .model_dump() converts it cleanly to the dict LangGraph expects
         # exclude_none=True ensures we don't pass empty 'feedback' keys if they used the UI editor
         resume_payload = request.human_feedback.model_dump(exclude_none=True)
     

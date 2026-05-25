@@ -31,7 +31,7 @@ class GeminiEmbeddingModel(BaseModel, Embeddings):
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         logger.debug(f"[Gemini Embed] Embedding batch of {len(texts)} documents...")
         try:
-            # 1. Try the native LangChain batch embedding first (Faster)
+            # 1. Try the native LangChain batch embedding first
             embeddings = self._embeddings.embed_documents(texts)
             
             # 2. If the API squashes the batch, trigger self-healing fallback

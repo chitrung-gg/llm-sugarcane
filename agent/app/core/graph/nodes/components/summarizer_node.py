@@ -1,8 +1,5 @@
-import asyncio
-from enum import StrEnum
 import time
 from typing import Literal
-from langfuse import observe
 from loguru import logger
 from langchain_core.messages import HumanMessage, SystemMessage, RemoveMessage
 from langgraph.types import Command
@@ -36,6 +33,7 @@ def make_summarizer_node(llm_service: LLMService):
         keep_messages = settings.SUMMARIZER_SUMMARY_KEEP_LAST_N
         # timeout_sec = settings.SUMMARIZER_SUMMARY_TIMEOUT_SEC
 
+        # Maybe better when use Long-Term Memory instead of adding to Vector DB
         # 1. Final Ingestion Dispatch
         # pending_knowledge = state.get("extracted_knowledge", [])
         # if pending_knowledge:
@@ -58,7 +56,7 @@ def make_summarizer_node(llm_service: LLMService):
                 goto=AgentGraphNode.END_NODE
             )
 
-        logger.info(f"[Summarizer] 📝 Summarizing {len(messages)} messages...")
+        logger.info(f"[Summarizer] Summarizing {len(messages)} messages...")
         start_time = time.time()
         
         if summary:
@@ -74,14 +72,9 @@ def make_summarizer_node(llm_service: LLMService):
         messages_to_summarize = messages[:-keep_messages]
         
         try:
-            # Tier 3 (Tertiary - Flash Lite) for high-speed summarization
             llm = llm_service.get_structured_tertiary_model(SummaryOutput)
             
-            # response = await asyncio.wait_for(
-            #     llm.ainvoke([SystemMessage(content=system_prompt)] + messages_to_summarize),
-            #     timeout=timeout_sec
-            # )
-            response = await llm.ainvoke(
+            response: SummaryOutput = await llm.ainvoke(
                 [SystemMessage(content=system_prompt)] + messages_to_summarize
             )
                 
@@ -92,7 +85,7 @@ def make_summarizer_node(llm_service: LLMService):
             delete_messages = [RemoveMessage(id=m.id) for m in messages_to_summarize if hasattr(m, 'id') and m.id]
 
             elapsed = int((time.time() - start_time) * 1000)
-            logger.debug(f"[Summarizer] ✅ Summary updated in {elapsed}ms. Marked {len(delete_messages)} messages for removal.")
+            logger.debug(f"[Summarizer] Summary updated in {elapsed}ms. Marked {len(delete_messages)} messages for removal.")
 
             return Command(
                 goto=AgentGraphNode.END_NODE,
@@ -102,7 +95,7 @@ def make_summarizer_node(llm_service: LLMService):
                 }
             )
         except Exception as e:
-            logger.error(f"[Summarizer] ❌ Summarization failed ({e}). Skipping message deletion to preserve context.")
+            logger.error(f"[Summarizer] Summarization failed ({e}). Skipping message deletion to preserve context.")
             return Command(goto=AgentGraphNode.END_NODE)
 
     return summarize_conversation

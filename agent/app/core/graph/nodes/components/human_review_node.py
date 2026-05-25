@@ -18,6 +18,8 @@ def make_human_review_node():
 
         p_name = project.get("project_name", "Default Project") if project else "Default Project"
         p_desc = project.get("description", "No description provided.") if project else ""
+
+        # Interrupt and then get value from Command(return=...)
         decision: Any = interrupt({
             "action_required": InterruptAction.APPROVE_PLAN,
             "plan": [step.model_dump() for step in state.get("plan", [])],
@@ -28,7 +30,7 @@ def make_human_review_node():
         # 2. Handle the decision returned when the graph is resumed
         if isinstance(decision, dict):
             
-            # SCENARIO A: User typed a prompt to modify the plan
+            # 2A. User typed a prompt to modify the plan
             if decision.get("action") == UserFeedbackAction.MODIFY and decision.get("feedback"):
                 logger.info(f"User requested LLM modification: {decision.get('feedback')}")
                 
@@ -37,10 +39,10 @@ def make_human_review_node():
                 # Loop back to PLANNER to redraw the plan
                 return Command(
                     goto=AgentGraphNode.PLANNER, 
-                    update={"messages": [feedback_msg]} 
+                    update={"messages": [feedback_msg]}         # Pass as a list to append
                 )
                 
-           # SCENARIO B: User manually dragged/dropped or edited the JSON in the UI
+            # 2B: User manually dragged/dropped or edited the JSON in the UI
             elif decision.get("action") == UserFeedbackAction.MODIFY and decision.get("modified_plan"):
                 logger.info("User provided a manually edited plan. Re-indexing and proceeding to EXECUTOR.")
                 
@@ -57,16 +59,19 @@ def make_human_review_node():
                         final_steps.append(AgentStepPlan(**step_data))
                     
                     elif isinstance(step_data, AgentStepPlan):
-                        step_data.step_id = index
-                        step_data.status = PlanStatus.PENDING
-                        final_steps.append(step_data)
+                        # Use model_copy to ensure we don't mutate existing objects in state
+                        new_step = step_data.model_copy(update={
+                            "step_id": index,
+                            "status": PlanStatus.PENDING
+                        })
+                        final_steps.append(new_step)
 
                 return Command(
                     goto=AgentGraphNode.EXECUTOR,
                     update={"plan": final_steps}
                 )
 
-        # SCENARIO C: User Approved (or default fallback)
+        # 2C: User Approved (or default fallback)
         logger.info("Plan approved. Proceeding to EXECUTOR.")
         return Command(
             goto=AgentGraphNode.EXECUTOR,

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import List, Literal
 from loguru import logger
 from langgraph.types import Command
 from langgraph.graph.state import CompiledStateGraph
@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from app.core.prompts.executor_prompts import EXECUTOR_INNER_QUERY_PROMPT
 from app.utils.observability.tracing import tracing
 from app.common.constants import ObservationType, PlanStatus
-from app.core.graph.state.planner_state import AgentStepObservation, PlanExecuteState
+from app.core.graph.state.planner_state import AgentStepObservation, AgentStepPlan, PlanExecuteState
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
 from app.utils.graph.context_utils import get_recent_messages
 
@@ -25,13 +25,13 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
         current_step = next((step for step in plan if step.status == PlanStatus.PENDING), None)
         
         if not current_step:
-            logger.warning("⚠️ [Executor] No pending steps found. Proceeding to exit.")
+            logger.warning("[Executor] No pending steps found. Proceeding to exit.")
             return Command(
                 goto=AgentGraphNode.OUTER_SYNTHESIZER,
                 update={"plan": plan}
             )
         
-        logger.info(f"⚙️ [Executor] Running Step {current_step.step_id} of {len(plan)}: {current_step.description}")
+        logger.info(f"[Executor] Running Step {current_step.step_id} of {len(plan)}: {current_step.description}")
 
         # 2. Build context from past steps to feed to the ReAct agent
         history_context = ""
@@ -43,7 +43,7 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
             history_context=history_context
         )
 
-        # 3. Create a fresh INNER state for your ReAct Agent
+        # 3. Create a fresh Inner state for ReAct Agent
         recent_messages = get_recent_messages(state.get("messages", []), last_k_turns=3)
 
         inner_state_input = {
@@ -51,7 +51,7 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
             "messages": recent_messages + [HumanMessage(content=inner_query)],
             "active_project": state.get("active_project"), 
             "active_datasets": state.get("active_datasets", []),
-            "system_datasets": state.get("system_datasets", []),
+            # "system_datasets": state.get("system_datasets", []),   # Not used
             "summary": state.get("summary", ""),
             "past_steps": past_steps,
             "execution_id": state.get("execution_id"),
@@ -74,13 +74,13 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
 
             if is_inner_complete:
                 final_status = PlanStatus.COMPLETED
-                logger.info(f"✅ [Executor] Step {current_step.step_id} completed successfully.")
+                logger.info(f"[Executor] Step {current_step.step_id} completed successfully.")
             else:
                 final_status = PlanStatus.FAILED
-                logger.warning(f"⚠️ [Executor] Step {current_step.step_id} could not find all required information. Continuing plan.")
+                logger.warning(f"[Executor] Step {current_step.step_id} could not find all required information. Continuing plan.")
 
         except Exception as e:
-            logger.error(f"❌ [Executor] Inner agent crashed on step {current_step.step_id}: {e}")
+            logger.error(f"[Executor] Inner agent crashed on step {current_step.step_id}: {e}")
             step_answer = f"Error executing step: {str(e)}"
             extracted_data = []
             final_status = PlanStatus.FAILED
@@ -92,7 +92,8 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
             summary=step_answer
         )
 
-        updated_plan = []
+        # Update state at final, not mutate state directly
+        updated_plan: List[AgentStepPlan] = []
         for step in plan:
             if step.step_id == current_step.step_id:
                 updated_step = step.model_copy(update={"status": final_status})
@@ -100,11 +101,10 @@ def make_executor_node(inner_react_graph: CompiledStateGraph):
             else:
                 updated_plan.append(step)
 
-        # 6. DYNAMIC ROUTING
+        # 6. Continue executing if plan not finished
         has_pending_steps = any(step.status == PlanStatus.PENDING for step in updated_plan)
 
-        # Only break the loop on hard failures (exceptions). Soft failures (missing info)
-        # still have partial results, so continue to remaining steps.
+        # Only break the loop on hard failures (exceptions). Soft failures (missing info) still have partial results, so continue to remaining steps.
         if hard_failure:
             logger.error(f"[Executor] Step {current_step.step_id} HARD FAILED. Breaking loop.")
             destination = AgentGraphNode.OUTER_SYNTHESIZER

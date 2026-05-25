@@ -17,7 +17,7 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
     async def planner(state: PlanExecuteState) -> Command[
         Literal[AgentGraphNode.HUMAN_REVIEW, AgentGraphNode.OUTER_SYNTHESIZER]
     ]:
-        logger.info("🧠 [Planner] Drafting research plan...")
+        logger.info("[Planner] Drafting research plan...")
 
         query = state["query"]
         
@@ -50,15 +50,14 @@ def make_planner_node(llm_service: LLMService, agent_capabilities: List[str]):
         if past_steps:
             formatted_steps = []
             for s in past_steps:
-                step_summary = s.summary
-                formatted_steps.append(f"- {step_summary}")
+                formatted_steps.append(f"- {s.summary}")
             past_steps_str = "\n".join(formatted_steps)
         else:
             past_steps_str = "No background research executed yet."
             
         conv_summary = state.get("summary", "No summary available.")
 
-        # 3. Format the Prompt using `active_datasets`
+        # 3. Format the Prompt
         system_msg = SystemMessage(content=PLANNER_SYSTEM_PROMPT.format(
             active_project_context=active_project_context,
             agent_capabilities_str=agent_capabilities_str,

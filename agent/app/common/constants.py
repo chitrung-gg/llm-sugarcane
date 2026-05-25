@@ -1,15 +1,11 @@
 import uuid
 from enum import StrEnum
-from pathlib import Path
 from typing import Final, Set
 
 
 # --- 0. GLOBAL IDS ---
 SYSTEM_OWNER_ID: Final[uuid.UUID] = uuid.UUID("00000000-0000-0000-0000-000000000000")
 DEFAULT_USER_ID: Final[uuid.UUID] = uuid.UUID("11111111-1111-1111-1111-111111111111")
-
-# Langgraph
-LANGGRAPH_STATE_MAX_ITERATIONS = 3
 
 # Langfuse
 LANGFUSE_GRAPH_OBSERVATION_NAME: str = "sugarcane_agent_execution"
@@ -57,19 +53,7 @@ class AgentIntent(StrEnum):
     TOOL_ONLY = "tool_only"
     WEB_SEARCH = "web_search"
     ALL = "all"
-    UNCLEAR = "unclear"
     DIRECT_ANSWER = "direct_answer"
-
-
-# --- 5. FILE TYPES ---
-class UploadedFileType(StrEnum):
-    PDF = "pdf"
-    MD = "md"
-    FASTA = "fasta"
-    JSON = "json"
-    GENOMIC_DATASET = "genomic_dataset"
-    CONTEXT_DOCUMENT = "context_document"
-    UNKNOWN = "unknown"
 
 
 # --- 6. TOOL STATUS ---
@@ -102,7 +86,7 @@ class ObservationType(StrEnum):
     CHAIN = "chain"
     RETRIEVER = "retriever"
     EVALUATOR = "evaluator"
-    GUARDRAIL = "guardrail"
+    GUARDRAIL = "guardrail"     # Validation before input/output
 
 
 # --- 9. STREAMING EVENTS ---

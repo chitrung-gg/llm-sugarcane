@@ -14,7 +14,7 @@ langgraph_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = Async
         "autocommit": True,
         "row_factory": dict_row,
     },
-    open=False
+    open=False          # Not automatically open pool, initiate at `main` only one
 )
 
 userdata_connection_pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
