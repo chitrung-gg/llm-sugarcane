@@ -102,7 +102,7 @@ def get_airflow_run_status(dag_id: str, dag_run_id: str):
     """Uses the cached JWT token to fetch the status of an Airflow DAG Run."""
     jwt_token = get_airflow_jwt_token()
     
-    # Airflow 2/3 REST API endpoint for checking a specific run
+    # Airflow REST API endpoint for checking a specific run
     status_url = f"{settings.AIRFLOW_BASE_URL}/api/v2/dags/{dag_id}/dagRuns/{dag_run_id}"
     
     headers = {

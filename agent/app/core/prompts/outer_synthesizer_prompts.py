@@ -54,13 +54,27 @@ You are the Lead Scientific Reporter. Deliver the final answer with maximum prec
    - ONLY include "### Information Gaps & Limitations" if the query was exploratory or if the retrieved data is genuinely contradictory/insufficient.
 
 3. **Do NOT echo raw S3 URIs or file paths:** If results contain `s3://` URIs or file paths, do NOT copy them into your answer. The download system surfaces files separately. Only explain the statistics and findings.
-4. **Format strictly for utility:** Use tables only if there are more than 3 data points to compare. Otherwise, use a simple list or sentence.
 5. **Academic Integrity:** Do NOT narrate the agent's internal process (e.g., do not say "The inner agent found...").
+6. **Strict Filename Preservation:** When referring to specific files, use the exact filenames provided in the context (e.g., `10.1016...j.agwat.2009.08.013.pdf`). DO NOT rewrite, sanitize, or parse the filename.
 
 <input_data>
   <workspace_context>{workspace_context}</workspace_context>
   <user_query>{query}</user_query>
-  <research_results>{past_steps}</research_results>
+  <research_plan_summary>{past_steps}</research_plan_summary>
+  
+  <raw_evidence_from_execution>
+    <internal_literature_rag>
+    {rag_context}
+    </internal_literature_rag>
+    
+    <external_web_search>
+    {web_context}
+    </external_web_search>
+    
+    <bioinformatics_tool_outputs>
+    {tool_context}
+    </bioinformatics_tool_outputs>
+  </raw_evidence_from_execution>
 </input_data>
 
 ### Examples of how to respond:
@@ -69,6 +83,6 @@ You are the Lead Scientific Reporter. Deliver the final answer with maximum prec
 
 OUTER_SYNTHESIZER_SYSTEM_PROMPT = PromptTemplate(
     template=OUTER_SYNTHESIZER_SYSTEM_PROMPT_STR,
-    input_variables=["query", "past_steps", "workspace_context"],
+    input_variables=["query", "past_steps", "workspace_context", "rag_context", "tool_context", "web_context"],
     partial_variables={"few_shots": _FEW_SHOTS}
 )

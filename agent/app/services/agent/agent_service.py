@@ -1,26 +1,20 @@
 import asyncio
-import os
 import re
 import time
-from typing import Any, Dict, List, Optional, AsyncContextManager, cast
+from typing import Any, Dict, List, Optional, cast
 import uuid
 from warnings import deprecated
 
-import aioboto3
-from fastapi import HTTPException
 from langfuse import Langfuse, propagate_attributes
 from langfuse.types import TraceContext
 from langgraph.graph.state import CompiledStateGraph, RunnableConfig
 from langgraph.types import Command
-from langgraph.errors import GraphInterrupt
 from langchain_core.messages import BaseMessageChunk, HumanMessage, AIMessage, BaseMessage, AIMessageChunk
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langfuse.langchain import CallbackHandler
 from loguru import logger
 from opentelemetry import trace
 import json
-
-from pydantic import BaseModel
 
 from app.core.graph.state.agent_state import AgentProject
 from app.utils.files.files_classifier import is_genomic_file
@@ -29,7 +23,6 @@ from app.services.workspace.project.project_service import ProjectService
 from app.services.workspace.dataset.dataset_service import DatasetService
 from app.common.constants import (
     LANGFUSE_GRAPH_OBSERVATION_NAME, 
-    LANGGRAPH_STATE_MAX_ITERATIONS, 
     ObservationType, 
     SYSTEM_OWNER_ID, 
     StreamEventType,
@@ -163,7 +156,7 @@ class AgentService:
                         if row and not row['title']:
                             asyncio.create_task(self._generate_and_update_title(thread_id, query))
 
-                    # Build initial state - CLEAR TURN-BASED STATE
+                    # Build initial state
                     initial_state = {
                         "query": query,
                         "messages": messages_to_add,      
@@ -256,7 +249,7 @@ class AgentService:
                 except Exception as update_err:
                     logger.warning(f"Failed to record error in graph state: {update_err}")
                 
-                raise # Re-raise to let the controller handle the HTTP response
+                raise
 
     @tracing(observation_type=ObservationType.AGENT)
     async def process_langgraph_chat_stream(
@@ -273,20 +266,20 @@ class AgentService:
         config: RunnableConfig = {"configurable": {"thread_id": str(thread_id)}}
         state = await self.graph.aget_state(config)
 
-        # 2. Consolidate the Execution ID (The core fix!)
+        # 2. Consolidate the Execution ID
         if state.next:
             # We are resuming! Grab the original execution ID from the state's memory
             execution_id = state.values.get("execution_id")
             if not execution_id:
                 execution_id = uuid.uuid4()
-            logger.info(f"Resuming existing execution: {execution_id}")
+            logger.info(f"[AgentService] Resuming existing execution: {execution_id}")
         else:
             # Starting fresh
             execution_id = uuid.uuid4()
-            logger.info(f"Starting new execution: {execution_id}")
+            logger.info(f"[AgentService] Starting new execution: {execution_id}")
         
         # 3. Force Langfuse to group everything under this specific execution ID
-        # Use .hex to remove hyphens for OpenTelemetry compatibility
+        # Use .hex to remove hyphens(-) for OpenTelemetry compatibility
         trace_ctx: TraceContext = {"trace_id": execution_id.hex}
 
         with self.langfuse_client.start_as_current_observation(
@@ -311,9 +304,10 @@ class AgentService:
                 event=StreamEventType.THOUGHT, 
                 data={
                     'node': 'system', 
-                    'content': '🧠 Analyzing your request...' if resume_payload else '🧠 Analyzing your new biological research query...'
+                    'content': 'Analyzing your request...' if resume_payload else 'Analyzing your new biological research query...'
                 }
             )
+            # SSE require format: "data: ..." and "\n\n" when event ended
             yield f"data: {initial_chunk.model_dump_json()}\n\n"
 
             state = await self.graph.aget_state(config)
@@ -424,13 +418,13 @@ class AgentService:
             }
 
             NODE_MESSAGES = {
-                AgentGraphNode.INPUT_ANALYZER: "📂 Analyzing attached workspace files...",
-                AgentGraphNode.PLANNER: "📋 Drafting research plan...",
-                AgentGraphNode.ROUTER: "🧭 Determining execution pathway...",
-                AgentGraphNode.EXECUTOR: "⚙️ Executing bioinformatics tools...",
-                AgentGraphNode.RAG: "🔎 Searching genomic vector databases...",
-                AgentGraphNode.INNER_SYNTHESIZER: "✍️ Aggregating data...",
-                AgentGraphNode.OUTER_SYNTHESIZER: "✍️ Synthesizing final response..."
+                AgentGraphNode.INPUT_ANALYZER: "Analyzing attached workspace files...",
+                AgentGraphNode.PLANNER: "Drafting research plan...",
+                AgentGraphNode.ROUTER: "Determining execution pathway...",
+                AgentGraphNode.EXECUTOR: "Executing bioinformatics tools...",
+                AgentGraphNode.RAG: "Searching genomic vector databases...",
+                AgentGraphNode.INNER_SYNTHESIZER: "Aggregating data...",
+                AgentGraphNode.OUTER_SYNTHESIZER: "Synthesizing final response..."
             }
 
             async def _yield_interrupt_payload(status_flag: dict):
@@ -655,6 +649,7 @@ class AgentService:
     #         logger.error(f"[Resume] Failed for thread {thread_id}: {e}")
     #         raise e
 
+    @deprecated("Use `chat_service.get_messages_by_thread")
     async def get_conversation_history(self, thread_id: uuid.UUID) -> dict:
         """Retrieves the conversation history from the chat_messages table."""
         async with langgraph_connection_pool.connection() as conn:
@@ -684,6 +679,7 @@ class AgentService:
                 "web_results": []
             }
         
+    @deprecated("Use `chat_service.get_thread` and `chat_service.create_thread")
     async def _ensure_thread_exists(self, thread_id: uuid.UUID, project_id: Optional[uuid.UUID] = None):
         async with langgraph_connection_pool.connection() as conn:
             # Check if exists
@@ -694,6 +690,7 @@ class AgentService:
                     (thread_id, SYSTEM_OWNER_ID, project_id)
                 )
 
+    @deprecated("Use `chat_service.add_message` instead")
     async def _save_chat_message(self, thread_id: uuid.UUID, role: str, content: str, type: str = "answer", execution_id: Optional[uuid.UUID] = None, chat_metadata: Optional[dict] = None):
         async with langgraph_connection_pool.connection() as conn:
             await conn.execute(
@@ -703,6 +700,7 @@ class AgentService:
                 """,
                 (thread_id, role, content, type, execution_id, json.dumps(chat_metadata) if chat_metadata else None)
             )
+
 
     async def _generate_and_update_title(self, thread_id: uuid.UUID, first_query: str):
         """Generates a short title based on the first query and updates the thread."""
@@ -774,8 +772,6 @@ class AgentService:
             return None
         
         # Case A: Strictly a LangGraph Command
-        # The IDE now knows 'output' is a Command. If LangGraph removes '.update', 
-        # your IDE will immediately flag this line with an error.
         if isinstance(output, Command):
             if output.update and isinstance(output.update, dict):
                 if ans := output.update.get("final_answer"):
@@ -794,7 +790,6 @@ class AgentService:
             return str(output.get("final_answer") or output.get("content") or "")
             
         # Case C: Strictly a LangChain Message (AIMessage, HumanMessage, ToolMessage)
-        # The IDE now guarantees that '.content' must exist on this object.
         elif isinstance(output, BaseMessage):
             return str(output.content)
             

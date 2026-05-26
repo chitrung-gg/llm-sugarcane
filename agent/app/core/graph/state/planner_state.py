@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
 
+from app.core.graph.state.record_source import RecordSource
 from app.common.constants import PlanStatus
 from app.core.graph.state.agent_state import AgentProject, AgentDataset 
 
@@ -27,8 +28,9 @@ class AgentStepObservation(BaseModel):
     summary: str = Field(description="Human-readable summary of what was found.")
     extracted_data: Dict[str, Any] = Field(
         default_factory=dict, 
-        description="Crucial variables (e.g., {'gene_id': 'ROC-123', 's3_uri': 's3://...'})"
+        description="Crucial variables (e.g., {'s3_uri': 's3://...'})"
     )
+
 class PlanExecuteState(TypedDict):
     # Core turn data
     query: str
@@ -48,9 +50,10 @@ class PlanExecuteState(TypedDict):
     past_steps: List[AgentStepObservation]
 
     # Hold the execution history
-    rag_results: List[Any]
-    tool_results: List[Any]
-    web_results: List[Any]
+    rag_results: Annotated[List[Any], operator.add]
+    tool_results: Annotated[List[Any], operator.add]
+    web_results: Annotated[List[Any], operator.add]
+    sources_used: Annotated[List[RecordSource], operator.add]
 
     # Results
     final_answer: str

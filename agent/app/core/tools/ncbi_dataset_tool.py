@@ -175,7 +175,7 @@
 #             gene_ids = search_data.get("esearchresult", {}).get("idlist", [])
 #             if not gene_ids:
 #                 return (
-#                     f"❌ No genes found in the curated database for: '{ncbi_term}'.\n"
+#                     f" No genes found in the curated database for: '{ncbi_term}'.\n"
 #                     f"SUGGESTION: Sugarcane genes are often uncurated. Try searching for this gene in a related species by calling this tool again with: 'Sorghum bicolor {gene}' or 'Zea mays {gene}'."
 #                 )
 
@@ -196,9 +196,9 @@
 #                 name = gene_info.get("name", "Unknown")
 #                 desc = gene_info.get("description", "No description available")
 #                 org = gene_info.get("organism", {}).get("scientificname", "Unknown")
-#                 results.append(f"🧬 Gene: {name} ({org})\n   Description: {desc}\n   NCBI ID: {uid}")
+#                 results.append(f" Gene: {name} ({org})\n   Description: {desc}\n   NCBI ID: {uid}")
 
-#             return "✅ GENE SEARCH RESULTS:\n\n" + "\n\n".join(results)
+#             return " GENE SEARCH RESULTS:\n\n" + "\n\n".join(results)
 
 #         except Exception as e:
 #             logger.error(f"Error searching NCBI Genes: {str(e)}")
@@ -218,7 +218,7 @@
 #     # 1. Intercept bad input immediately
 #     clean_id = gene_id.strip()
 #     if not clean_id.isdigit():
-#         return "❌ ERROR: You must provide a valid NUMERIC Gene ID (e.g., '10582'). Do not pass gene names or symbols."
+#         return " ERROR: You must provide a valid NUMERIC Gene ID (e.g., '10582'). Do not pass gene names or symbols."
     
 #     logger.debug(f"[NCBI Tool] Fetching deep metadata for Gene ID: {gene_id}")
 
@@ -250,7 +250,7 @@
 #             processes = [p.get("name") for p in go_data.get("biological_processes", [])]
             
 #             return (
-#                 f"✅ DETAILED GENE METADATA:\n"
+#                 f" DETAILED GENE METADATA:\n"
 #                 f"- Symbol: {symbol} (ID: {gene_id})\n"
 #                 f"- Organism: {taxname}\n"
 #                 f"- Description: {description}\n"
@@ -307,7 +307,7 @@
 #     protein_coding = gene_counts.get("protein_coding", "Data not available")
     
 #     return (
-#         f"✅ GENOME METADATA FOUND:\n"
+#         f" GENOME METADATA FOUND:\n"
 #         f"--- Basic Info ---\n"
 #         f"- Accession: {accession}\n"
 #         f"- Scientific Name: {org.get('sci_name', 'Unknown')} (TaxID: {org.get('tax_id', 'Unknown')})\n"

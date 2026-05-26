@@ -23,35 +23,35 @@ from app.api.v1 import agent_endpoint, ingestion_endpoint, project_endpoint, dat
 async def lifespan(app: FastAPI):
     """Initialize all services on startup, clean up on shutdown."""
 
-    logger.info("🔌 Opening Genome PostgreSQL connection pool...")
+    logger.info("Opening Genome PostgreSQL connection pool...")
     await genome_connection_pool.open()
     
-    logger.info("🔌 Opening LangGraph PostgreSQL connection pool...")
+    logger.info("Opening LangGraph PostgreSQL connection pool...")
     await langgraph_connection_pool.open()
 
-    logger.info("🔌 Opening UserData PostgreSQL connection pool...")
+    logger.info("Opening UserData PostgreSQL connection pool...")
     await userdata_connection_pool.open()
 
-    # logger.info("🔌 Opening RustFS client ...")
+    # logger.info("Opening RustFS client ...")
     # await rustfs_client.__aenter__()
 
-    logger.info("⚙️ Initializing app container and compiling graph...")
+    logger.info("Initializing app container and compiling graph...")
     await get_container().initialize()
     yield
     # teardown if needed (e.g. close DB connections)
 
-    logger.info("🛑 Shutting down server...")
+    logger.info("Shutting down server...")
 
-    logger.info("🔌 Closing Genome PostgreSQL connection pool...")
+    logger.info("Closing Genome PostgreSQL connection pool...")
     await genome_connection_pool.close()
 
-    logger.info("🔌 Closing LangGraph PostgreSQL connection pool...")
+    logger.info("Closing LangGraph PostgreSQL connection pool...")
     await langgraph_connection_pool.close()
 
-    logger.info("🔌 Closing UserData PostgreSQL connection pool...")
+    logger.info("Closing UserData PostgreSQL connection pool...")
     await userdata_connection_pool.close()
 
-    # logger.info("🔌 Closing RustFS client ...")
+    # logger.info("Closing RustFS client ...")
     # await rustfs_client.__aexit__(None, None, None)
 
 

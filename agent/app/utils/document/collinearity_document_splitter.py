@@ -65,14 +65,14 @@ class CollinearityDocumentSplitter(AbstractDocumentSplitter):
                 )
                 
             logger.debug(
-                "✅ Successfully extracted {len_docs} synteny blocks.",
+                "Successfully extracted {len_docs} synteny blocks.",
                 len_docs = len(docs)
             )
             return docs
             
         except Exception as e:
             logger.exception(
-                "❌ Failed to parse .collinearity file: {e}",
+                "Failed to parse .collinearity file: {e}",
                 e=e
             )
             raise ValueError(f"Could not read collinearity file: {e}")

@@ -1,14 +1,8 @@
 import asyncio
-from enum import StrEnum
-import time
-from typing import List, Literal, cast
-from langfuse import observe
-from langgraph.graph import END
+from typing import List
 from loguru import logger
-from pydantic import BaseModel, Field
 
-from app.core.graph.state.planner_state import AgentStepObservation
-from app.common.constants import AgentIntent, ObservationType, PlanStatus, StreamingTag
+from app.common.constants import ObservationType
 from app.configs.settings.settings import get_settings
 from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
@@ -19,13 +13,12 @@ from app.schemas.agent.synthesizer import SynthesizerOutput
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
-from langgraph.types import Command
 from app.utils.graph.context_utils import format_optimized_context, get_recent_messages
 
 def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[str, BaseTool]):
     @tracing(observation_type=ObservationType.CHAIN)
     async def synthesizer(state: AgentState) -> dict:
-        logger.debug("[Synthesizer] ✍️ Generating final response")
+        logger.debug("[Synthesizer] Generating final response")
         
         settings = get_settings()
         synthesizer_timeout = settings.SYNTHESIZER_TIMEOUT_SEC
@@ -43,19 +36,15 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
         # 2. Format execution context (with truncation)
         rag_results = state.get("rag_results", [])[:5]
         web_results = state.get("web_results", [])[:5]
-        tool_results = state.get("tool_results", [])[-5:] 
+        tool_results = state.get("tool_results", [])[-5:]
         
         rag_context = "\n".join([f"- [Doc: {r.get('source_file')}] {r.get('content')[:1000]}..." for r in rag_results])
         web_context = "\n".join([f"- [{r.get('title')}] ({r.get('link')}): {r.get('snippet')}" for r in web_results])
-        tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')[:2000]}..." for r in tool_results])
-        knowledge_context = str(state.get("extracted_knowledge", []))
+        tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')[:1000]}..." for r in tool_results])
 
         context_string = f"""
             --- UNIFIED WORKSPACE CONTEXT ---
             {workspace_context}
-            
-            --- EXTRACTED KNOWLEDGE (FACTS/METADATA) ---
-            {knowledge_context if knowledge_context != "[]" else "No structured knowledge extracted yet."}
 
             --- RAG KNOWLEDGE (Top 5) ---
             {rag_context if rag_context else "No RAG data found."}
@@ -101,9 +90,9 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
         ]
 
         try:
-            result = await llm.ainvoke(messages_to_send)
+            result: SynthesizerOutput = await llm.ainvoke(messages_to_send)
         except asyncio.TimeoutError:
-            logger.error(f"[Synthesizer] ❌ LLM generation timed out after {synthesizer_timeout} seconds.")
+            logger.error(f"[Synthesizer] LLM generation timed out after {synthesizer_timeout} seconds.")
             error_text = "I apologize, but synthesizing this massive amount of data took too long and timed out. Could you please narrow down your question?"
             return {
                 "final_answer": error_text,
@@ -112,7 +101,7 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
                 "messages": [AIMessage(content=error_text, additional_kwargs={"execution_id": str(state.get("execution_id"))})]
             }
         except Exception as e:
-            logger.error(f"[Synthesizer] ❌ LLM Generation failed: {e}")
+            logger.error(f"[Synthesizer] LLM Generation failed: {e}")
             error_text = "I apologize, but I encountered an error while formatting the synthesized information."
             return {
                 "final_answer": error_text,
@@ -141,7 +130,7 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
         # Determine destination
         if not result.is_complete and not is_final_attempt:
             # 1. Step failed or needs more info -> Loop back to ROUTER
-            logger.warning("⚠️ Answer incomplete. Sending back to ROUTER.")
+            logger.warning("Answer incomplete. Sending back to ROUTER.")
             updates["iteration_count"] = current_iteration + 1
             updates["messages"] = [
                 AIMessage(
@@ -149,15 +138,12 @@ def make_inner_synthesizer_node(llm_service: LLMService, available_tools: dict[s
                     additional_kwargs={"is_thought": True, "execution_id": str(state.get("execution_id"))}
                 )
             ]
-            destination = AgentGraphNode.ROUTER
         else:
             # 2. Inner task is complete. We update the final_answer and exit the INNER graph.
             # The Outer Executor will catch this answer, update past_steps, and decide what to do next.
             
             logger.info("[Synthesizer] Answer complete. Exiting inner graph.")
             updates["iteration_count"] = current_iteration + 1
-            destination = AgentGraphNode.END_NODE
-
 
         return updates
 

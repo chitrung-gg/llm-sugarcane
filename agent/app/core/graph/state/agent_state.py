@@ -4,7 +4,6 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
 
 from langgraph.graph import add_messages
 from langchain_core.messages import BaseMessage
-from langchain_core.documents import Document
 
 from app.schemas.tool.tool_call_request import ToolCallRequest
 from app.common.constants import (
@@ -44,15 +43,12 @@ class AgentFile(TypedDict):
     file_category: Literal["GENOMIC", "KNOWLEDGE"] # Helps the LLM know which tools to use
     file_type: str # e.g., "FASTA", "GFF3", "PDF", "TXT"
     rustfs_uri: str
-    local_content: Optional[str] # Direct text for very small TXT/CSV files
 
 class AgentDataset(TypedDict):
     """A single dataset containing its specific genomic and knowledge files."""
     dataset_id: str
     dataset_name: str
-    source: Literal["USER_WORKSPACE", "SYSTEM_LIBRARY"] # Helps the LLM understand ownership
-    
-    # Splitting them makes it MUCH easier for the LLM's Planner to read 
+    source: Literal["USER_WORKSPACE", "SYSTEM_LIBRARY"]
     genomic_files: List[AgentFile]
     knowledge_files: List[AgentFile]
 
@@ -61,7 +57,6 @@ class AgentProject(TypedDict):
     project_id: str
     project_name: str
     description: Optional[str]
-    # Useful if you store global parameters like {"target_organism": "Saccharum officinarum"}
     metadata: Optional[Dict[str, Any]]
 
 class AgentState(TypedDict):

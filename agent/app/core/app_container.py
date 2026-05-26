@@ -1,6 +1,3 @@
-from functools import lru_cache
-from typing import List, AsyncContextManager
-
 import aioboto3
 from langchain_neo4j import Neo4jGraph
 from langchain_qdrant import QdrantVectorStore
@@ -61,7 +58,7 @@ class AppContainer:
         self._rustfs_session: aioboto3.Session | None = None
 
     async def initialize(self):
-        logger.info("🚀 Initializing app container...")
+        logger.info(" Initializing app container...")
         
         # 1. Base Services & APIs
         await self._init_langfuse_client()
@@ -72,13 +69,13 @@ class AppContainer:
         await self._init_searx_wrapper()
         
         # 2. Databases & Storage
-        logger.info("📡 Connecting to Databases...")
+        logger.info(" Connecting to Databases...")
         await self._init_embedding_model()
-        logger.info("✅ Embedding model initialized.")
+        logger.info(" Embedding model initialized.")
         await self._init_vector_store()
-        logger.info("✅ Qdrant initialized.")
+        logger.info(" Qdrant initialized.")
         await self._init_knowledge_graph()
-        logger.info("✅ Neo4j initialized.")
+        logger.info(" Neo4j initialized.")
         
         # 3. Middlewares & Processors
         await self._init_document_processor()
@@ -89,15 +86,15 @@ class AppContainer:
         await self._init_chat_service()
 
         # 4. The Graph
-        logger.info("🗺️ Compiling Agent Graph...")
+        logger.info("Compiling Agent Graph...")
         await self._init_agent_graph()
-        logger.info("✅ Agent Graph compiled.")
+        logger.info("Agent Graph compiled.")
         
         # 5. Top-Level Services
         await self._init_knowledge_service() 
         await self._init_agent_service() 
         
-        logger.info("✨ App container ready.")
+        logger.info("App container ready.")
 
     async def _init_langfuse_client(self):
         """Initialize the Langfuse singleton client with explicit Pydantic settings."""
@@ -109,10 +106,10 @@ class AppContainer:
                 secret_key=settings.LANGFUSE_SECRET_KEY.get_secret_value(),
                 host=settings.LANGFUSE_BASE_URL
             )
-            logger.info("✅ Langfuse client initialized.")
+            logger.info("Langfuse client initialized.")
         else:
             self._langfuse_client = None
-            logger.warning("⚠️ Langfuse credentials missing. Tracing disabled.")
+            logger.warning("Langfuse credentials missing. Tracing disabled.")
 
     async def _init_llm_service(self):
         """Initialize LLM models with fallback chain."""
@@ -233,10 +230,10 @@ class AppContainer:
             
             # Extract the schema immediately so it's cached in memory
             self._knowledge_graph.refresh_schema()
-            logger.info("✅ Neo4j Knowledge Graph initialized and schema cached.")
+            logger.info("Neo4j Knowledge Graph initialized and schema cached.")
             
         except Exception as e:
-            logger.error(f"❌ Failed to connect to Neo4j: {str(e)}")
+            logger.error(f"Failed to connect to Neo4j: {str(e)}")
             raise e
 
     async def _init_agent_graph(self):

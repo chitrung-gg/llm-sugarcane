@@ -5,7 +5,6 @@ import time
 from typing import Dict, Literal
 from langfuse import observe
 from loguru import logger
-from langgraph.types import Command
 from langchain_core.tools import BaseTool
 
 from app.configs.settings.settings import get_settings
@@ -23,7 +22,7 @@ def make_tools_node(available_tools: dict[str, BaseTool], tool_registry: Dict[st
         tools_to_run = state.get("required_tools", [])
 
         logger.debug(
-            "[Tools] 🛠 Starting {count} tools for execution",
+            "[Tools] Starting {count} tools for execution",
             count=len(tools_to_run)
         )
 
@@ -84,7 +83,7 @@ def make_tools_node(available_tools: dict[str, BaseTool], tool_registry: Dict[st
 
                 elapsed = int((time.time() - tool_start) * 1000)
                 logger.debug(
-                    "[Tools] ✅ Tool completed | name={tool_name} | status={status} | latency={elapsed}ms",
+                    "[Tools] Tool completed | name={tool_name} | status={status} | latency={elapsed}ms",
                     tool_name=tool_name, status=status, elapsed=elapsed
                 )
 
@@ -94,7 +93,7 @@ def make_tools_node(available_tools: dict[str, BaseTool], tool_registry: Dict[st
                 status = ToolExecutionStatus.ERROR
 
                 logger.error(
-                    "[Tools] ❌ Tool failed | name={tool_name} | error={error} | latency={elapsed}ms",
+                    "[Tools] Tool failed | name={tool_name} | error={error} | latency={elapsed}ms",
                     tool_name=tool_name, error=str(e), elapsed=elapsed
                 )
 
@@ -113,29 +112,29 @@ def make_tools_node(available_tools: dict[str, BaseTool], tool_registry: Dict[st
         total_elapsed = int((time.time() - overall_start) * 1000)
 
         logger.debug(
-            "[Tools] 🏁 All tools completed | total_tools={total_tools} | total_latency={total_latency}ms",
+            "[Tools] All tools completed | total_tools={total_tools} | total_latency={total_latency}ms",
             total_tools=len(new_tool_results), total_latency=total_elapsed
         )
 
-        # Inline enrichment: stage tool outputs that belong to the knowledge graph registry
-        extracted_knowledge = []
-        active_project = state.get("active_project") or {}
-        project_id = active_project.get("project_id", "unknown")
+        # Used for knowledge graph ingestion dynamically if using NCBI Tools
+        # extracted_knowledge = []
+        # active_project = state.get("active_project") or {}
+        # project_id = active_project.get("project_id", "unknown")
 
-        for result in new_tool_results:
-            if result["status"] == ToolExecutionStatus.SUCCESS and result["tool_name"] in tool_registry:
-                logger.info(f"[Tools] Queueing knowledge graph ingestion for: {result['tool_name']}")
-                extracted_knowledge.append({
-                    "source_text": result["output"],
-                    "source_metadata": {
-                        "tool": result["tool_name"],
-                        "project_id": project_id
-                    }
-                })
+        # for result in new_tool_results:
+        #     if result["status"] == ToolExecutionStatus.SUCCESS and result["tool_name"] in tool_registry:
+        #         logger.info(f"[Tools] Queueing knowledge graph ingestion for: {result['tool_name']}")
+                # extracted_knowledge.append({
+                #     "source_text": result["output"],
+                #     "source_metadata": {
+                #         "tool": result["tool_name"],
+                #         "project_id": project_id
+                #     }
+                # })
 
         return {
             "tool_results": new_tool_results,
-            "extracted_knowledge": extracted_knowledge      # Currently not used
+            # "extracted_knowledge": extracted_knowledge
         }
 
 

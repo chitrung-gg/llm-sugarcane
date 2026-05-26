@@ -5,8 +5,6 @@ from langchain_core.documents import Document
 from sentence_transformers import CrossEncoder
 import torch
 
-# Prevent PyTorch's internal OpenMP/MKL thread pool from deadlocking when
-# model.predict() is called inside asyncio.to_thread (a ThreadPoolExecutor thread).
 torch.set_num_threads(1)
 
 from app.configs.settings.settings import get_settings
@@ -22,7 +20,7 @@ class RerankerService:
         if self._model_instance is None:
             with self._lock:
                 if self._model_instance is None:
-                    logger.info("Initializing HuggingFace Cross-Encoder model... (This only happens once)")
+                    logger.info("Initializing HuggingFace Cross-Encoder model... ")
                     try:
                         model_name = "BAAI/bge-reranker-base"
                         self._model_instance = CrossEncoder(model_name)
@@ -54,12 +52,17 @@ class RerankerService:
         model = self._get_model()
         
         # 1. Prepare pairs
-        text_pairs = [[query, doc.page_content] for doc in documents]
+        text_pairs = []
+        for doc in documents:
+            # ID-Only Injection for strict UUID matching
+            fid = doc.metadata.get("file_id", "unknown_id")
+            chunk_text = f"[Source ID: {fid}]\n{doc.page_content}"
+            text_pairs.append([query, chunk_text])
         
-        # 2. Get raw logits (Linter is happy because we only pass the text)
+        # 2. Get raw logits
         raw_scores = model.predict(text_pairs)
 
-        # 3. Apply PyTorch's highly optimized native Sigmoid to the entire array at once!
+        # 3. Apply PyTorch's highly optimized native Sigmoid to the entire array
         scores = torch.sigmoid(torch.tensor(raw_scores)).tolist()
 
         # 3. Attach scores to metadata

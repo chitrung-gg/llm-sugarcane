@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Library, Database, Globe, Download, Plus, Loader2, Upload, Trash2 } from "lucide-react"
-import { useUserDatasets, useLibraryDatasets, useUpdateDataset, useAttachDataset, useDatasetFiles, useDownloadFile, useDeleteDatasetFile } from "@/hooks/use-datasets"
+import { useUserDatasets, useLibraryDatasets, useUpdateDataset, useAttachDataset, useDatasetFiles, useDownloadFile, useDeleteDatasetFile, useAvailableProjects } from "@/hooks/use-datasets"
 import { useProjects } from "@/hooks/use-projects"
 import { getCurrentUser } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
@@ -210,7 +210,7 @@ function DatasetFilesList({ datasetId, isOwner }: { datasetId: string, isOwner: 
 }
 
 function CloneDatasetDialog({ datasetId }: { datasetId: string }) {
-  const { data: projects = [] } = useProjects()
+  const { data: availableProjects = [], isLoading } = useAvailableProjects(datasetId)
   const attachDataset = useAttachDataset()
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
@@ -220,19 +220,29 @@ function CloneDatasetDialog({ datasetId }: { datasetId: string }) {
     try {
       await attachDataset.mutateAsync({ projectId: selectedProject, datasetId })
       console.log("Dataset added to project successfully")
+      setSelectedProject(null)
       setOpen(false)
     } catch (error) {
       console.error("Failed to add dataset", error)
     }
   }
 
+  const allAttached = !isLoading && availableProjects.length === 0
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger 
         nativeButton={true}
         render={
-          <Button className="w-full bg-stone-900 hover:bg-stone-800 text-white font-bold rounded-xl shadow-lg shadow-stone-900/10 h-11 transition-all active:scale-[0.98]">
-            <Plus className="h-4 w-4 mr-2" /> Add to Project
+          <Button 
+            disabled={allAttached}
+            className={`w-full font-bold rounded-xl shadow-lg h-11 transition-all active:scale-[0.98] ${
+              allAttached 
+                ? "bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed shadow-none" 
+                : "bg-stone-900 hover:bg-stone-800 text-white shadow-stone-900/10"
+            }`}
+          >
+            {allAttached ? "Already in All Projects" : <><Plus className="h-4 w-4 mr-2" /> Add to Project</>}
           </Button>
         }
       />
@@ -251,12 +261,12 @@ function CloneDatasetDialog({ datasetId }: { datasetId: string }) {
         <div className="py-4 space-y-6">
           <div className="space-y-2">
             <label className="text-[11px] font-bold text-stone-400 uppercase tracking-widest ml-1">Select Destination</label>
-            <Select value={selectedProject} onValueChange={(val) => setSelectedProject(val)}>
+            <Select value={selectedProject || ""} onValueChange={(val) => setSelectedProject(val)}>
               <SelectTrigger className="h-12 rounded-xl border-stone-200 focus:ring-emerald-500">
                 <SelectValue placeholder="Select a project..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                {projects.map(p => (
+                {availableProjects.map(p => (
                   <SelectItem key={p.id} value={p.id} className="font-medium">{p.name}</SelectItem>
                 ))}
               </SelectContent>

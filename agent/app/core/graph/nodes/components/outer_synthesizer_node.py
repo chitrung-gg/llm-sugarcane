@@ -37,7 +37,17 @@ def make_outer_synthesizer_node(llm_service: LLMService):
         active_datasets = state.get("active_datasets", [])
         workspace_context = format_optimized_context(active_project, active_datasets)
 
-        # 2. Format the past steps into a clear evidence string
+        # 2. Format execution context (with truncation to prevent overflow)
+        # We take the best results from the entire plan execution
+        rag_results = state.get("rag_results", [])[:10]
+        web_results = state.get("web_results", [])[:5]
+        tool_results = state.get("tool_results", [])[-10:] 
+        
+        rag_context = "\n".join([f"- [Doc: {r.get('source_file')}] {r.get('content')[:1000]}..." for r in rag_results])
+        web_context = "\n".join([f"- [{r.get('title')}] ({r.get('link')}): {r.get('snippet')}" for r in web_results])
+        tool_context = "\n".join([f"- [{r.get('tool_name')}] Status: {r.get('status')}\nOutput: {r.get('output')[:1000]}..." for r in tool_results])
+
+        # 3. Format the past steps into a clear evidence string
         steps_context = ""
         for step in past_steps:
             steps_context += f"OBJECTIVE: {step.summary}\nRESULT: {step.extracted_data}\n\n"
@@ -45,7 +55,10 @@ def make_outer_synthesizer_node(llm_service: LLMService):
         prompt = OUTER_SYNTHESIZER_SYSTEM_PROMPT.format(
             query=query,
             past_steps=steps_context,
-            workspace_context=workspace_context
+            workspace_context=workspace_context,
+            rag_context=rag_context if rag_context else "No RAG data found.",
+            web_context=web_context if web_context else "No web data found.",
+            tool_context=tool_context if tool_context else "No tool data found."
         )
         
         # 2. Structured Model tagged for real-time JSON streaming
@@ -62,13 +75,13 @@ def make_outer_synthesizer_node(llm_service: LLMService):
         # 3. Final Invocation with Error Handling
         try:
             # Adding a reasonable timeout to prevent hanging the pipeline
-            result = await llm.ainvoke(messages)
+            result: SynthesizerOutput = await llm.ainvoke(messages)
             final_answer = result.answer
         except asyncio.TimeoutError:
-            logger.error("[Outer Synthesizer] ❌ LLM generation timed out.")
+            logger.error("[Outer Synthesizer] LLM generation timed out.")
             final_answer = "I apologize, but synthesizing the final report took too long and timed out."
         except Exception as e:
-            logger.error(f"[Outer Synthesizer] ❌ Final Synthesis failed: {e}")
+            logger.error(f"[Outer Synthesizer] Final Synthesis failed: {e}")
             final_answer = "I apologize, but I encountered an error while formatting the final answer."
         
         # 4. Route to Summarizer

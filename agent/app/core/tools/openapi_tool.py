@@ -79,7 +79,7 @@
 #             strict_query = f"""
 #                 Task: {query}
                 
-#                 ⚠️ CRITICAL EXECUTION RULES FOR API PLANNER:
+#                  CRITICAL EXECUTION RULES FOR API PLANNER:
 #                 1. FATAL ERROR PREVENTION: You MUST URL-encode all spaces in your API URLs (replace spaces with '%20').
 #                 - WRONG: GET /genome/assembly_name/sugarcane r570/dataset_report
 #                 - CORRECT: GET /genome/assembly_name/sugarcane%20r570/dataset_report

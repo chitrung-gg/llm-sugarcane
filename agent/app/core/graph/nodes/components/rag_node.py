@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 import re
 import hashlib
@@ -32,7 +33,7 @@ def make_rag_node(
     async def rag(state: AgentState) -> dict:
         settings = get_settings()
 
-        logger.debug("[RAG] 🔎 Starting vector search with FlashRank Integration")
+        logger.debug("[RAG] Starting vector search")
         start_time = time.time()
         
         original_query = state["query"]
@@ -42,7 +43,7 @@ def make_rag_node(
         solid_k = settings.QDRANT_SOLID_TOP_K 
         volatile_k = settings.QDRANT_VOLATILE_TOP_K
         max_query_length = settings.QDRANT_MAX_QUERY_LENGTH
-
+        
         if not optimized_query:
             logger.info("[RAG] No pre-optimized query found. Rewriting...")
             system_prompt = RAG_QUERY_OPTIMIZATION_PROMPT.format(
@@ -64,21 +65,19 @@ def make_rag_node(
                 optimized_query = rewritten_result.search_query
 
                 if len(optimized_query) > max_query_length:
-                    logger.warning(f"[RAG] ⚠️ LLM hallucinated a repeating query. Triggering fallback.")
+                    logger.warning(f"[RAG] LLM hallucinated a repeating query. Triggering fallback.")
                     optimized_query = original_query
-                else:
-                    logger.debug(f"[RAG] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
             except Exception as e:
                 logger.warning(f"[RAG] Query optimization failed: {e}. Falling back to original query.")
                 optimized_query = original_query
         else:
-            logger.info(f"[RAG] Using pre-optimized query from Router: '{optimized_query}'")
+            logger.info(f"[RAG] Using pre-optimized query from Router: '{optimized_query}")
 
         active_datasets = state.get("active_datasets") or []
         dataset_ids = [ds.get("dataset_id") for ds in active_datasets if ds.get("dataset_id")]
 
         logger.debug(f"Executing Qdrant search with query: {optimized_query}")
-        
+
         # 2. Broad Qdrant Search
         solid_results = await vector_store_solid.asimilarity_search(
             query=optimized_query, 
@@ -89,7 +88,7 @@ def make_rag_node(
         seen_payloads = set()
         solid_docs = []
         for doc in solid_results:
-            # Hash the actual content to ensure we only drop 100% exact duplicates
+            # Hash the actual content to ensure only drop exact duplicates
             doc_hash = hashlib.md5(doc.page_content.strip().encode('utf-8')).hexdigest()
             
             if doc_hash not in seen_payloads:
@@ -97,43 +96,43 @@ def make_rag_node(
                 doc.metadata["source_tier"] = doc.metadata.get("source_tier", "CURATED")
                 solid_docs.append(doc)
             else:
-                logger.debug("[RAG] 🗑️ Dropped exact duplicate Qdrant chunk.")
+                logger.debug("[RAG] Dropped exact duplicate Qdrant chunk.")
 
-        volatile_docs = []
-        if dataset_ids:
-            # Combine filters
-            volatile_filter = models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="metadata.dataset_id",
-                        match=models.MatchAny(any=dataset_ids)
-                    )
-                ]
-            )
+        # volatile_docs = []
+        # if dataset_ids:
+        #     # Combine filters
+        #     volatile_filter = models.Filter(
+        #         must=[
+        #             models.FieldCondition(
+        #                 key="metadata.dataset_id",
+        #                 match=models.MatchAny(any=dataset_ids)
+        #             )
+        #         ]
+        #     )
  
-            volatile_results = await vector_store_volatile.asimilarity_search(
-                query=optimized_query, 
-                k=volatile_k,
-                filter=volatile_filter
-            )
+        #     volatile_results = await vector_store_volatile.asimilarity_search(
+        #         query=optimized_query, 
+        #         k=volatile_k,
+        #         filter=volatile_filter
+        #     )
             
-            for doc in volatile_results:
-                doc_hash = hashlib.md5(doc.page_content.encode('utf-8')).hexdigest()
-                if doc_hash not in seen_payloads:
-                    seen_payloads.add(doc_hash)
-                    doc.metadata["source_tier"] = doc.metadata.get("source_tier", "INFERRED")
-                    volatile_docs.append(doc)
-                else:
-                    logger.debug("[RAG] 🗑️ Dropped duplicate Qdrant chunk (VOLATILE).")
+        #     for doc in volatile_results:
+        #         doc_hash = hashlib.md5(doc.page_content.encode('utf-8')).hexdigest()
+        #         if doc_hash not in seen_payloads:
+        #             seen_payloads.add(doc_hash)
+        #             doc.metadata["source_tier"] = doc.metadata.get("source_tier", "INFERRED")
+        #             volatile_docs.append(doc)
+        #         else:
+        #             logger.debug("[RAG] Dropped duplicate Qdrant chunk (VOLATILE).")
 
         # 3. Multi-Store Fusion & Reranking
-        combined_docs = solid_docs + volatile_docs
+        combined_docs = solid_docs
         
         if not combined_docs:
             logger.warning("[RAG] No documents retrieved from databases.")
             final_docs = []
         else:
-            logger.debug(f"[RAG] Reranking {len(combined_docs)} total chunks using FlashRank...")
+            logger.debug(f"[RAG] Reranking {len(combined_docs)} total chunks using query: '{original_query}'")
             final_docs = await asyncio.to_thread(
                 reranker_service.rerank_documents,
                 query=original_query,
@@ -146,6 +145,8 @@ def make_rag_node(
         new_sources = []
 
         for idx, doc in enumerate(final_docs):
+            logger.info(f"[RAG] SAMPLE METADATA: {json.dumps(doc.metadata, default=str)}")
+
             raw_score = doc.metadata.get("relevance_score", 0.0)
             relevance_score = float(raw_score)      
 
@@ -172,7 +173,7 @@ def make_rag_node(
             })
 
         elapsed = int((time.time() - start_time) * 1000)
-        logger.info(f"[RAG] 🎯 Final top {len(new_rag_results)} chunks extracted in {elapsed}ms.")
+        logger.info(f"[RAG] Final top {len(new_rag_results)} chunks extracted in {elapsed}ms.")
 
         return {
             "rag_results": new_rag_results,

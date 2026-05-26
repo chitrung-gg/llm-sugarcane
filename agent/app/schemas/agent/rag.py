@@ -1,3 +1,4 @@
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 class OptimizedRagQuery(BaseModel):

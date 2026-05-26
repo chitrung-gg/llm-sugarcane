@@ -95,6 +95,25 @@ class DatasetService:
             )
             return True
 
+    async def get_available_projects_for_dataset(self, user_id: uuid.UUID, dataset_id: uuid.UUID) -> List[Dict[str, Any]]:
+        """Returns all projects owned by the user where the specified dataset is NOT yet attached."""
+        async with userdata_connection_pool.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT p.id, p.name 
+                FROM user_projects p
+                WHERE p.owner_id = %s 
+                AND p.id NOT IN (
+                    SELECT project_id 
+                    FROM project_dataset_attachments 
+                    WHERE dataset_id = %s
+                )
+                """,
+                (user_id, dataset_id)
+            )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
     # --- Fetching Datasets ---
     async def get_available_library_datasets(self) -> List[UserDataset]:
         """Returns all datasets marked as public for the Reference Library."""

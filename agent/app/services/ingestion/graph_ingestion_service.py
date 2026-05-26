@@ -226,13 +226,13 @@ class GraphIngestionService:
                 try:
                     await target_vector_store.aadd_documents(documents=batch_docs, ids=batch_ids)
                 except Exception as e:
-                    logger.warning("🚨 Sparse/Dense mismatch detected for batch. Isolating chunks sequentially...")
+                    logger.warning("Sparse/Dense mismatch detected for batch. Isolating chunks sequentially...")
                     # Fallback: Insert 1-by-1 to isolate and identify the exact chunk causing FastEmbed to choke
                     for single_doc, single_id in zip(batch_docs, batch_ids):
                         try:
                             await target_vector_store.aadd_documents(documents=[single_doc], ids=[single_id])
                         except Exception as inner_e:
-                            logger.error(f"❌ Skipping toxic chunk that broke FastEmbed: {single_doc.page_content[:100]}... Error: {inner_e}")
+                            logger.error(f"Skipping toxic chunk that broke FastEmbed: {single_doc.page_content[:100]}... Error: {inner_e}")
                         
 
     async def _is_ingestable_payload(self, text: str) -> bool:
@@ -278,15 +278,15 @@ class GraphIngestionService:
                 # 3. Determine Delay
                 if is_rate_limit:
                     delay = 40.0 + random.uniform(1.0, 5.0)
-                    logger.warning(f"[Extraction] 🚨 Rate Limit. Sleeping {delay:.1f}s (Attempt {attempt + 1})")
+                    logger.warning(f"[Extraction] Rate Limit. Sleeping {delay:.1f}s (Attempt {attempt + 1})")
                     
                 elif is_server_error:
                     delay = (2 ** attempt) + random.uniform(0.5, 2.0)
-                    logger.warning(f"[Extraction] ⚠️ Server Error. Retrying in {delay:.1f}s...")
+                    logger.warning(f"[Extraction] Server Error. Retrying in {delay:.1f}s...")
                     
                 else:
                     delay = 5.0
-                    logger.warning(f"[Extraction] ❓ Unexpected Error ({status_code}). Retrying in {delay:.1f}s")
+                    logger.warning(f"[Extraction] Unexpected Error ({status_code}). Retrying in {delay:.1f}s")
                 
                 await asyncio.sleep(delay)
                 

@@ -18,7 +18,6 @@ from app.schemas.agent.summarizer import SummaryOutput
 def make_summarizer_node(llm_service: LLMService):
     """
     Creates a node that summarizes the conversation history to keep the context window lean.
-    This follows the 'Summarize-and-Delete' pattern from LangGraph.
     """
     @tracing(observation_type=ObservationType.CHAIN)
     async def summarize_conversation(state: PlanExecuteState) -> Command[
@@ -33,7 +32,7 @@ def make_summarizer_node(llm_service: LLMService):
         keep_messages = settings.SUMMARIZER_SUMMARY_KEEP_LAST_N
         # timeout_sec = settings.SUMMARIZER_SUMMARY_TIMEOUT_SEC
 
-        # Maybe better when use Long-Term Memory instead of adding to Vector DB
+        # TODO: Maybe better when use Long-Term Memory instead of adding to Vector DB
         # 1. Final Ingestion Dispatch
         # pending_knowledge = state.get("extracted_knowledge", [])
         # if pending_knowledge:
@@ -80,8 +79,7 @@ def make_summarizer_node(llm_service: LLMService):
                 
             new_summary = response.new_summary
 
-            # Create RemoveMessage instructions to delete the messages we just summarized
-            # LangGraph uses these to prune the 'messages' list in the state.
+            # Create RemoveMessage instructions to delete the messages we just summarized.
             delete_messages = [RemoveMessage(id=m.id) for m in messages_to_summarize if hasattr(m, 'id') and m.id]
 
             elapsed = int((time.time() - start_time) * 1000)

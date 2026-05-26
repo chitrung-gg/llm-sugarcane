@@ -18,36 +18,36 @@ def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service:
         start_time = time.time()
         logger.debug("========== [Input Analyzer Node] ==========")
         
-        query = state.get("query", "")
-        summary = state.get("summary", "")
-        past_steps = state.get("past_steps", [])
-        active_project = state.get("active_project")
-        datasets = state.get("active_datasets") or []
-        system_datasets = state.get("system_datasets", [])
+        # query = state.get("query", "")
+        # summary = state.get("summary", "")
+        # past_steps = state.get("past_steps", [])
+        # active_project = state.get("active_project")
+        # datasets = state.get("active_datasets") or []
+        # system_datasets = state.get("system_datasets", [])
 
-        filtered_datasets = datasets
+        # filtered_datasets = datasets
         
-        if len(datasets) > 1:
-            logger.info(f"[Input Analyzer] ✂️ Pruning {len(datasets)} active datasets for relevance...")
+        # if len(datasets) > 1:
+            # logger.info(f"[Input Analyzer] Pruning {len(datasets)} active datasets for relevance...")
             
             # 1. Build an Enriched Context Query
             # Include recent messages and unified workspace context
-            recent_messages_text = "\n".join([f"{m.type}: {m.content}" for m in get_recent_messages(state.get("messages", []), last_k_turns=3)])
+            # recent_messages_text = "\n".join([f"{m.type}: {m.content}" for m in get_recent_messages(state.get("messages", []), last_k_turns=3)])
             
-            step_history = "\n".join([f"- Step {obs.step_id}: {obs.summary}" for obs in past_steps]) if past_steps else "None"
+            # step_history = "\n".join([f"- Step {obs.step_id}: {obs.summary}" for obs in past_steps]) if past_steps else "None"
             
-            # Use the optimized utility for the file list
-            workspace_context = format_optimized_context(active_project, datasets)
+            # # Use the optimized utility for the file list
+            # workspace_context = format_optimized_context(active_project, datasets)
             
-            enriched_query = (
-                f"--- CONVERSATION HISTORY ---\n"
-                f"{summary}\n"
-                f"{recent_messages_text}\n\n"
-                f"--- RESEARCH PROGRESS (PAST STEPS) ---\n"
-                f"{step_history}\n\n"
-                f"--- CURRENT TASK ---\n"
-                f"{query}"
-            )
+            # enriched_query = (
+            #     f"--- CONVERSATION HISTORY ---\n"
+            #     f"{summary}\n"
+            #     f"{recent_messages_text}\n\n"
+            #     f"--- RESEARCH PROGRESS (PAST STEPS) ---\n"
+            #     f"{step_history}\n\n"
+            #     f"--- CURRENT TASK ---\n"
+            #     f"{query}"
+            # )
             
             # try:
                 # Use Tier 3 (Flash Lite) for quick selection
@@ -73,10 +73,10 @@ def make_input_analyzer_node(document_processor: DocumentProcessor, llm_service:
             #     logger.info(f"[Input Analyzer] Kept {len(filtered_datasets)}/{len(datasets)} datasets.")
                 
             # except Exception as e:
-            #     logger.error(f"[Input Analyzer] ❌ Pruning failed: {e}. Falling back to full context.")
+            #     logger.error(f"[Input Analyzer] Pruning failed: {e}. Falling back to full context.")
             #     filtered_datasets = datasets
 
-        logger.debug(f"Input Analyzer execution time: {int((time.time() - start_time) * 1000)} ms")
+        # logger.debug(f"Input Analyzer execution time: {int((time.time() - start_time) * 1000)} ms")
 
         return {
                 # "active_datasets": filtered_datasets, 

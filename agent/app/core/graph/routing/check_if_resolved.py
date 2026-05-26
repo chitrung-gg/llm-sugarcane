@@ -12,20 +12,20 @@
 #     max_iterations = state.get("max_iterations", 3) 
     
 #     logger.debug(
-#         "🔄 Checking resolution. Loop: {count}/{max}", 
+#         "Checking resolution. Loop: {count}/{max}", 
 #         count=iteration_count, max=max_iterations
 #     )
 
 #     # HARD STOP - CIRCUIT BREAKER
 #     if iteration_count >= max_iterations:
-#         logger.error("🛑 Max iterations reached! Forcing the graph to END.")
+#         logger.error("Max iterations reached! Forcing the graph to END.")
 #         return "__end__"
         
 #     # STANDARD CHECK
 #     is_complete = state.get("is_complete", False)
 #     if is_complete:
-#         logger.debug("✅ Answer complete. Ending graph.")
+#         logger.debug("Answer complete. Ending graph.")
 #         return "__end__"
 #     else:
-#         logger.warning("⚠️ Answer incomplete. Sending back to Router.")
+#         logger.warning("Answer incomplete. Sending back to Router.")
 #         return "router"

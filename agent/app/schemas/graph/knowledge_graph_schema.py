@@ -57,6 +57,7 @@ class KnowledgeGraphNode(BaseModel):
 
 
 class KnowledgeGraphRelationship(BaseModel):
+    # TODO: Why the `evidence` not found in edge property
     source_name: str = Field(description="The exact name of the source node.")
     target_name: str = Field(description="The exact name of the target node.")
     type: str = Field(

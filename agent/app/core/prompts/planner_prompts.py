@@ -1,4 +1,3 @@
-import json
 from langchain_core.prompts import PromptTemplate
 from app.schemas.agent.planner import PlanOutput
 from app.core.graph.state.planner_state import AgentStepPlan
@@ -103,6 +102,7 @@ Understand the strengths of your available resources to plan efficiently:
 6. **Handling Meta-Questions:** If the user asks about the AI's reasoning or sources, plan a SINGLE step to review internal RAG and Conversation History. DO NOT plan external searches.
 7. **Skip Redundant Steps:** Look at [Completed Steps]. If required data was already found, DO NOT schedule a step to search for it again. 
 8. **Delegate, Do Not Predict:** Plan the *actions* to take, but DO NOT hallucinate specific output metrics. Do not create a separate step just for "Summarization".
+9. **Strict Filename Preservation:** When referring to files in step descriptions, use the exact filenames provided in the context (e.g., `10.1016...j.agwat.2009.08.013.pdf`). DO NOT rewrite, sanitize, or parse the filename into a path.
 
 ### Scratchpad Logic:
 1. Identify the core user request.
@@ -119,7 +119,7 @@ Understand the strengths of your available resources to plan efficiently:
 PLANNER_SYSTEM_PROMPT = PromptTemplate(
     template=PLANNER_SYSTEM_PROMPT_STR,
     input_variables=[
-        "active_project_context",  # <-- Renamed to match your state exactly
+        "active_project_context", 
         "agent_capabilities_str", 
         "chat_history_str",
         "conv_summary", 

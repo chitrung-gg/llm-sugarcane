@@ -2,11 +2,11 @@ import time
 from typing import List, Dict, Any
 from loguru import logger
 
+from app.schemas.agent.router import RouteDecision
 from app.common.constants import ObservationType
 from app.configs.settings.settings import get_settings
 from app.utils.observability.tracing import tracing
 from app.core.graph.nodes.agent_graph_node import AgentGraphNode
-from app.core.graph.routing.route_action import RouteDecision
 from app.core.graph.state.agent_state import AgentState
 from app.services.llm.llm_service import LLMService
 from app.core.prompts.router_prompts import ROUTER_FINAL_STATE_ENFORCEMENT, ROUTER_SYSTEM_INSTRUCTIONS
@@ -24,7 +24,6 @@ def make_router_node(
     async def router(state: AgentState) -> Dict[str, Any]:
         """
         Router Node that analyzes user intent and prepares the execution state.
-        Returns a raw dictionary representing state updates to fit a static graph workflow.
         """
         start_time = time.time()
         query = state["query"]
@@ -49,15 +48,13 @@ def make_router_node(
         history_header = [SystemMessage(content="--- RECENT CONVERSATION HISTORY ---")] if recent_messages else []
 
         # 3. Analyze Current Retrieval Execution History
-        rag_results = state.get("rag_results", [])
-        tool_results = state.get("tool_results", [])
-        web_results = state.get("web_results", [])
-
-        available_intents_list = ["- 'direct_answer'", "- 'all'"]
-        if not web_results: available_intents_list.append("- 'web_search'")
-        if not tool_results: available_intents_list.append("- 'tool_only'")
-        if not rag_results: available_intents_list.append("- 'rag_only'")
-        
+        available_intents_list = [
+            "- 'direct_answer'", 
+            "- 'all'", 
+            "- 'rag_only'", 
+            "- 'tool_only'", 
+            "- 'web_search'"
+        ]
         intents_str = "\n".join(available_intents_list)
 
         sys_msg_2 = SystemMessage(content=ROUTER_FINAL_STATE_ENFORCEMENT.format(
@@ -74,7 +71,7 @@ def make_router_node(
         try:
             decision: RouteDecision = await router_llm.ainvoke(messages_to_send)
         except Exception as e:
-            logger.exception("[Router] ❌ LLM routing failed")
+            logger.exception("[Router] LLM routing failed")
             raise e
         
         # 5. Return Raw State Updates

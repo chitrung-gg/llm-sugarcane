@@ -27,7 +27,7 @@
 #             AgentGraphNode.END_NODE
 #         ]   
 #     ]:
-#         logger.info("🔄 [Replanner] Assessing progress...")
+#         logger.info("[Replanner] Assessing progress...")
 #         settings = get_settings()
 #         query = state["query"]
 #         past_steps = state.get("past_steps", [])
@@ -35,11 +35,11 @@
 #         iteration_count = state.get("iteration_count", 0)
 #         max_planner_iteration = settings.REPLANNER_MAX_PLANNER_ITERATION
 
-#         # Time-boxing: Prevent 504 Gateway Timeout (120s limit)
+#         # Prevent 504 Gateway Timeout
 #         start_time = state.get("start_time", time.time())
 #         elapsed_time = time.time() - start_time
 #         if elapsed_time > 100: # 100s budget to allow for final synthesis
-#             logger.warning(f"🕒 [Replanner] Time budget exceeded ({int(elapsed_time)}s). Forcing synthesis.")
+#             logger.warning(f"[Replanner] Time budget exceeded ({int(elapsed_time)}s). Forcing synthesis.")
 #             return Command(
 #                 goto=AgentGraphNode.END_NODE, 
 #                 update={"final_answer": "I have completed as much research as possible within the time limit. Based on what I've found so far..."}
@@ -47,7 +47,7 @@
 
 #         # Circuit Breaker: Max Iterations
 #         if iteration_count >= max_planner_iteration:
-#             logger.warning("🛑 [Replanner] Max iterations hit. Forcing exit.")
+#             logger.warning("[Replanner] Max iterations hit. Forcing exit.")
 #             return Command(
 #                 goto=AgentGraphNode.END_NODE, 
 #                 update={"final_answer": "Task timed out after maximum steps."}

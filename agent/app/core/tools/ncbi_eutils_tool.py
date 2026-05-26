@@ -61,7 +61,7 @@ async def search_literature_for_traits(organism: str, primary_concept: str, seco
             # ANTI-LOOP ERROR MESSAGE
             if not pmids:
                 return (
-                    f"❌ 0 results found for: '{entrez_query}'.\n"
+                    f" 0 results found for: '{entrez_query}'.\n"
                     f"INSTRUCTION: The search was too strict. Do NOT run multiple variations of this tool. "
                     f"If you used a secondary_concept, try calling this tool exactly ONE MORE TIME using ONLY the primary_concept. "
                     f"If it still fails, move to 'direct_answer' and state the literature is unavailable."
@@ -75,7 +75,7 @@ async def search_literature_for_traits(organism: str, primary_concept: str, seco
                 async with session.get(fetch_url, params=fetch_params) as resp:
                     abstracts = await resp.text()
 
-            return f"✅ FOUND {len(pmids)} RELEVANT ABSTRACTS:\n\n{abstracts}\n\n---\nINSTRUCTION FOR LLM: Read these abstracts to answer the user's question. If you identify specific gene symbols, you can use 'get_gene_metadata_by_symbol' to get more data."
+            return f" FOUND {len(pmids)} RELEVANT ABSTRACTS:\n\n{abstracts}\n\n---\nINSTRUCTION FOR LLM: Read these abstracts to answer the user's question. If you identify specific gene symbols, you can use 'get_gene_metadata_by_symbol' to get more data."
 
         except Exception as e:
             logger.error(f"[Literature Tool] Error: {str(e)}")
@@ -133,7 +133,7 @@ async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
                 gene_ids = data.get("esearchresult", {}).get("idlist", [])
 
                 if not gene_ids:
-                    return f"❌ No curated gene data found for '{gene_symbol}' in {organism}. It may be uncurated or go by a different official symbol."
+                    return f" No curated gene data found for '{gene_symbol}' in {organism}. It may be uncurated or go by a different official symbol."
 
             # 2. Batch fetch metadata using Datasets API
             ids_string = ",".join(gene_ids)
@@ -147,7 +147,7 @@ async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
             
             reports = ds_data.get("reports", [])
             if not reports:
-                return f"❌ Metadata not found for Gene IDs: {ids_string}."
+                return f" Metadata not found for Gene IDs: {ids_string}."
             
             # 3. Format multiple gene reports
             formatted_results = []
@@ -164,7 +164,7 @@ async def get_gene_metadata_by_symbol(organism: str, gene_symbol: str) -> str:
                 processes = [p.get("name") for p in go_data.get("biological_processes", [])]
                 
                 formatted_results.append(
-                    f"✅ METADATA FOR: {symbol} (NCBI ID: {current_gene_id})\n"
+                    f" METADATA FOR: {symbol} (NCBI ID: {current_gene_id})\n"
                     f"- Organism: {organism}\n"
                     f"- Description: {desc}\n"
                     f"- Chromosome: {chromosomes if chromosomes else 'Unknown'}\n"
@@ -206,7 +206,7 @@ async def search_ncbi_genome(organism_or_cultivar: str) -> str:
             
             id_list = search_data.get("esearchresult", {}).get("idlist", [])
             if not id_list:
-                return f"❌ No genome assembly found for '{organism_or_cultivar}'."
+                return f" No genome assembly found for '{organism_or_cultivar}'."
 
             # Retrieve Accession
             assembly_id = id_list[0]
@@ -221,7 +221,7 @@ async def search_ncbi_genome(organism_or_cultivar: str) -> str:
             accession = result.get("assemblyaccession")
             
             if not accession:
-                return "❌ Could not resolve a valid Accession ID."
+                return " Could not resolve a valid Accession ID."
 
             # Fetch Dataset Report
             ds_url = f"{DATASETS_BASE}/genome/accession/{accession}/dataset_report"
@@ -231,7 +231,7 @@ async def search_ncbi_genome(organism_or_cultivar: str) -> str:
             
             reports = ds_data.get("reports", [])
             if not reports:
-                return "❌ No dataset report found."
+                return " No dataset report found."
                 
             return _format_dataset_report(reports[0])
 
@@ -270,7 +270,7 @@ async def search_bioproject(query: str) -> str:
             
             id_list = search_data.get("esearchresult", {}).get("idlist", [])
             if not id_list:
-                return f"❌ No BioProject found for '{query}'. The project might not be registered under this exact name."
+                return f" No BioProject found for '{query}'. The project might not be registered under this exact name."
 
             # 2. Fetch the Project Summary
             project_id = id_list[0]
@@ -292,7 +292,7 @@ async def search_bioproject(query: str) -> str:
             data_type = result.get("project_data_type", "Unknown data type")
             
             return (
-                f"✅ BIOPROJECT CONTEXT FOUND:\n"
+                f" BIOPROJECT CONTEXT FOUND:\n"
                 f"- Project Title: {title}\n"
                 f"- Organism: {organism}\n"
                 f"- Submitting Organization: {submitter}\n"
@@ -331,7 +331,7 @@ async def search_biosample(query: str) -> str:
             
             id_list = search_data.get("esearchresult", {}).get("idlist", [])
             if not id_list:
-                return f"❌ No BioSample metadata found for '{query}'."
+                return f" No BioSample metadata found for '{query}'."
 
             # 2. Fetch the text report (BioSample has a nice plain-text return mode)
             biosample_id = id_list[0]
@@ -342,11 +342,11 @@ async def search_biosample(query: str) -> str:
             async with limiter:
                 async with session.get(fetch_url, params=fetch_params) as resp:
                     if resp.status != 200:
-                        return f"❌ Failed to retrieve BioSample details."
+                        return f" Failed to retrieve BioSample details."
                     text_report = await resp.text()
             
             return (
-                f"✅ BIOSAMPLE METADATA FOUND:\n\n"
+                f" BIOSAMPLE METADATA FOUND:\n\n"
                 f"{text_report}\n\n"
                 f"--- \n"
                 f"INSTRUCTION FOR LLM: Extract the relevant tissue, geographic location, or condition details from the text above to answer the user."
@@ -385,7 +385,7 @@ async def resolve_taxonomy(query: str) -> str:
             
             id_list = search_data.get("esearchresult", {}).get("idlist", [])
             if not id_list:
-                return f"❌ Could not resolve '{query}' in the NCBI Taxonomy database. Please check the spelling."
+                return f" Could not resolve '{query}' in the NCBI Taxonomy database. Please check the spelling."
 
             # 2. Fetch Taxonomic Details
             tax_id = id_list[0]
@@ -403,7 +403,7 @@ async def resolve_taxonomy(query: str) -> str:
             division = result.get("division", "Unknown")
             
             return (
-                f"✅ TAXONOMY RESOLVED:\n"
+                f" TAXONOMY RESOLVED:\n"
                 f"- Input Query: {query}\n"
                 f"- Official TaxID: {tax_id}\n"
                 f"- Scientific Name: {sci_name}\n"
@@ -447,14 +447,14 @@ async def fetch_nucleotide_sequence(accession: str, start_pos: int = 1, stop_pos
             async with limiter:
                 async with session.get(fetch_url, params=params) as resp:
                     if resp.status != 200:
-                        return f"❌ Failed to fetch sequence for {accession}. It may not exist in the nuccore database."
+                        return f" Failed to fetch sequence for {accession}. It may not exist in the nuccore database."
                     fasta_data = await resp.text()
             
             if not fasta_data.strip():
-                return f"❌ No sequence data returned for {accession}."
+                return f" No sequence data returned for {accession}."
 
             return (
-                f"✅ FASTA SEQUENCE RETRIEVED (Showing bp {start_pos} to {stop_pos}):\n\n"
+                f" FASTA SEQUENCE RETRIEVED (Showing bp {start_pos} to {stop_pos}):\n\n"
                 f"```fasta\n"
                 f"{fasta_data.strip()}\n"
                 f"```"
@@ -508,7 +508,7 @@ def _format_dataset_report(report: Dict[str, Any]) -> str:
     protein_coding = gene_counts.get("protein_coding", "Data not available")
     
     return (
-        f"✅ GENOME METADATA FOUND:\n"
+        f" GENOME METADATA FOUND:\n"
         f"--- Basic Info ---\n"
         f"- Accession: {accession}\n"
         f"- Scientific Name: {org.get('sci_name', 'Unknown')} (TaxID: {org.get('tax_id', 'Unknown')})\n"

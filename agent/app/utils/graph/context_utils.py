@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 import uuid
+from warnings import deprecated
 from langchain_core.tools import BaseTool
 from langchain_core.messages import BaseMessage, HumanMessage
 
@@ -9,6 +10,7 @@ def generate_entity_uuid(label: str, name: str) -> str:
     seed = f"{label}::{name}"
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, seed))
 
+@deprecated("Will move to use the `ChatService.get_recent_chat_turns()`")
 def get_recent_messages(messages: List[BaseMessage], last_k_turns: int = 3) -> List[BaseMessage]:
     """
     Returns the last `k` conversational turns from the history.

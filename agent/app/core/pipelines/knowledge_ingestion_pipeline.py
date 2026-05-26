@@ -5,8 +5,8 @@ from typing import Any
 from airflow.sdk import dag, task, get_current_context
 
 # Fetch paths dynamically from the worker's environment (.env)
-LLM_PYTHON_BIN = os.getenv("LLM_PYTHON_BIN", "/home/cocogoat/miniconda3/envs/llm-sugarcane/bin/python")
-LLM_PROJECT_DIR = os.getenv("LLM_PROJECT_DIR", "/home/cocogoat/Data/Repositories/llm-sugarcane/agent")
+LLM_PYTHON_BIN = os.getenv("LLM_PYTHON_BIN", "/home/user/miniconda3/envs/llm-sugarcane/bin/python")
+LLM_PROJECT_DIR = os.getenv("LLM_PROJECT_DIR", "/home/user/llm-sugarcane/agent")
 
 DEFAULT_ARGS = {
     'owner': 'genome_hub',
@@ -34,7 +34,7 @@ def knowledge_ingestion_pipeline():
         return (dag_run.conf or {}) if dag_run else {}
     
     # 2. Branching Logic: Decide which pipeline to run
-    @task.branch(queue="ingest_knowledge_queue")
+    @task.branch(queue="ingest_knowledge_queue", pool="etl_pool")
     def route_ingestion(conf: dict) -> str:
         # If there's a file URI, route to document parser
         if conf.get("target_uri"):
@@ -165,7 +165,7 @@ def knowledge_ingestion_pipeline():
                     local_file_path = f"/tmp/{original_filename}"
                     
                     # Force the filename into the metadata for the graph/vector store
-                    metadata["source_filename"] = original_filename
+                    metadata["source"] = original_filename
                     
                     rustfs_client = cast(
                         AsyncContextManager[S3Client],
@@ -185,8 +185,8 @@ def knowledge_ingestion_pipeline():
                 chunks = container.document_processor.process_and_get_chunks(local_file_path)
                 total_chunks = len(chunks)
                 
-                BATCH_SIZE = settings.INGESTION_BATCH_SIZE # Optimized from 8
-                DELAY_BETWEEN_BATCHES = settings.INGESTION_DELAY_BETWEEN_BATCHES # Reduced from 30 as batching is more efficient
+                BATCH_SIZE = settings.INGESTION_BATCH_SIZE
+                DELAY_BETWEEN_BATCHES = settings.INGESTION_DELAY_BETWEEN_BATCHES
                 pending_chunks = [(i, chunk) for i, chunk in enumerate(chunks)]
 
                 while pending_chunks:
@@ -200,7 +200,6 @@ def knowledge_ingestion_pipeline():
                     # Using the new batch ingestion method to reduce LLM calls!
                     owner_id_str = metadata.get("owner_id")
                     owner_id = uuid.UUID(owner_id_str) if owner_id_str and owner_id_str != "SYSTEM" else SYSTEM_OWNER_ID
-                    is_public = metadata.get("is_public")
                     
                     try:
                         texts = [chunk.page_content for _, chunk in current_batch]

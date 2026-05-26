@@ -46,6 +46,20 @@ export function useDatasetFiles(datasetId: string) {
   });
 }
 
+export function useAvailableProjects(datasetId: string) {
+  const user = getCurrentUser();
+  return useQuery({
+    queryKey: ["datasets", datasetId, "available-projects"],
+    queryFn: async () => {
+      const response = await api.get<{id: string, name: string}[]>(`/workspace/datasets/${datasetId}/available-projects`, {
+        params: { user_id: user?.uuid }
+      });
+      return response.data;
+    },
+    enabled: !!datasetId && !!user?.uuid,
+  });
+}
+
 export function useCreateDataset() {
   const queryClient = useQueryClient();
 
@@ -160,6 +174,7 @@ export function useAttachDataset() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["projects", variables.projectId, "datasets"] });
+      queryClient.invalidateQueries({ queryKey: ["datasets", variables.datasetId, "available-projects"] });
     },
   });
 }

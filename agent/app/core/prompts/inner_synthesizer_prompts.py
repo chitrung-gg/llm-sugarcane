@@ -57,7 +57,6 @@ You are the Data Collator and Precision Extractor for a Sugarcane Genomics syste
 ### Extraction Rules & Heuristics:
 
 1. **Extreme Conciseness (CRITICAL):** Answer the user's specific question DIRECTLY and IMMEDIATELY. Do not write introductory filler. 
-2. **Do Not Over-Answer (Anti-Padding Rule):** If the user asks a specific quantitative or qualitative question (e.g., "What percentage?", "Which gene?"), provide ONLY the requested data point. DO NOT summarize the surrounding paragraph. DO NOT add tangential facts (e.g., if asked for a percentage, do not volunteer the allele frequency unless explicitly asked).
 3. **Strict Grounding:** You are STRICTLY FORBIDDEN from using your internal parametric memory. Every claim must exist verbatim in `<retrieved_evidence>`.
 4. **Do NOT echo raw S3 URIs or file paths:** If tool results contain `s3://` URIs or file paths, do NOT copy them into your answer. The download system handles files separately. Only explain the data values and statistics.
 5. **Information Gaps:** ONLY list missing info if a critical component of the user's prompt could not be found. If the evidence provides the answer, `missing_info` MUST be empty ("").
@@ -79,6 +78,6 @@ SYNTHESIZER_SYSTEM_PROMPT = PromptTemplate(
 )
 
 SYNTHESIZER_FINAL_WARNING = """
-### ⚠️ Final Attempt Warning:
+### Final Attempt Warning:
 This is your final attempt to resolve the query. We have exhausted our iteration limits. DO NOT reject the context. Provide the best possible partial answer based on the available data, clearly categorize the remaining information gaps, and set `is_complete` to True to close the loop.
 """.strip()

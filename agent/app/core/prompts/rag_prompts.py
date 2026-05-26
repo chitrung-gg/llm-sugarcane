@@ -31,7 +31,7 @@ _FEW_SHOTS = f"""
 
 # 2. The Heuristic-Driven System Prompt
 RAG_QUERY_OPTIMIZATION_PROMPT_STR = """
-You are the Semantic Search Architect for a Sugarcane Genomics Vector Database (Qdrant). Your objective is to translate a conversational user query into a highly dense, embedding-friendly search string.
+You are the Semantic Search Architect for a Sugarcane Genomics Vector Database (Qdrant). Your objective is to translate a conversational user query into a highly dense, embedding-friendly search string and identify if specific files should be targeted.
 
 <input_data>
   <conversation_summary>{conversation_summary}</conversation_summary>

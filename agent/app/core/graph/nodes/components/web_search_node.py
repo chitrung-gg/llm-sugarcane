@@ -1,5 +1,6 @@
 import asyncio
 from enum import StrEnum
+import json
 import time
 from typing import List, Literal, cast
 from langfuse import observe
@@ -32,7 +33,7 @@ def make_web_search_node(
     async def web_search(state: AgentState) -> dict:
         settings = get_settings()
 
-        logger.debug("--- 🌐 TRIGGERING SEARXNG WEB SEARCH ---")
+        logger.debug("--- TRIGGERING SEARXNG WEB SEARCH ---")
         start_time = time.time()
 
         # Check if the Router provided a specific search query
@@ -48,7 +49,7 @@ def make_web_search_node(
                     break
 
         if optimized_query:
-            logger.info(f"[Web Search] 💡 Using pre-optimized query: '{optimized_query}'")
+            logger.info(f"[Web Search] Using pre-optimized query: '{optimized_query}'")
         else:
             
             max_query_length = settings.WEB_SEARCH_MAX_QUERY_LENGTH
@@ -71,14 +72,14 @@ def make_web_search_node(
 
             try:
                 rewriter_llm = llm_service.get_structured_quaternary_model(OptimizedSearchQuery)
-                rewritten_result = await rewriter_llm.ainvoke(messages)
+                rewritten_result: OptimizedSearchQuery = await rewriter_llm.ainvoke(messages)
                 optimized_query = rewritten_result.search_query
 
                 if len(optimized_query) > max_query_length:
-                    logger.warning(f"[Web Search] ⚠️ LLM hallucinated query too long ({len(optimized_query)} chars). Using original.")
+                    logger.warning(f"[Web Search] LLM output query too long ({len(optimized_query)} chars). Using original.")
                     optimized_query = original_query
                 else:
-                    logger.debug(f"[Web Search] 🪄 Optimized query: '{optimized_query}' (Original: '{original_query}')")
+                    logger.debug(f"[Web Search] Optimized query: '{optimized_query}' (Original: '{original_query}')")
             except Exception as e:
                 logger.warning(f"[Web Search] Query optimization failed: {e}. Falling back to original query.")
                 optimized_query = original_query
@@ -101,6 +102,7 @@ def make_web_search_node(
 
         web_docs = []
         for res in raw_results:
+            logger.info(f"[Web Search] Sample result: {json.dumps(res, default=str)}")
             snippet = res.get("snippet", "")
             if snippet:
                 web_docs.append(
