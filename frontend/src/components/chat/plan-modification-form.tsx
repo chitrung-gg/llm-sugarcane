@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Plus, Trash2, RotateCcw, Send } from "lucide-react";
 
-interface Step {
+export interface Step {
   step_id?: string | number;
   description: string;
   expected_tool?: string;

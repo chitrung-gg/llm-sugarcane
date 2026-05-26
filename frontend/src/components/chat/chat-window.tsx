@@ -19,6 +19,7 @@ import { useChatHistory } from "@/hooks/use-chat";
 import { useChatStream } from "@/hooks/use-chat-stream";
 import { useDownload } from "@/hooks/use-download";
 import { PlanModificationForm } from "./plan-modification-form";
+import { Step } from "./plan-modification-form";
 import { AddDatasetDialog } from "@/components/datasets/add-dataset-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Message, Dataset, DatasetFile } from "@/lib/types";
@@ -288,7 +289,7 @@ export function ChatWindow() {
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
   const [activeThoughtsExpanded, setActiveThoughtsExpanded] = useState(true);
   const [isModifyingPlan, setIsModifyingPlan] = useState(false);
-  const [planToModify, setPlanToModify] = useState<Message['interrupt_data'] | null>(null);
+  const [planToModify, setPlanToModify] = useState<Step[] | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: datasets, isLoading: datasetsLoading } = useProjectDatasets(projectId);

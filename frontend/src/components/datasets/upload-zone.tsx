@@ -91,7 +91,7 @@ export function UploadZone() {
     }
   }, [initialDatasetId]);
 
-  const allowedGenomic = [".fasta", ".fa", ".gff", ".gff3", ".fna", ".faa", ".gbk", ".bam"];
+  const allowedGenomic = [".fasta", ".fa", ".gff", ".gff3", ".fna", ".faa", ".gbk", ".bam", ".gz"];
   const allowedKnowledge = [".pdf", ".json", ".txt", ".docx", ".csv", ".md"];
 
   const validateFile = (file: File) => {
